@@ -11,6 +11,7 @@ import com.resqhub.controller.AuthController;
 import com.resqhub.controller.DisasterController;
 import com.resqhub.controller.RescueRequestController;
 import com.resqhub.controller.RescueTeamController;
+import com.resqhub.controller.UserController;
 import com.resqhub.controller.VictimController;
 import com.resqhub.exception.DataAccessException;
 import com.resqhub.model.AssignmentStatus;
@@ -89,6 +90,36 @@ public class Phase8Test {
         }
         check("admin created a CITIZEN account (ADMIN-only service op)",
                 citizenCreated);
+
+        AuthController signupController = new AuthController();
+        check("citizen SELF-signup works without admin",
+                signupController.registerCitizen("zztest_selfreg",
+                        "Citizen@123", "ZZTEST Self Reg",
+                        "zztest_selfreg@resqhub.local", null).isSuccess());
+        check("duplicate username rejected during signup",
+                !signupController.registerCitizen("zztest_selfreg",
+                        "Citizen@123", "ZZTEST Dup",
+                        "zztest_dup@resqhub.local", null).isSuccess());
+        check("weak password rejected during signup",
+                !signupController.registerCitizen("zztest_weakpw", "short",
+                        "ZZTEST Weak", "zztest_weak@resqhub.local",
+                        null).isSuccess());
+
+        UserController userController = new UserController();
+        check("admin registers staff account via controller",
+                userController.registerUser("zztest_officer2", "Officer@123",
+                        "ZZTEST Officer Two", "zztest_officer2@resqhub.local",
+                        null, RoleType.RESCUE_OFFICER).isSuccess());
+        auth.logout();
+        check("new staff account can log in",
+                auth.login("zztest_officer2", "Officer@123").isSuccess());
+        check("staff (non-admin) cannot create users via controller",
+                !userController.registerUser("zztest_nope", "Officer@123",
+                        "ZZTEST Nope", "zztest_nope@resqhub.local", null,
+                        RoleType.ADMIN).isSuccess());
+        auth.logout();
+        check("re-login as admin restores session",
+                auth.login("admin", "Admin@123").isSuccess());
 
         System.out.println("--- Section B: reference data via controllers ---------");
 

@@ -82,6 +82,14 @@ public class LoginView extends JFrame {
         // Event source: button. Listener: this lambda (ActionListener).
         loginButton.addActionListener(event -> attemptLogin());
 
+        JButton signupButton = new JButton("New citizen? Create an account");
+        gbc.gridy = 5;
+        root.add(signupButton, gbc);
+        signupButton.addActionListener(event -> {
+            SignupView.launch("ResQHub - Create Citizen Account");
+            dispose();
+        });
+
         pack();
         setLocationRelativeTo(null);
     }

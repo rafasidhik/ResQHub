@@ -49,6 +49,25 @@ public class AuthController {
         return SessionManager.getInstance().isLoggedIn();
     }
 
+    /** Citizen self-signup: creates a CITIZEN account without admin help. */
+    public ActionResult registerCitizen(String username, String password,
+                                        String fullName, String email,
+                                        String phone) {
+        try {
+            User user = authService.selfRegister(username, password,
+                    fullName, email, phone);
+            return ActionResult.successWithData(
+                    "Account created for " + user.getUsername()
+                            + ". You can now log in.",
+                    user);
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error during signup: "
+                    + e.getMessage());
+        }
+    }
+
     /** Role of the logged-in user - drives dashboard navigation. */
     public boolean hasRole(com.resqhub.model.RoleType... roles) {
         return SessionManager.getInstance().hasRole(roles);

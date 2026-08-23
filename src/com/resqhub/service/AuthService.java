@@ -5,9 +5,13 @@ import com.resqhub.exception.AuthenticationException;
 import com.resqhub.exception.DataAccessException;
 import com.resqhub.exception.InvalidUserDataException;
 import com.resqhub.model.AccountStatus;
+import com.resqhub.model.RoleType;
 import com.resqhub.model.User;
 import com.resqhub.util.PasswordUtil;
 import com.resqhub.util.ValidationUtil;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Authentication workflow: credential checking, account lockout after
@@ -84,5 +88,58 @@ public class AuthService {
 
         current.setPasswordHash(PasswordUtil.hash(newPassword));
         userDAO.save(current);
+    }
+
+    /**
+     * Public citizen self-registration: no session or role required.
+     * Self-service signups are ALWAYS RoleType.CITIZEN - staff roles
+     * can only be granted by an administrator via UserService.
+     */
+    public User selfRegister(String username, String rawPassword,
+                             String fullName, String email, String phone)
+            throws InvalidUserDataException, DataAccessException {
+
+        List<String> errors = new ArrayList<>();
+        if (username == null || !username.matches("[A-Za-z0-9_]{4,50}")) {
+            errors.add("username must be 4-50 characters (letters, digits, underscore)");
+        }
+        try {
+            UserService.validatePasswordPolicy(rawPassword);
+        } catch (InvalidUserDataException e) {
+            errors.add(e.getMessage());
+        }
+        if (!ValidationUtil.isValidName(fullName)) {
+            errors.add("full name is invalid");
+        }
+        if (!ValidationUtil.isValidEmail(email)) {
+            errors.add("email is invalid");
+        }
+        String cleanPhone = ValidationUtil.clean(phone);
+        if (cleanPhone != null && !cleanPhone.isEmpty()
+                && !ValidationUtil.isValidPhone(cleanPhone)) {
+            errors.add("phone must be 10 digits");
+        }
+        if (!errors.isEmpty()) {
+            throw new InvalidUserDataException(String.join("; ", errors));
+        }
+
+        if (userDAO.findByUsername(username.trim()) != null) {
+            throw new InvalidUserDataException("username already exists");
+        }
+        for (User existing : userDAO.findAll()) {
+            if (existing.getEmail().equalsIgnoreCase(email.trim())) {
+                throw new InvalidUserDataException("email already registered");
+            }
+        }
+
+        User user = new User(ValidationUtil.clean(fullName),
+                cleanPhone == null || cleanPhone.isEmpty() ? null : cleanPhone,
+                ValidationUtil.clean(email));
+        user.setUsername(username.trim());
+        user.setPasswordHash(PasswordUtil.hash(rawPassword));
+        user.setRole(RoleType.CITIZEN);
+        user.setAccountStatus(AccountStatus.ACTIVE);
+
+        return userDAO.save(user);
     }
 }
