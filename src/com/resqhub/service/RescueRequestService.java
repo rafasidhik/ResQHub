@@ -155,7 +155,8 @@ public class RescueRequestService {
         return assignmentDAO.assignTeam(requestId, teamId, session.currentUserId());
     }
 
-    /** Progresses ASSIGNED -> EN_ROUTE -> ON_SITE in strict order. */
+    /** Progresses ASSIGNED -> EN_ROUTE -> ON_SITE; EN_ROUTE may be skipped
+     *  when a team arrives directly, but no move can go backwards. */
     public void progressAssignment(long assignmentId, AssignmentStatus target,
                                    String notes)
             throws UnauthorizedOperationException, InvalidRescueRequestException,
