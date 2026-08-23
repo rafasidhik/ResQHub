@@ -24,6 +24,7 @@ import com.resqhub.controller.DisasterController;
 import com.resqhub.exception.DataAccessException;
 import com.resqhub.model.Disaster;
 import com.resqhub.model.DisasterSeverity;
+import com.resqhub.model.DisasterStatus;
 import com.resqhub.model.DisasterType;
 import com.resqhub.model.RoleType;
 import com.resqhub.service.SessionManager;
@@ -113,8 +114,18 @@ public class DisasterPanel extends JPanel implements Refreshable {
         JButton deleteButton = new JButton("Delete selected");
         deleteButton.setEnabled(
                 SessionManager.getInstance().hasRole(RoleType.ADMIN));
+
+        controls.add(new JLabel("Set status:"));
+        JComboBox<DisasterStatus> statusCombo =
+                new JComboBox<>(new DisasterStatus[] {
+                        DisasterStatus.ACTIVE, DisasterStatus.CONTAINED,
+                        DisasterStatus.RESOLVED});
+        JButton applyStatusButton = new JButton("Apply");
+
         controls.add(searchButton);
         controls.add(showAllButton);
+        controls.add(statusCombo);
+        controls.add(applyStatusButton);
         controls.add(closeDisasterButton);
         controls.add(deleteButton);
         area.add(controls, BorderLayout.NORTH);
@@ -126,6 +137,8 @@ public class DisasterPanel extends JPanel implements Refreshable {
         });
         closeDisasterButton.addActionListener(event -> closeSelected());
         deleteButton.addActionListener(event -> deleteSelected());
+        applyStatusButton.addActionListener(event -> applyStatus(
+                (DisasterStatus) statusCombo.getSelectedItem()));
 
         // MouseAdapter demonstrates the adapter-class idiom: we only need one click event
         table.addMouseListener(new MouseAdapter() {
@@ -203,6 +216,22 @@ public class DisasterPanel extends JPanel implements Refreshable {
 
     @Override
     public void refreshData() {
+        refreshTable();
+    }
+
+    private void applyStatus(DisasterStatus newStatus) {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            ViewUtil.error(this, "Select a disaster in the table first");
+            return;
+        }
+        Long id = (Long) tableModel.getValueAt(viewRow, 0);
+        ActionResult result = controller.updateStatus(id, newStatus);
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
         refreshTable();
     }
 

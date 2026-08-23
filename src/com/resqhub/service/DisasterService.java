@@ -72,6 +72,33 @@ public class DisasterService {
         return disasterDAO.save(disaster);
     }
 
+    /** Forward-only lifecycle: REPORTED -> ACTIVE -> CONTAINED -> RESOLVED.
+     *  Use closeDisaster instead for an early resolution. */
+    public Disaster updateStatus(long disasterId, DisasterStatus newStatus)
+            throws UnauthorizedOperationException, InvalidDisasterDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER);
+        Disaster disaster = requireExisting(disasterId);
+        DisasterStatus current = disaster.getStatus();
+        boolean legal =
+                (current == DisasterStatus.REPORTED && newStatus == DisasterStatus.ACTIVE)
+             || (current == DisasterStatus.ACTIVE && newStatus == DisasterStatus.CONTAINED)
+             || (current == DisasterStatus.CONTAINED && newStatus == DisasterStatus.RESOLVED);
+
+        if (!legal) {
+            throw new InvalidDisasterDataException(
+                    "Cannot move disaster #" + disasterId + " from "
+                            + current.getLabel() + " to " + newStatus.getLabel());
+        }
+        disaster.setStatus(newStatus);
+        if (newStatus == DisasterStatus.RESOLVED
+                && disaster.getEndDateTime() == null) {
+            disaster.setEndDateTime(LocalDateTime.now());
+        }
+        return disasterDAO.save(disaster);
+    }
+
     private void validate(Disaster d) throws InvalidDisasterDataException {
         List<String> errors = new ArrayList<>();
         if (!ValidationUtil.requireNonBlank(d.getTitle()) || d.getTitle().length() < 5) {

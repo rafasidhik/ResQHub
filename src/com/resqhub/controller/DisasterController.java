@@ -72,6 +72,19 @@ public class DisasterController {
         }
     }
 
+    public ActionResult updateStatus(long disasterId, DisasterStatus status) {
+        try {
+            Disaster updated = disasterService.updateStatus(disasterId, status);
+            return ActionResult.success("Disaster #" + updated.getId()
+                    + " is now " + updated.getStatus().getLabel());
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error updating status: "
+                    + e.getMessage());
+        }
+    }
+
     public List<Disaster> getAllDisasters() throws DataAccessException {
         return disasterService.getAllDisasters();
     }

@@ -18,6 +18,7 @@ import com.resqhub.model.AssignmentStatus;
 import com.resqhub.model.AvailabilityStatus;
 import com.resqhub.model.Disaster;
 import com.resqhub.model.DisasterSeverity;
+import com.resqhub.model.DisasterStatus;
 import com.resqhub.model.DisasterType;
 import com.resqhub.model.EmergencyStatus;
 import com.resqhub.model.Gender;
@@ -132,6 +133,16 @@ public class Phase8Test {
                 nowText, null, "integration scenario flood");
         check("disaster registered via controller", disasterResult.isSuccess());
         Disaster disaster = disasterResult.getData();
+
+        check("disaster activation REPORTED -> ACTIVE works",
+                disasterController.updateStatus(disaster.getId(),
+                        DisasterStatus.ACTIVE).isSuccess());
+        check("skipping lifecycle steps is rejected (ACTIVE -> RESOLVED)",
+                !disasterController.updateStatus(disaster.getId(),
+                        DisasterStatus.RESOLVED).isSuccess());
+        check("backwards transition is rejected (ACTIVE -> REPORTED)",
+                !disasterController.updateStatus(disaster.getId(),
+                        DisasterStatus.REPORTED).isSuccess());
 
         VictimController victimController = new VictimController();
         ActionResult v1Result = victimController.registerVictim(
