@@ -78,6 +78,54 @@ public class RescueTeamService {
         return teamDAO.save(team);
     }
 
+    /** Loads a team for edit flows (null when the id is unknown). */
+    public RescueTeam getTeam(long teamId) throws DataAccessException {
+        return teamDAO.findById(teamId);
+    }
+
+    /** Full detail edit of an existing rescue team. */
+    public RescueTeam updateTeam(RescueTeam team)
+            throws UnauthorizedOperationException, InvalidTeamDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER);
+        if (team == null || team.getId() == null) {
+            throw new InvalidTeamDataException("Cannot update an unsaved team");
+        }
+
+        List<String> errors = new ArrayList<>();
+        if (!ValidationUtil.requireNonBlank(team.getTeamName())
+                || team.getTeamName().trim().length() < 3) {
+            errors.add("team name must be at least 3 characters");
+        }
+        if (team.getTeamType() == null) {
+            errors.add("team type must be selected");
+        }
+        if (!ValidationUtil.isValidName(team.getLeaderName())) {
+            errors.add("leader name is invalid");
+        }
+        if (!ValidationUtil.isValidPhone(team.getContactNumber())) {
+            errors.add("contact number must be 10 digits");
+        }
+        if (!ValidationUtil.isPositive(team.getMemberCount())) {
+            errors.add("member count must be at least 1");
+        }
+        if (!errors.isEmpty()) {
+            throw new InvalidTeamDataException(String.join("; ", errors));
+        }
+
+        for (RescueTeam other : teamDAO.findAll()) {
+            if (!other.getId().equals(team.getId())
+                    && other.getTeamName()
+                            .equalsIgnoreCase(team.getTeamName().trim())) {
+                throw new InvalidTeamDataException(
+                        "team name already registered: "
+                                + team.getTeamName().trim());
+            }
+        }
+        return teamDAO.save(team);
+    }
+
     private RescueTeam requireExisting(long teamId)
             throws InvalidTeamDataException, DataAccessException {
         RescueTeam team = teamDAO.findById(teamId);

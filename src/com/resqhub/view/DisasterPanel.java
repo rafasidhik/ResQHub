@@ -50,6 +50,9 @@ public class DisasterPanel extends JPanel implements Refreshable {
             ViewUtil.readOnlyModel(DisasterController.tableHeaders());
     private final JTable table = new JTable(tableModel);
 
+    private Long editingId = null;
+    private final JButton saveChangesButton = new JButton("Save changes");
+
     public DisasterPanel() {
         setLayout(new BorderLayout(10, 10));
         setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -110,7 +113,10 @@ public class DisasterPanel extends JPanel implements Refreshable {
         controls.add(searchField);
         JButton searchButton = new JButton("Search");
         JButton showAllButton = new JButton("Show all");
+        JButton editButton = new JButton("Edit selected");
+        saveChangesButton.setEnabled(false);
         JButton closeDisasterButton = new JButton("Close selected disaster");
+        JButton exportButton = new JButton("Export CSV");
         JButton deleteButton = new JButton("Delete selected");
         deleteButton.setEnabled(
                 SessionManager.getInstance().hasRole(RoleType.ADMIN));
@@ -126,7 +132,10 @@ public class DisasterPanel extends JPanel implements Refreshable {
         controls.add(showAllButton);
         controls.add(statusCombo);
         controls.add(applyStatusButton);
+        controls.add(editButton);
+        controls.add(saveChangesButton);
         controls.add(closeDisasterButton);
+        controls.add(exportButton);
         controls.add(deleteButton);
         area.add(controls, BorderLayout.NORTH);
 
@@ -139,6 +148,10 @@ public class DisasterPanel extends JPanel implements Refreshable {
         deleteButton.addActionListener(event -> deleteSelected());
         applyStatusButton.addActionListener(event -> applyStatus(
                 (DisasterStatus) statusCombo.getSelectedItem()));
+        editButton.addActionListener(event -> editSelected());
+        saveChangesButton.addActionListener(event -> saveChanges());
+        exportButton.addActionListener(event ->
+                ViewUtil.exportTableToCsv(this, table, "disasters"));
 
         // MouseAdapter demonstrates the adapter-class idiom: we only need one click event
         table.addMouseListener(new MouseAdapter() {
@@ -217,6 +230,46 @@ public class DisasterPanel extends JPanel implements Refreshable {
     @Override
     public void refreshData() {
         refreshTable();
+    }
+
+    private void editSelected() {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            ViewUtil.error(this, "Select a disaster in the table first");
+            return;
+        }
+        fillFormFromSelection();
+        editingId = (Long) tableModel.getValueAt(viewRow, 0);
+        saveChangesButton.setEnabled(true);
+        ViewUtil.info(this, "Editing disaster #" + editingId
+                + " - change the form and press Save changes");
+    }
+
+    private void saveChanges() {
+        if (editingId == null) {
+            return;
+        }
+        ActionResult result = controller.updateDisaster(editingId,
+                titleField.getText(),
+                (DisasterType) typeCombo.getSelectedItem(),
+                (DisasterSeverity) severityCombo.getSelectedItem(),
+                locationField.getText(),
+                populationField.getText(),
+                startField.getText(),
+                endField.getText(),
+                descriptionArea.getText());
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+            clearEditMode();
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        refreshTable();
+    }
+
+    private void clearEditMode() {
+        editingId = null;
+        saveChangesButton.setEnabled(false);
     }
 
     private void applyStatus(DisasterStatus newStatus) {

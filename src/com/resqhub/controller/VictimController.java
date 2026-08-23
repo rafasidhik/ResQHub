@@ -66,6 +66,39 @@ public class VictimController {
         }
     }
 
+    public ActionResult updateVictim(long victimId, String fullName,
+                                     String ageText, Gender gender,
+                                     String phone,
+                                     EmergencyStatus emergencyStatus,
+                                     String medicalCondition,
+                                     String familyInfo, String currentLocation,
+                                     Long disasterId) {
+        try {
+            Victim existing = victimService.getVictim(victimId);
+            existing.setFullName(fullName);
+            existing.setAge(InputParser.parseInt(ageText, "Age"));
+            existing.setGender(gender);
+            String cleanPhone = phone == null ? null : phone.trim();
+            existing.setPhone(cleanPhone == null || cleanPhone.isEmpty()
+                    ? null : cleanPhone);
+            existing.setEmergencyStatus(emergencyStatus);
+            existing.setMedicalCondition(medicalCondition);
+            existing.setFamilyInfo(familyInfo);
+            existing.setCurrentLocation(currentLocation);
+            existing.setDisasterId(disasterId);
+
+            Victim saved = victimService.updateVictim(existing);
+            return ActionResult.success("Victim #" + saved.getId()
+                    + " updated");
+        } catch (NumberFormatException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error: " + e.getMessage());
+        }
+    }
+
     public ActionResult deleteVictim(long victimId) {
         try {
             victimService.deleteVictim(victimId);

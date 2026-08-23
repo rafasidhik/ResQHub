@@ -11,6 +11,7 @@ import com.resqhub.controller.AuthController;
 import com.resqhub.controller.DisasterController;
 import com.resqhub.controller.RescueRequestController;
 import com.resqhub.controller.RescueTeamController;
+import com.resqhub.controller.StatsController;
 import com.resqhub.controller.UserController;
 import com.resqhub.controller.VictimController;
 import com.resqhub.exception.DataAccessException;
@@ -24,6 +25,7 @@ import com.resqhub.model.EmergencyStatus;
 import com.resqhub.model.Gender;
 import com.resqhub.model.PriorityLevel;
 import com.resqhub.model.RequestStatus;
+import com.resqhub.model.RescueAssignment;
 import com.resqhub.model.RescueRequest;
 import com.resqhub.model.RescueTeam;
 import com.resqhub.model.RoleType;
@@ -320,6 +322,151 @@ public class Phase8Test {
         long adminId = SessionManager.getInstance().getCurrentUser().getId();
         check("admin cannot delete own active account",
                 !userController.deleteUser(adminId).isSuccess());
+
+        System.out.println("--- Section H: edit, abort, history, stats ------------");
+
+        ActionResult requestCResult = requestController.submitRequest(
+                disaster.getId(), null,
+                "ZZTEST Requester C", "9999944444", "ZZTEST Alley C",
+                "1", "0", "0", false, false, false, "insulin needed");
+        check("section H scenario request submitted",
+                requestCResult.isSuccess());
+        long requestCid =
+                ((RescueRequest) requestCResult.getData()).getId();
+
+        check("admin edits a disaster",
+                disasterController.updateDisaster(disaster.getId(),
+                        "ZZTEST Flood 2026 EDITED", DisasterType.FLOOD,
+                        DisasterSeverity.LOW, "ZZTEST Zone 9", "12000",
+                        LocalDateTime.now().format(InputParser.DATE_TIME_FORMAT),
+                        null, "edited description").isSuccess());
+        boolean disasterEdited = false;
+        for (Disaster candidate : disasterController.getAllDisasters()) {
+            if (candidate.getId().equals(disaster.getId())
+                    && candidate.getSeverity() == DisasterSeverity.LOW
+                    && candidate.getAffectedPopulation() == 12000
+                    && candidate.getTitle().endsWith("EDITED")) {
+                disasterEdited = true;
+            }
+        }
+        check("edited disaster fields persisted", disasterEdited);
+
+        Victim victimTwo = (Victim) v2Result.getData();
+        check("staff edits a victim",
+                victimController.updateVictim(victimTwo.getId(),
+                        "ZZTEST V Two Edited", "71", Gender.MALE,
+                        "9999977777", EmergencyStatus.SAFE, null, null,
+                        "ZZTEST Lane 2", disaster.getId()).isSuccess());
+        boolean victimEdited = false;
+        for (Victim candidate : victimController.getAllVictims()) {
+            if (candidate.getId().equals(victimTwo.getId())
+                    && candidate.getFullName().endsWith("Edited")
+                    && candidate.getEmergencyStatus()
+                            == EmergencyStatus.SAFE) {
+                victimEdited = true;
+            }
+        }
+        check("edited victim fields persisted", victimEdited);
+
+        check("staff edits a team",
+                teamController.updateTeam(team.getId(), "ZZTEST Alpha Team",
+                        TeamType.FIRE_RESCUE, "ZZTEST Leader", "9999900001",
+                        "9", "swimming, rope, diving", "boat, cutter",
+                        "ZZTEST Base").isSuccess());
+        boolean teamEdited = false;
+        for (RescueTeam candidate : teamController.getAllTeams()) {
+            if (candidate.getId().equals(team.getId())
+                    && candidate.getMemberCount() == 9) {
+                teamEdited = true;
+            }
+        }
+        check("edited team fields persisted", teamEdited);
+
+        check("PENDING request edited with priority recompute",
+                requestController.updateRequest(requestCid,
+                        disaster.getId(), null,
+                        "ZZTEST Requester C", "9999944444", "ZZTEST Alley C",
+                        "4", "2", "2", true, true, true,
+                        "situation escalated").isSuccess());
+        boolean bumped = false;
+        for (RescueRequest candidate
+                : requestController.getByStatus(RequestStatus.PENDING)) {
+            if (candidate.getId().equals(requestCid)
+                    && candidate.getPriority() != PriorityLevel.LOW) {
+                bumped = true;
+            }
+        }
+        check("edited request left the LOW band", bumped);
+        check("non-PENDING request edit is rejected",
+                !requestController.updateRequest(requestA.getId(),
+                        disaster.getId(), null, "X", "9999911111", "Y",
+                        "1", "0", "0", false, false, false, "")
+                        .isSuccess());
+
+        check("team reassigned to edited request",
+                requestController.assignTeam(requestCid, team.getId())
+                        .isSuccess());
+        long assignmentTwo =
+                requestController.getLatestAssignmentId(requestCid);
+        check("abort releases the team and requeues the request",
+                requestController.abortAssignment(assignmentTwo,
+                        "flood worsened, pulled back").isSuccess());
+        boolean abortedTeamFree = false;
+        for (RescueTeam candidate : teamController.getAllTeams()) {
+            if (candidate.getId().equals(team.getId())
+                    && candidate.getAvailabilityStatus()
+                            == AvailabilityStatus.AVAILABLE) {
+                abortedTeamFree = true;
+            }
+        }
+        check("aborted team is AVAILABLE again", abortedTeamFree);
+        check("aborted request returned to PENDING queue",
+                indexOfId(requestController.getPendingQueue(), requestCid)
+                        >= 0);
+        boolean abortNotesStored = false;
+        for (RescueAssignment record
+                : requestController.getAssignmentHistory(requestCid)) {
+            if (record.getNotes() != null
+                    && record.getNotes().contains("flood worsened")) {
+                abortNotesStored = true;
+            }
+        }
+        check("abort reason stored in assignment history", abortNotesStored);
+        check("assignment history readable for completed request too",
+                !requestController.getAssignmentHistory(requestA.getId())
+                        .isEmpty());
+
+        ActionResult summary = new StatsController().getSummary();
+        Object statsText = summary.getData();
+        check("stats summary produced for staff",
+                summary.isSuccess() && statsText != null
+                        && statsText.toString()
+                                .contains("PENDING RESCUE REQUESTS"));
+
+        ActionResult resettableResult = userController.registerUser(
+                "zztest_resetpw", "Oldpw@123", "ZZTEST Reset",
+                "zztest_resetpw@resqhub.local", null, RoleType.VOLUNTEER);
+        com.resqhub.model.User resettable =
+                (com.resqhub.model.User) resettableResult.getData();
+        check("admin updates user profile and role",
+                userController.updateUser(resettable.getId(),
+                        "ZZTEST Reset Edited", "zztest_resetpw@resqhub.local",
+                        "9999988888", RoleType.CAMP_MANAGER).isSuccess());
+        check("admin resets a user password",
+                userController.resetPassword(resettable.getId(),
+                        "Newpw@456").isSuccess());
+        auth.logout();
+        check("login works with the reset password",
+                auth.login("zztest_resetpw", "Newpw@456").isSuccess());
+        check("old password rejected after reset",
+                !auth.login("zztest_resetpw", "Oldpw@123").isSuccess());
+        check("role change persisted after update",
+                SessionManager.getInstance().getCurrentUser().getRole()
+                        == RoleType.CAMP_MANAGER);
+
+        auth.logout();
+        check("admin session restored after Section H",
+                auth.login("admin", "Admin@123").isSuccess());
 
         System.out.println("--- Section E: citizen role restrictions --------------");
 

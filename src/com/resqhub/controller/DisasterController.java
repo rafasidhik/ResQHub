@@ -72,6 +72,44 @@ public class DisasterController {
         }
     }
 
+    public ActionResult updateDisaster(long disasterId, String title,
+                                       DisasterType type,
+                                       DisasterSeverity severity,
+                                       String location, String populationText,
+                                       String startText, String endText,
+                                       String description) {
+        try {
+            Disaster existing = disasterService.requireExisting(disasterId);
+            int population = InputParser.parseInt(populationText,
+                    "Affected population");
+            LocalDateTime start = LocalDateTime.parse(startText == null ? ""
+                    : startText.trim(), InputParser.DATE_TIME_FORMAT);
+            LocalDateTime end = InputParser.parseOptionalDateTime(endText);
+
+            existing.setTitle(title);
+            existing.setDisasterType(type);
+            existing.setSeverity(severity);
+            existing.setLocation(location);
+            existing.setAffectedPopulation(population);
+            existing.setStartDateTime(start);
+            existing.setEndDateTime(end);
+            existing.setDescription(description);
+
+            Disaster saved = disasterService.updateDisaster(existing);
+            return ActionResult.success("Disaster #" + saved.getId()
+                    + " updated");
+        } catch (java.time.format.DateTimeParseException e) {
+            return ActionResult.failure(
+                    "Dates must use the format yyyy-MM-dd HH:mm");
+        } catch (NumberFormatException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error: " + e.getMessage());
+        }
+    }
+
     public ActionResult updateStatus(long disasterId, DisasterStatus status) {
         try {
             Disaster updated = disasterService.updateStatus(disasterId, status);

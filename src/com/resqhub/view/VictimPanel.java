@@ -65,6 +65,9 @@ public class VictimPanel extends JPanel implements Refreshable {
         }
     }
 
+    private Long editingId = null;
+    private final JButton saveChangesButton = new JButton("Save changes");
+
     public VictimPanel(boolean operational) {
         this.operational = operational;
         setLayout(new BorderLayout(10, 10));
@@ -144,6 +147,13 @@ public class VictimPanel extends JPanel implements Refreshable {
         deleteButton.setEnabled(
                 SessionManager.getInstance().hasRole(RoleType.ADMIN));
         controls.add(deleteButton);
+
+        JButton editButton = new JButton("Edit selected");
+        saveChangesButton.setEnabled(false);
+        JButton exportButton = new JButton("Export CSV");
+        controls.add(editButton);
+        controls.add(saveChangesButton);
+        controls.add(exportButton);
         area.add(controls, BorderLayout.NORTH);
 
         applyButton.addActionListener(event -> {
@@ -164,6 +174,10 @@ public class VictimPanel extends JPanel implements Refreshable {
         });
 
         deleteButton.addActionListener(event -> deleteSelected());
+        editButton.addActionListener(event -> editSelected());
+        saveChangesButton.addActionListener(event -> saveChanges());
+        exportButton.addActionListener(event ->
+                ViewUtil.exportTableToCsv(this, table, "victims"));
 
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -253,6 +267,82 @@ public class VictimPanel extends JPanel implements Refreshable {
     public void refreshData() {
         refreshDisasterCombo();
         refreshTable();
+    }
+
+    private void editSelected() {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            ViewUtil.error(this, "Select a victim in the table first");
+            return;
+        }
+        Long id = (Long) tableModel.getValueAt(viewRow, 0);
+        try {
+            for (Victim victim : controller.getAllVictims()) {
+                if (victim.getId().equals(id)) {
+                    loadVictimIntoForm(victim);
+                }
+            }
+        } catch (DataAccessException e) {
+            ViewUtil.error(this, e.getMessage());
+            return;
+        }
+        editingId = id;
+        saveChangesButton.setEnabled(true);
+        ViewUtil.info(this, "Editing victim #" + id
+                + " - change the form and press Save changes");
+    }
+
+    private void loadVictimIntoForm(Victim victim) {
+        nameField.setText(victim.getFullName());
+        ageField.setText(String.valueOf(victim.getAge()));
+        Gender gender = victim.getGender();
+        maleRadio.setSelected(gender == Gender.MALE);
+        femaleRadio.setSelected(gender == Gender.FEMALE);
+        otherRadio.setSelected(gender == Gender.OTHER);
+        phoneField.setText(victim.getPhone() == null ? "" : victim.getPhone());
+        statusCombo.setSelectedItem(victim.getEmergencyStatus());
+        medicalArea.setText(victim.getMedicalCondition());
+        familyArea.setText(victim.getFamilyInfo());
+        locationField.setText(victim.getCurrentLocation());
+        for (int i = 0; i < disasterCombo.getItemCount(); i++) {
+            if (disasterCombo.getItemAt(i).id()
+                    .equals(victim.getDisasterId())) {
+                disasterCombo.setSelectedIndex(i);
+            }
+        }
+    }
+
+    private void saveChanges() {
+        if (editingId == null) {
+            return;
+        }
+        DisasterOption selected = (DisasterOption) disasterCombo.getSelectedItem();
+        Gender gender = maleRadio.isSelected() ? Gender.MALE
+                : femaleRadio.isSelected() ? Gender.FEMALE
+                : otherRadio.isSelected() ? Gender.OTHER : null;
+
+        ActionResult result = controller.updateVictim(editingId,
+                nameField.getText(),
+                ageField.getText(),
+                gender,
+                phoneField.getText(),
+                (EmergencyStatus) statusCombo.getSelectedItem(),
+                medicalArea.getText(),
+                familyArea.getText(),
+                locationField.getText(),
+                selected == null ? null : selected.id());
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+            clearEditMode();
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        refreshTable();
+    }
+
+    private void clearEditMode() {
+        editingId = null;
+        saveChangesButton.setEnabled(false);
     }
 
     private void deleteSelected() {

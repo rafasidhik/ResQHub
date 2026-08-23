@@ -105,6 +105,13 @@ public class UserPanel extends JPanel implements Refreshable {
 
         JButton refreshButton = new JButton("Refresh");
         controls.add(refreshButton);
+
+        JButton editButton = new JButton("Update selected");
+        JButton resetButton = new JButton("Reset password...");
+        JButton exportButton = new JButton("Export CSV");
+        controls.add(editButton);
+        controls.add(resetButton);
+        controls.add(exportButton);
         area.add(controls, BorderLayout.NORTH);
 
         unlockButton.addActionListener(event -> {
@@ -128,8 +135,73 @@ public class UserPanel extends JPanel implements Refreshable {
             refreshTable();
         });
         refreshButton.addActionListener(event -> refreshTable());
+        editButton.addActionListener(event -> updateSelected());
+        resetButton.addActionListener(event -> resetPassword());
+        exportButton.addActionListener(event ->
+                ViewUtil.exportTableToCsv(this, table, "users"));
 
         return area;
+    }
+
+    /** Loads the selected user's profile and applies edits via dialogs. */
+    private void updateSelected() {
+        Long id = selectedUserId();
+        if (id == null) {
+            return;
+        }
+        try {
+            User target = null;
+            for (User candidate : controller.listUsers()) {
+                if (candidate.getId().equals(id)) {
+                    target = candidate;
+                }
+            }
+            if (target == null) {
+                ViewUtil.error(this, "User #" + id + " not found");
+                return;
+            }
+
+            String fullName = JOptionPane.showInputDialog(this,
+                    "Full name:", target.getFullName());
+            if (fullName == null) {
+                return;
+            }
+            String email = JOptionPane.showInputDialog(this,
+                    "Email:", target.getEmail());
+            if (email == null) {
+                return;
+            }
+            String phone = JOptionPane.showInputDialog(this,
+                    "Phone (optional):", target.getPhone());
+            if (phone == null) {
+                return;
+            }
+            Object roleChoice = JOptionPane.showInputDialog(this,
+                    "Role:", "Update user #" + id,
+                    JOptionPane.PLAIN_MESSAGE, null, RoleType.values(),
+                    target.getRole());
+            if (roleChoice == null) {
+                return;
+            }
+            show(controller.updateUser(id, fullName, email, phone,
+                    (RoleType) roleChoice));
+        } catch (DataAccessException e) {
+            ViewUtil.error(this, e.getMessage());
+        }
+        refreshTable();
+    }
+
+    private void resetPassword() {
+        Long id = selectedUserId();
+        if (id == null) {
+            return;
+        }
+        String newPassword = JOptionPane.showInputDialog(this,
+                "New password for user #" + id + ":");
+        if (newPassword == null || newPassword.isEmpty()) {
+            return;
+        }
+        show(controller.resetPassword(id, newPassword));
     }
 
     private Long selectedUserId() {

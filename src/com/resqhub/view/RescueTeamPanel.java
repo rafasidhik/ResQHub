@@ -43,6 +43,9 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
             ViewUtil.readOnlyModel(RescueTeamController.tableHeaders());
     private final JTable table = new JTable(tableModel);
 
+    private Long editingId = null;
+    private final JButton saveChangesButton = new JButton("Save changes");
+
     public RescueTeamPanel() {
         setLayout(new BorderLayout(10, 10));
         setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -101,6 +104,13 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
         deleteButton.setEnabled(
                 SessionManager.getInstance().hasRole(RoleType.ADMIN));
         controls.add(deleteButton);
+
+        JButton editButton = new JButton("Edit selected");
+        saveChangesButton.setEnabled(false);
+        JButton exportButton = new JButton("Export CSV");
+        controls.add(editButton);
+        controls.add(saveChangesButton);
+        controls.add(exportButton);
         area.add(controls, BorderLayout.NORTH);
 
         applyButton.addActionListener(event -> {
@@ -121,8 +131,66 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
         });
         refreshButton.addActionListener(event -> refreshTable());
         deleteButton.addActionListener(event -> deleteSelected());
+        editButton.addActionListener(event -> editSelected());
+        saveChangesButton.addActionListener(event -> saveChanges());
+        exportButton.addActionListener(event ->
+                ViewUtil.exportTableToCsv(this, table, "rescue_teams"));
 
         return area;
+    }
+
+    private void editSelected() {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            ViewUtil.error(this, "Select a team in the table first");
+            return;
+        }
+        Long id = (Long) tableModel.getValueAt(viewRow, 0);
+        try {
+            for (RescueTeam candidate : controller.getAllTeams()) {
+                if (candidate.getId().equals(id)) {
+                    nameField.setText(candidate.getTeamName());
+                    typeCombo.setSelectedItem(candidate.getTeamType());
+                    leaderField.setText(candidate.getLeaderName());
+                    contactField.setText(candidate.getContactNumber());
+                    memberCountField.setText(
+                            String.valueOf(candidate.getMemberCount()));
+                    skillsField.setText(candidate.getSkills());
+                    equipmentField.setText(candidate.getEquipment());
+                    baseField.setText(candidate.getBaseLocation());
+                }
+            }
+        } catch (DataAccessException e) {
+            ViewUtil.error(this, e.getMessage());
+            return;
+        }
+        editingId = id;
+        saveChangesButton.setEnabled(true);
+        ViewUtil.info(this, "Editing team #" + id
+                + " - change the form and press Save changes");
+    }
+
+    private void saveChanges() {
+        if (editingId == null) {
+            return;
+        }
+        ActionResult result = controller.updateTeam(editingId,
+                nameField.getText(),
+                (TeamType) typeCombo.getSelectedItem(),
+                leaderField.getText(),
+                contactField.getText(),
+                memberCountField.getText(),
+                skillsField.getText(),
+                equipmentField.getText(),
+                baseField.getText());
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+            editingId = null;
+            saveChangesButton.setEnabled(false);
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        refreshTable();
     }
 
     @Override

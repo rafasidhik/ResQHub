@@ -121,6 +121,108 @@ public class RescueRequestService {
         return priority;
     }
 
+    /** Edits a request while it is still PENDING; priority is recomputed. */
+    public RescueRequest updateRequest(long requestId, Long disasterId,
+                                       Long victimId, String requesterName,
+                                       String contactNumber, String location,
+                                       int peopleCount, int childrenCount,
+                                       int elderlyCount,
+                                       boolean lifeThreatening,
+                                       boolean medicalEmergency,
+                                       boolean trappedUnderDebris,
+                                       String requiredAssistance)
+            throws UnauthorizedOperationException, InvalidRescueRequestException,
+            OperationNotAllowedException, DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER);
+        RescueRequest existing = requireExisting(requestId);
+        if (existing.getStatus() != RequestStatus.PENDING) {
+            throw new OperationNotAllowedException("Request #" + requestId
+                    + " is " + existing.getStatus().getLabel()
+                    + " - only PENDING requests can be edited");
+        }
+
+        List<String> errors = new ArrayList<>();
+        if (!ValidationUtil.isValidName(requesterName)) {
+            errors.add("requester name is invalid");
+        }
+        if (!ValidationUtil.isValidPhone(contactNumber)) {
+            errors.add("contact number must be 10 digits");
+        }
+        if (!ValidationUtil.requireNonBlank(location)) {
+            errors.add("location of the emergency is required");
+        }
+        if (!ValidationUtil.isPositive(peopleCount)) {
+            errors.add("people count must be at least 1");
+        }
+        if (!ValidationUtil.isNonNegative(childrenCount)
+                || !ValidationUtil.isNonNegative(elderlyCount)) {
+            errors.add("children and elderly counts cannot be negative");
+        }
+        if (ValidationUtil.isNonNegative(childrenCount)
+                && ValidationUtil.isNonNegative(elderlyCount)
+                && childrenCount + elderlyCount > peopleCount) {
+            errors.add("children + elderly cannot exceed total people");
+        }
+        if (disasterId == null) {
+            errors.add("the related disaster must be selected");
+        }
+        if (!errors.isEmpty()) {
+            throw new InvalidRescueRequestException(String.join("; ", errors));
+        }
+        Disaster disaster = requireDisaster(disasterId);
+
+        existing.setDisasterId(disasterId);
+        existing.setVictimId(victimId);
+        existing.setRequesterName(ValidationUtil.clean(requesterName));
+        existing.setContactNumber(contactNumber.trim());
+        existing.setLocation(ValidationUtil.clean(location));
+        existing.setPeopleCount(peopleCount);
+        existing.setChildrenCount(childrenCount);
+        existing.setElderlyCount(elderlyCount);
+        existing.setLifeThreatening(lifeThreatening);
+        existing.setMedicalEmergency(medicalEmergency);
+        existing.setTrappedUnderDebris(trappedUnderDebris);
+        existing.setRequiredAssistance(ValidationUtil.clean(requiredAssistance));
+        existing.setPriority(engine.evaluate(existing, disaster));
+
+        return requestDAO.save(existing);
+    }
+
+    /** Every request regardless of status - powers the history view. */
+    public List<RescueRequest> getAllRequests() throws DataAccessException {
+        return requestDAO.findAll();
+    }
+
+    /**
+     * Aborts the live assignment of a request: assignment -> ABORTED,
+     * team released, request returns to PENDING for reassignment.
+     */
+    public void abortAssignment(long assignmentId, String notes)
+            throws UnauthorizedOperationException, InvalidRescueRequestException,
+            OperationNotAllowedException, DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER);
+        RescueAssignment assignment = requireAssignment(assignmentId);
+        AssignmentStatus current = assignment.getAssignmentStatus();
+        if (current == AssignmentStatus.COMPLETED
+                || current == AssignmentStatus.ABORTED) {
+            throw new OperationNotAllowedException("Assignment #"
+                    + assignmentId + " is already " + current.getLabel());
+        }
+        assignmentDAO.abortAssignment(assignmentId, notes);
+    }
+
+    /** Assignment history rows for one request (newest first). */
+    public List<RescueAssignment> getAssignmentsForRequest(long requestId)
+            throws UnauthorizedOperationException, InvalidRescueRequestException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER);
+        requireExisting(requestId);
+        return assignmentDAO.findByRequest(requestId);
+    }
+
     /**
      * Assigns an available rescue team to a pending request using the
      * transactional DAO method (request + team + assignment update atomically).

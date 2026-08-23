@@ -109,6 +109,63 @@ public class UserService {
         userDAO.save(user);
     }
 
+    /** ADMIN edit of an account profile; username stays immutable. */
+    public User updateUser(long userId, String fullName, String email,
+                           String phone, RoleType role)
+            throws UnauthorizedOperationException, InvalidUserDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN);
+        User user = requireExisting(userId);
+
+        List<String> errors = new ArrayList<>();
+        if (!ValidationUtil.isValidName(fullName)) {
+            errors.add("full name is invalid");
+        }
+        if (!ValidationUtil.isValidEmail(email)) {
+            errors.add("email is invalid");
+        }
+        String cleanPhone = ValidationUtil.clean(phone);
+        if (cleanPhone != null && !cleanPhone.isEmpty()
+                && !ValidationUtil.isValidPhone(cleanPhone)) {
+            errors.add("phone must be 10 digits");
+        }
+        if (role == null) {
+            errors.add("a role must be selected");
+        }
+        if (!errors.isEmpty()) {
+            throw new InvalidUserDataException(String.join("; ", errors));
+        }
+
+        String cleanedEmail = ValidationUtil.clean(email);
+        for (User other : userDAO.findAll()) {
+            if (!other.getId().equals(user.getId())
+                    && other.getEmail().equalsIgnoreCase(cleanedEmail)) {
+                throw new InvalidUserDataException(
+                        "email already registered to another account");
+            }
+        }
+
+        user.setFullName(ValidationUtil.clean(fullName));
+        user.setEmail(cleanedEmail);
+        user.setPhone(cleanPhone == null || cleanPhone.isEmpty()
+                ? null : cleanPhone);
+        user.setRole(role);
+        return userDAO.save(user);
+    }
+
+    /** ADMIN reset that skips the old-password check (forgot-password flow). */
+    public void resetPassword(long userId, String newPassword)
+            throws UnauthorizedOperationException, InvalidUserDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN);
+        User user = requireExisting(userId);
+        validatePasswordPolicy(newPassword);
+        user.setPasswordHash(PasswordUtil.hash(newPassword));
+        userDAO.save(user);
+    }
+
     /** ADMIN-only hard delete. Child references use ON DELETE SET NULL,
      *  so any account can be removed - except your own active one. */
     public void deleteUser(long userId)

@@ -78,6 +78,11 @@ public class VictimService {
         return victimDAO.save(victim);
     }
 
+    /** Loads a victim for edit flows (null when the id is unknown). */
+    public Victim getVictim(long victimId) throws DataAccessException {
+        return victimDAO.findById(victimId);
+    }
+
     /** Updates the emergency triage state of a victim. */
     public Victim updateEmergencyStatus(long victimId, EmergencyStatus status)
             throws UnauthorizedOperationException, InvalidVictimDataException,
@@ -87,6 +92,49 @@ public class VictimService {
                 RoleType.RESCUE_OFFICER);
         Victim victim = requireExisting(victimId);
         victim.setEmergencyStatus(status);
+        return victimDAO.save(victim);
+    }
+
+    /** Full detail edit of an existing victim record. */
+    public Victim updateVictim(Victim victim)
+            throws UnauthorizedOperationException, InvalidVictimDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.CAMP_MANAGER,
+                RoleType.RESCUE_OFFICER);
+        if (victim == null || victim.getId() == null) {
+            throw new InvalidVictimDataException(
+                    "Cannot update an unsaved victim");
+        }
+
+        List<String> errors = new ArrayList<>();
+        if (!ValidationUtil.isValidName(victim.getFullName())) {
+            errors.add("victim name is invalid");
+        }
+        if (!ValidationUtil.isValidAge(victim.getAge())) {
+            errors.add("age must be between 0 and 130");
+        }
+        if (victim.getGender() == null) {
+            errors.add("gender must be selected");
+        }
+        if (!ValidationUtil.requireNonBlank(victim.getCurrentLocation())) {
+            errors.add("current location is required");
+        }
+        String cleanPhone = ValidationUtil.clean(victim.getPhone());
+        if (cleanPhone != null && !cleanPhone.isEmpty()
+                && !ValidationUtil.isValidPhone(cleanPhone)) {
+            errors.add("phone must be 10 digits");
+        }
+        if (victim.getDisasterId() == null) {
+            errors.add("the disaster must be selected");
+        }
+        if (!errors.isEmpty()) {
+            throw new InvalidVictimDataException(String.join("; ", errors));
+        }
+        if (disasterDAO.findById(victim.getDisasterId()) == null) {
+            throw new InvalidVictimDataException("No disaster with id "
+                    + victim.getDisasterId());
+        }
         return victimDAO.save(victim);
     }
 

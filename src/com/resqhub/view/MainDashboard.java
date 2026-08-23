@@ -53,6 +53,19 @@ public class MainDashboard extends JFrame {
             }
         });
 
+        // Auto-refresh: every 30s the visible module reloads its data.
+        new javax.swing.Timer(30_000, event -> {
+            java.awt.Component visible = null;
+            for (java.awt.Component component : cardHost.getComponents()) {
+                if (component.isVisible()) {
+                    visible = component;
+                }
+            }
+            if (visible instanceof Refreshable) {
+                ((Refreshable) visible).refreshData();
+            }
+        }).start();
+
         setSize(1024, 680);
         setLocationRelativeTo(null);
     }
@@ -96,6 +109,10 @@ public class MainDashboard extends JFrame {
 
         JMenu modulesMenu = new JMenu("Modules");
 
+        if (has(RoleType.ADMIN, RoleType.RESCUE_OFFICER, RoleType.CAMP_MANAGER)) {
+            modulesMenu.add(item("Overview", () ->
+                    openModule("overview", new StatsPanel())));
+        }
         if (has(RoleType.ADMIN, RoleType.RESCUE_OFFICER)) {
             modulesMenu.add(item("Disasters", () ->
                     openModule("disasters", new DisasterPanel())));

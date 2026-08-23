@@ -50,6 +50,38 @@ public class RescueTeamController {
         }
     }
 
+    public ActionResult updateTeam(long teamId, String teamName,
+                                   TeamType teamType, String leaderName,
+                                   String contactNumber,
+                                   String memberCountText, String skills,
+                                   String equipment, String baseLocation) {
+        try {
+            RescueTeam existing = teamService.getTeam(teamId);
+            if (existing == null) {
+                return ActionResult.failure("No team with id " + teamId);
+            }
+            int memberCount = InputParser.parseInt(memberCountText,
+                    "Member count");
+            existing.setTeamName(teamName);
+            existing.setTeamType(teamType);
+            existing.setLeaderName(leaderName);
+            existing.setContactNumber(contactNumber);
+            existing.setMemberCount(memberCount);
+            existing.setSkills(skills);
+            existing.setEquipment(equipment);
+            existing.setBaseLocation(baseLocation);
+
+            RescueTeam saved = teamService.updateTeam(existing);
+            return ActionResult.success("Team #" + saved.getId() + " updated");
+        } catch (NumberFormatException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error: " + e.getMessage());
+        }
+    }
+
     public ActionResult deleteTeam(long teamId) {
         try {
             teamService.deleteTeam(teamId);

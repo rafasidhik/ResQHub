@@ -100,6 +100,65 @@ public class RescueRequestController {
         }
     }
 
+    public ActionResult updateRequest(long requestId, Long disasterId,
+                                      Long victimId, String requesterName,
+                                      String contactNumber, String location,
+                                      String peopleText, String childrenText,
+                                      String elderlyText,
+                                      boolean lifeThreatening,
+                                      boolean medicalEmergency,
+                                      boolean trappedUnderDebris,
+                                      String requiredAssistance) {
+        try {
+            int people = InputParser.parseInt(peopleText, "People count");
+            int children = childrenText == null || childrenText.trim().isEmpty()
+                    ? 0 : InputParser.parseInt(childrenText, "Children count");
+            int elderly = elderlyText == null || elderlyText.trim().isEmpty()
+                    ? 0 : InputParser.parseInt(elderlyText, "Elderly count");
+
+            requestService.updateRequest(requestId, disasterId, victimId,
+                    requesterName, contactNumber, location, people, children,
+                    elderly, lifeThreatening, medicalEmergency,
+                    trappedUnderDebris, requiredAssistance);
+            return ActionResult.success("Request #" + requestId + " updated");
+        } catch (NumberFormatException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error: " + e.getMessage());
+        }
+    }
+
+    public ActionResult abortAssignment(long assignmentId, String notes) {
+        try {
+            requestService.abortAssignment(assignmentId, notes);
+            return ActionResult.success("Assignment #" + assignmentId
+                    + " aborted. Team released and request back to PENDING.");
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error: " + e.getMessage());
+        }
+    }
+
+    /** All requests regardless of status (history browsing). */
+    public List<RescueRequest> getAllRequests() throws DataAccessException {
+        return requestService.getAllRequests();
+    }
+
+    /** Assignment history of one request; empty when never assigned. */
+    public List<com.resqhub.model.RescueAssignment> getAssignmentHistory(
+            long requestId) throws DataAccessException {
+        try {
+            return requestService.getAssignmentsForRequest(requestId);
+        } catch (UnauthorizedOperationException e) {
+            throw new DataAccessException(e.getMessage(), e);
+        } catch (com.resqhub.exception.InvalidRescueRequestException e) {
+            throw new DataAccessException(e.getMessage(), e);
+        }
+    }
+
     public ActionResult deleteRequest(long requestId) {
         try {
             requestService.deleteRequest(requestId);

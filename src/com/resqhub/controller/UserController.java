@@ -58,6 +58,35 @@ public class UserController {
         }
     }
 
+    public ActionResult updateUser(long userId, String fullName,
+                                   String email, String phone,
+                                   RoleType role) {
+        try {
+            User updated = userService.updateUser(userId, fullName, email,
+                    phone, role);
+            return ActionResult.success("Account #" + updated.getId()
+                    + " updated");
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error updating account: "
+                    + e.getMessage());
+        }
+    }
+
+    public ActionResult resetPassword(long userId, String newPassword) {
+        try {
+            userService.resetPassword(userId, newPassword);
+            return ActionResult.success("Password reset for user #"
+                    + userId);
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error resetting password: "
+                    + e.getMessage());
+        }
+    }
+
     public ActionResult deleteUser(long userId) {
         try {
             userService.deleteUser(userId);

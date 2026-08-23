@@ -125,6 +125,52 @@ public class RescueAssignmentDAO extends BaseDao
         }
     }
 
+    /**
+     * TRANSACTION: mark the assignment ABORTED, release the team and
+     * return the request to PENDING so a different team can take over.
+     */
+    public void abortAssignment(long assignmentId, String notes)
+            throws DataAccessException {
+        String updateSql = "UPDATE rescue_assignments SET assignment_status = ?, "
+                + "notes = ? WHERE id = ?";
+        String requestSql = "UPDATE rescue_requests r JOIN rescue_assignments a "
+                + "ON a.rescue_request_id = r.id SET r.status = ? WHERE a.id = ?";
+        String teamSql = "UPDATE rescue_teams t JOIN rescue_assignments a "
+                + "ON a.rescue_team_id = t.id SET t.availability_status = ? WHERE a.id = ?";
+
+        Connection con = null;
+        try {
+            con = openConnection();
+            con.setAutoCommit(false);
+
+            try (PreparedStatement ps = con.prepareStatement(updateSql)) {
+                ps.setString(1, AssignmentStatus.ABORTED.name());
+                ps.setString(2, notes);
+                ps.setLong(3, assignmentId);
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = con.prepareStatement(requestSql)) {
+                ps.setString(1, RequestStatus.PENDING.name());
+                ps.setLong(2, assignmentId);
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = con.prepareStatement(teamSql)) {
+                ps.setString(1,
+                        com.resqhub.model.AvailabilityStatus.AVAILABLE.name());
+                ps.setLong(2, assignmentId);
+                ps.executeUpdate();
+            }
+
+            con.commit();
+        } catch (SQLException e) {
+            rollbackQuietly(con);
+            throw new DataAccessException(
+                    "Abort transaction rolled back", e);
+        } finally {
+            restoreAutoCommitAndClose(con);
+        }
+    }
+
     /** Simple status progression (EN_ROUTE / ON_SITE) with optional notes. */
     public void updateStatus(long assignmentId, AssignmentStatus status, String notes)
             throws DataAccessException {

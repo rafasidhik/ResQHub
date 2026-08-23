@@ -29,6 +29,8 @@ import com.resqhub.controller.RescueTeamController;
 import com.resqhub.exception.DataAccessException;
 import com.resqhub.model.AssignmentStatus;
 import com.resqhub.model.Disaster;
+import com.resqhub.model.RequestStatus;
+import com.resqhub.model.RescueAssignment;
 import com.resqhub.model.RescueRequest;
 import com.resqhub.model.RoleType;
 import com.resqhub.service.SessionManager;
@@ -62,6 +64,13 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
     private final javax.swing.table.DefaultTableModel tableModel =
             ViewUtil.readOnlyModel(RescueRequestController.tableHeaders());
     private final JTable table = new JTable(tableModel);
+
+    private final JComboBox<String> filterCombo = new JComboBox<>(
+            new String[] {"Pending", "Assigned", "In Progress", "Rescued",
+                    "Cancelled", "All"});
+    private Long editingId = null;
+    private Long editingVictimId = null;
+    private final JButton saveChangesButton = new JButton("Save changes");
 
     private record DisasterOption(Long id, String label) {
         @Override
@@ -155,6 +164,23 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
         deleteButton.setEnabled(
                 SessionManager.getInstance().hasRole(RoleType.ADMIN));
         controls.add(deleteButton);
+
+        controls.add(new javax.swing.JLabel("Show:"));
+        controls.add(filterCombo);
+        JButton abortButton = new JButton("Abort mission");
+        JButton historyButton = new JButton("History...");
+        JButton editButton = new JButton("Edit selected");
+        saveChangesButton.setEnabled(false);
+        JButton exportButton = new JButton("Export CSV");
+        controls.add(abortButton);
+        controls.add(historyButton);
+        controls.add(editButton);
+        controls.add(saveChangesButton);
+        controls.add(exportButton);
+
+        abortButton.setEnabled(operational);
+        historyButton.setEnabled(operational);
+        editButton.setEnabled(operational);
         area.add(controls, BorderLayout.NORTH);
 
         assignButton.addActionListener(event -> showAssignDialog());
@@ -164,6 +190,13 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
         explainButton.addActionListener(event -> explainPriority());
         refreshButton.addActionListener(event -> refreshQueue());
         deleteButton.addActionListener(event -> deleteSelected());
+        filterCombo.addActionListener(event -> refreshQueue());
+        abortButton.addActionListener(event -> abortSelected());
+        historyButton.addActionListener(event -> showHistory());
+        editButton.addActionListener(event -> editSelected());
+        saveChangesButton.addActionListener(event -> saveChanges());
+        exportButton.addActionListener(event ->
+                ViewUtil.exportTableToCsv(this, table, "rescue_requests"));
 
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -405,12 +438,166 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
             return;
         }
         try {
-            List<RescueRequest> pending = controller.getPendingQueue();
-            for (RescueRequest request : pending) {
+            String filter = String.valueOf(filterCombo.getSelectedItem());
+            List<RescueRequest> requests;
+            if ("All".equals(filter)) {
+                requests = controller.getAllRequests();
+            } else {
+                RequestStatus status = RequestStatus.valueOf(
+                        filter.toUpperCase().replace(' ', '_'));
+                requests = controller.getByStatus(status);
+            }
+            for (RescueRequest request : requests) {
                 tableModel.addRow(RescueRequestController.toRow(request));
             }
         } catch (DataAccessException e) {
             ViewUtil.error(this, e.getMessage());
         }
+    }
+
+    /** Releases the live team; the request returns to PENDING. */
+    private void abortSelected() {
+        Long requestId = selectedRequestId();
+        if (requestId == null) {
+            return;
+        }
+        long assignmentId = controller.getLatestAssignmentId(requestId);
+        if (assignmentId < 0) {
+            ViewUtil.info(this,
+                    "Request #" + requestId + " has no assignment to abort");
+            return;
+        }
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Abort assignment #" + assignmentId
+                        + "? The team is released and the request returns"
+                        + " to PENDING.",
+                "Confirm abort", JOptionPane.YES_NO_OPTION);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+        String notes = JOptionPane.showInputDialog(this,
+                "Reason / notes (optional):");
+        ActionResult result = controller.abortAssignment(assignmentId, notes);
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        refreshQueue();
+    }
+
+    /** Shows every past assignment of the selected request with notes. */
+    private void showHistory() {
+        Long requestId = selectedRequestId();
+        if (requestId == null) {
+            return;
+        }
+        try {
+            List<RescueAssignment> history =
+                    controller.getAssignmentHistory(requestId);
+            StringBuilder text = new StringBuilder(
+                    "Assignment history of request #" + requestId + ":\n");
+            if (history.isEmpty()) {
+                text.append("  (never assigned)");
+            } else {
+                for (RescueAssignment a : history) {
+                    text.append("  #").append(a.getId())
+                            .append(" ").append(a.getAssignmentStatus())
+                            .append(" | team #").append(a.getRescueTeamId())
+                            .append(" | ").append(a.getNotes() == null
+                                    ? "-" : a.getNotes())
+                            .append("\n");
+                }
+            }
+            JTextArea area = new JTextArea(text.toString(), 12, 40);
+            area.setEditable(false);
+            JOptionPane.showMessageDialog(this, new JScrollPane(area),
+                    "History", JOptionPane.INFORMATION_MESSAGE);
+        } catch (DataAccessException e) {
+            ViewUtil.error(this, e.getMessage());
+        }
+    }
+
+    private void editSelected() {
+        Long requestId = selectedRequestId();
+        if (requestId == null) {
+            return;
+        }
+        try {
+            RescueRequest target = null;
+            for (RescueRequest candidate : controller.getAllRequests()) {
+                if (candidate.getId().equals(requestId)) {
+                    target = candidate;
+                }
+            }
+            if (target == null) {
+                ViewUtil.error(this, "Request #" + requestId + " not found");
+                return;
+            }
+            if (target.getStatus() != RequestStatus.PENDING) {
+                ViewUtil.error(this, "Only PENDING requests can be edited"
+                        + " - this one is "
+                        + target.getStatus().getLabel());
+                return;
+            }
+            requesterField.setText(target.getRequesterName());
+            contactField.setText(target.getContactNumber());
+            locationField.setText(target.getLocation());
+            peopleField.setText(String.valueOf(target.getPeopleCount()));
+            childrenField.setText(String.valueOf(target.getChildrenCount()));
+            elderlyField.setText(String.valueOf(target.getElderlyCount()));
+            lifeBox.setSelected(target.isLifeThreatening());
+            medicalBox.setSelected(target.isMedicalEmergency());
+            trappedBox.setSelected(target.isTrappedUnderDebris());
+            assistanceArea.setText(target.getRequiredAssistance());
+            refreshDisasters();
+            for (int i = 0; i < disasterCombo.getItemCount(); i++) {
+                if (disasterCombo.getItemAt(i).id()
+                        .equals(target.getDisasterId())) {
+                    disasterCombo.setSelectedIndex(i);
+                }
+            }
+            editingVictimId = target.getVictimId();
+        } catch (DataAccessException e) {
+            ViewUtil.error(this, e.getMessage());
+            return;
+        }
+        editingId = requestId;
+        saveChangesButton.setEnabled(true);
+        ViewUtil.info(this, "Editing request #" + requestId
+                + " - change the form and press Save changes");
+    }
+
+    private void saveChanges() {
+        if (editingId == null) {
+            return;
+        }
+        DisasterOption selected = (DisasterOption) disasterCombo.getSelectedItem();
+        ActionResult result = controller.updateRequest(editingId,
+                selected == null ? null : selected.id(),
+                editingVictimId,
+                requesterField.getText(),
+                contactField.getText(),
+                locationField.getText(),
+                peopleField.getText(),
+                childrenField.getText(),
+                elderlyField.getText(),
+                lifeBox.isSelected(),
+                medicalBox.isSelected(),
+                trappedBox.isSelected(),
+                assistanceArea.getText());
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+            clearEditMode();
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        refreshQueue();
+    }
+
+    private void clearEditMode() {
+        editingId = null;
+        editingVictimId = null;
+        saveChangesButton.setEnabled(false);
     }
 }
