@@ -101,4 +101,21 @@ public class RescueTeamService {
         return team.getTeamName() + " (" + team.getMemberCount() + " members, "
                 + skills + ")";
     }
+
+    /** ADMIN-only hard delete; blocked when assignment history exists. */
+    public void deleteTeam(long teamId)
+            throws UnauthorizedOperationException, InvalidTeamDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN);
+        try {
+            if (!teamDAO.deleteById(teamId)) {
+                throw new InvalidTeamDataException("No team with id " + teamId);
+            }
+        } catch (DataAccessException e) {
+            throw new InvalidTeamDataException(
+                    "Cannot delete team #" + teamId
+                            + " - it has rescue assignment history");
+        }
+    }
 }

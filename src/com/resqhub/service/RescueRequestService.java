@@ -287,4 +287,23 @@ public class RescueRequestService {
         }
         return assignment;
     }
+
+    /** ADMIN-only hard delete; blocked while an assignment row exists.
+     *  Cancelled requests that were never assigned can always be removed. */
+    public void deleteRequest(long requestId)
+            throws UnauthorizedOperationException, InvalidRescueRequestException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN);
+        try {
+            if (!requestDAO.deleteById(requestId)) {
+                throw new InvalidRescueRequestException(
+                        "No rescue request with id " + requestId);
+            }
+        } catch (DataAccessException e) {
+            throw new InvalidRescueRequestException(
+                    "Cannot delete request #" + requestId
+                            + " - it was already assigned to a team");
+        }
+    }
 }

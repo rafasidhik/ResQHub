@@ -66,6 +66,18 @@ public class VictimController {
         }
     }
 
+    public ActionResult deleteVictim(long victimId) {
+        try {
+            victimService.deleteVictim(victimId);
+            return ActionResult.success("Victim #" + victimId + " deleted");
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error deleting victim: "
+                    + e.getMessage());
+        }
+    }
+
     public List<Victim> getVictimsByDisaster(long disasterId)
             throws DataAccessException {
         return victimService.getVictimsByDisaster(disasterId);

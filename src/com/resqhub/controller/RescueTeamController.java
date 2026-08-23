@@ -50,6 +50,18 @@ public class RescueTeamController {
         }
     }
 
+    public ActionResult deleteTeam(long teamId) {
+        try {
+            teamService.deleteTeam(teamId);
+            return ActionResult.success("Team #" + teamId + " deleted");
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error deleting team: "
+                    + e.getMessage());
+        }
+    }
+
     public List<RescueTeam> getAvailableTeams() throws DataAccessException {
         return teamService.getAvailableTeams();
     }

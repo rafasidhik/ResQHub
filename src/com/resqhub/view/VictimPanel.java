@@ -13,6 +13,7 @@ import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
@@ -27,7 +28,9 @@ import com.resqhub.exception.DataAccessException;
 import com.resqhub.model.Disaster;
 import com.resqhub.model.EmergencyStatus;
 import com.resqhub.model.Gender;
+import com.resqhub.model.RoleType;
 import com.resqhub.model.Victim;
+import com.resqhub.service.SessionManager;
 
 /** Victim management screen. JRadioButtons + ButtonGroup for gender. */
 public class VictimPanel extends JPanel {
@@ -136,6 +139,11 @@ public class VictimPanel extends JPanel {
         applyButton.setEnabled(operational);
         controls.add(quickStatus);
         controls.add(applyButton);
+
+        JButton deleteButton = new JButton("Delete selected");
+        deleteButton.setEnabled(
+                SessionManager.getInstance().hasRole(RoleType.ADMIN));
+        controls.add(deleteButton);
         area.add(controls, BorderLayout.NORTH);
 
         applyButton.addActionListener(event -> {
@@ -154,6 +162,8 @@ public class VictimPanel extends JPanel {
             }
             refreshTable();
         });
+
+        deleteButton.addActionListener(event -> deleteSelected());
 
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -237,6 +247,28 @@ public class VictimPanel extends JPanel {
         maleRadio.setSelected(false);
         femaleRadio.setSelected(false);
         otherRadio.setSelected(false);
+    }
+
+    private void deleteSelected() {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            ViewUtil.error(this, "Select a victim in the table first");
+            return;
+        }
+        Long id = (Long) tableModel.getValueAt(viewRow, 0);
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Permanently delete victim #" + id + "?",
+                "Confirm delete", JOptionPane.YES_NO_OPTION);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+        ActionResult result = controller.deleteVictim(id);
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        refreshTable();
     }
 
     private void refreshTable() {

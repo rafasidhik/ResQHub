@@ -15,6 +15,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -29,6 +30,8 @@ import com.resqhub.exception.DataAccessException;
 import com.resqhub.model.AssignmentStatus;
 import com.resqhub.model.Disaster;
 import com.resqhub.model.RescueRequest;
+import com.resqhub.model.RoleType;
+import com.resqhub.service.SessionManager;
 import com.resqhub.model.RescueTeam;
 
 /**
@@ -147,6 +150,11 @@ public class RescueRequestPanel extends JPanel {
         progressButton.setEnabled(operational);
         completeButton.setEnabled(operational);
         cancelButton.setEnabled(operational);
+
+        JButton deleteButton = new JButton("Delete selected");
+        deleteButton.setEnabled(
+                SessionManager.getInstance().hasRole(RoleType.ADMIN));
+        controls.add(deleteButton);
         area.add(controls, BorderLayout.NORTH);
 
         assignButton.addActionListener(event -> showAssignDialog());
@@ -155,6 +163,7 @@ public class RescueRequestPanel extends JPanel {
         cancelButton.addActionListener(event -> cancelSelected());
         explainButton.addActionListener(event -> explainPriority());
         refreshButton.addActionListener(event -> refreshQueue());
+        deleteButton.addActionListener(event -> deleteSelected());
 
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -361,6 +370,26 @@ public class RescueRequestPanel extends JPanel {
         } else {
             ViewUtil.error(this, result.getMessage());
         }
+    }
+
+    private void deleteSelected() {
+        Long requestId = selectedRequestId();
+        if (requestId == null) {
+            return;
+        }
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Permanently delete request #" + requestId + "?",
+                "Confirm delete", JOptionPane.YES_NO_OPTION);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+        ActionResult result = controller.deleteRequest(requestId);
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        refreshQueue();
     }
 
     private void refreshQueue() {

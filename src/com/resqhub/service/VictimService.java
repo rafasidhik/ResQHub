@@ -122,4 +122,22 @@ public class VictimService {
     public List<Victim> getAllVictims() throws DataAccessException {
         return victimDAO.findAll();
     }
+
+    /** ADMIN-only hard delete; request references are auto-nulled (SET NULL). */
+    public void deleteVictim(long victimId)
+            throws UnauthorizedOperationException, InvalidVictimDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN);
+        try {
+            if (!victimDAO.deleteById(victimId)) {
+                throw new InvalidVictimDataException(
+                        "No victim with id " + victimId);
+            }
+        } catch (DataAccessException e) {
+            throw new InvalidVictimDataException(
+                    "Cannot delete victim #" + victimId
+                            + " - rescue requests still reference this victim");
+        }
+    }
 }

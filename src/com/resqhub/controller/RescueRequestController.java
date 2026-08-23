@@ -100,6 +100,18 @@ public class RescueRequestController {
         }
     }
 
+    public ActionResult deleteRequest(long requestId) {
+        try {
+            requestService.deleteRequest(requestId);
+            return ActionResult.success("Request #" + requestId + " deleted");
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error deleting request: "
+                    + e.getMessage());
+        }
+    }
+
     /** Latest assignment id for a selected request (-1 when none yet). */
     public long getLatestAssignmentId(long requestId) {
         try {

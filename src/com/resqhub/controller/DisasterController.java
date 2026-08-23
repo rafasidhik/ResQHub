@@ -59,6 +59,19 @@ public class DisasterController {
         }
     }
 
+    public ActionResult deleteDisaster(long disasterId) {
+        try {
+            disasterService.deleteDisaster(disasterId);
+            return ActionResult.success("Disaster #" + disasterId
+                    + " deleted");
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error deleting disaster: "
+                    + e.getMessage());
+        }
+    }
+
     public List<Disaster> getAllDisasters() throws DataAccessException {
         return disasterService.getAllDisasters();
     }

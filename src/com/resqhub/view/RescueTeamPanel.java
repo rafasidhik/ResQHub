@@ -10,6 +10,7 @@ import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -20,7 +21,9 @@ import com.resqhub.controller.RescueTeamController;
 import com.resqhub.exception.DataAccessException;
 import com.resqhub.model.AvailabilityStatus;
 import com.resqhub.model.RescueTeam;
+import com.resqhub.model.RoleType;
 import com.resqhub.model.TeamType;
+import com.resqhub.service.SessionManager;
 
 /** Rescue team screen: registration + availability control. */
 public class RescueTeamPanel extends JPanel {
@@ -93,6 +96,11 @@ public class RescueTeamPanel extends JPanel {
 
         JButton refreshButton = new JButton("Refresh");
         controls.add(refreshButton);
+
+        JButton deleteButton = new JButton("Delete selected");
+        deleteButton.setEnabled(
+                SessionManager.getInstance().hasRole(RoleType.ADMIN));
+        controls.add(deleteButton);
         area.add(controls, BorderLayout.NORTH);
 
         applyButton.addActionListener(event -> {
@@ -112,8 +120,31 @@ public class RescueTeamPanel extends JPanel {
             refreshTable();
         });
         refreshButton.addActionListener(event -> refreshTable());
+        deleteButton.addActionListener(event -> deleteSelected());
 
         return area;
+    }
+
+    private void deleteSelected() {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            ViewUtil.error(this, "Select a team in the table first");
+            return;
+        }
+        Long id = (Long) tableModel.getValueAt(viewRow, 0);
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Permanently delete team #" + id + "?",
+                "Confirm delete", JOptionPane.YES_NO_OPTION);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+        ActionResult result = controller.deleteTeam(id);
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        refreshTable();
     }
 
     private void registerTeam() {

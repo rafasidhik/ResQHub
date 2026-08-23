@@ -58,6 +58,18 @@ public class UserController {
         }
     }
 
+    public ActionResult deleteUser(long userId) {
+        try {
+            userService.deleteUser(userId);
+            return ActionResult.success("User #" + userId + " deleted");
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error deleting user: "
+                    + e.getMessage());
+        }
+    }
+
     /** Read method: authorization failures surface as DataAccessException. */
     public List<User> listUsers() throws DataAccessException {
         try {

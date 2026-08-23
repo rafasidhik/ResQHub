@@ -10,6 +10,7 @@ import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -21,6 +22,7 @@ import com.resqhub.exception.DataAccessException;
 import com.resqhub.model.AccountStatus;
 import com.resqhub.model.RoleType;
 import com.resqhub.model.User;
+import com.resqhub.service.SessionManager;
 
 /** ADMIN-only user administration: create staff accounts, unlock, status. */
 public class UserPanel extends JPanel {
@@ -88,6 +90,11 @@ public class UserPanel extends JPanel {
         JButton unlockButton = new JButton("Unlock selected");
         controls.add(unlockButton);
 
+        JButton deleteButton = new JButton("Delete selected");
+        deleteButton.setEnabled(
+                SessionManager.getInstance().hasRole(RoleType.ADMIN));
+        controls.add(deleteButton);
+
         controls.add(new JLabel("Set status:"));
         JComboBox<AccountStatus> statusCombo =
                 new JComboBox<>(new AccountStatus[] {
@@ -109,6 +116,7 @@ public class UserPanel extends JPanel {
             show(result);
             refreshTable();
         });
+        deleteButton.addActionListener(event -> deleteSelected());
         applyButton.addActionListener(event -> {
             Long id = selectedUserId();
             if (id == null) {
@@ -155,6 +163,22 @@ public class UserPanel extends JPanel {
             emailField.setText("");
             phoneField.setText("");
         }
+        refreshTable();
+    }
+
+    private void deleteSelected() {
+        Long id = selectedUserId();
+        if (id == null) {
+            return;
+        }
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Permanently delete user #" + id + "?",
+                "Confirm delete", JOptionPane.YES_NO_OPTION);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+        ActionResult result = controller.deleteUser(id);
+        show(result);
         refreshTable();
     }
 

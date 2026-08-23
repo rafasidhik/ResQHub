@@ -271,6 +271,45 @@ public class Phase8Test {
         check("shelter-status hook works for Ameya's module",
                 shelterHook.isSuccess());
 
+        System.out.println("--- Section G: admin deletion powers ------------------");
+
+        check("admin deletes never-assigned cancelled request",
+                requestController.deleteRequest(requestB.getId()).isSuccess());
+        check("request with assignment history cannot be deleted",
+                !requestController.deleteRequest(requestA.getId()).isSuccess());
+        check("admin deletes victim (references auto-nulled)",
+                victimController.deleteVictim(victimOne.getId()).isSuccess());
+        check("disaster with dependants cannot be deleted",
+                !disasterController.deleteDisaster(disaster.getId()).isSuccess());
+        check("team with assignment history cannot be deleted",
+                !teamController.deleteTeam(team.getId()).isSuccess());
+
+        ActionResult disposableResult = disasterController.createDisaster(
+                "ZZTEST Disposable", DisasterType.FIRE, DisasterSeverity.LOW,
+                "ZZTEST Void", "1",
+                LocalDateTime.now().format(InputParser.DATE_TIME_FORMAT),
+                null, "delete-me");
+        check("admin deletes unreferenced disaster",
+                disposableResult.isSuccess()
+                        && disasterController.deleteDisaster(
+                                ((Disaster) disposableResult.getData())
+                                        .getId()).isSuccess());
+
+        ActionResult doomedAccount = userController.registerUser(
+                "zztest_doomed", "Doomed@123", "ZZTEST Doomed",
+                "zztest_doomed@resqhub.local", null, RoleType.VOLUNTEER);
+        check("admin deletes a staff account",
+                doomedAccount.isSuccess()
+                        && userController.deleteUser(
+                                ((com.resqhub.model.User)
+                                        doomedAccount.getData()).getId())
+                                .isSuccess());
+        check("deleted account can no longer log in",
+                !auth.login("zztest_doomed", "Doomed@123").isSuccess());
+        long adminId = SessionManager.getInstance().getCurrentUser().getId();
+        check("admin cannot delete own active account",
+                !userController.deleteUser(adminId).isSuccess());
+
         System.out.println("--- Section E: citizen role restrictions --------------");
 
         auth.logout();
@@ -305,6 +344,9 @@ public class Phase8Test {
                 "1", "", "", "");
         check("team registration blocked for restricted roles",
                 !citizenTeam.isSuccess());
+
+        check("deletion is ADMIN-only even through controllers",
+                !requestController.deleteRequest(1L).isSuccess());
 
         ActionResult citizenSubmit = requestController.submitRequest(
                 disaster.getId(), null,

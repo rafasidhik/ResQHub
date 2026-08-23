@@ -109,6 +109,28 @@ public class UserService {
         userDAO.save(user);
     }
 
+    /** ADMIN-only hard delete. Child references use ON DELETE SET NULL,
+     *  so any account can be removed - except your own active one. */
+    public void deleteUser(long userId)
+            throws UnauthorizedOperationException, InvalidUserDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN);
+        if (session.currentUserId() == userId) {
+            throw new InvalidUserDataException(
+                    "You cannot delete the account you are logged in with");
+        }
+        try {
+            if (!userDAO.deleteById(userId)) {
+                throw new InvalidUserDataException("No user with id " + userId);
+            }
+        } catch (DataAccessException e) {
+            throw new InvalidUserDataException(
+                    "Cannot delete user #" + userId
+                            + " - records still reference this account");
+        }
+    }
+
     private User requireExisting(long userId) throws InvalidUserDataException,
             DataAccessException {
         User user = userDAO.findById(userId);

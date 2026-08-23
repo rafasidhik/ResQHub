@@ -12,6 +12,7 @@ import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -24,6 +25,8 @@ import com.resqhub.exception.DataAccessException;
 import com.resqhub.model.Disaster;
 import com.resqhub.model.DisasterSeverity;
 import com.resqhub.model.DisasterType;
+import com.resqhub.model.RoleType;
+import com.resqhub.service.SessionManager;
 
 /** Disaster management screen: register, search, close. */
 public class DisasterPanel extends JPanel {
@@ -107,9 +110,13 @@ public class DisasterPanel extends JPanel {
         JButton searchButton = new JButton("Search");
         JButton showAllButton = new JButton("Show all");
         JButton closeDisasterButton = new JButton("Close selected disaster");
+        JButton deleteButton = new JButton("Delete selected");
+        deleteButton.setEnabled(
+                SessionManager.getInstance().hasRole(RoleType.ADMIN));
         controls.add(searchButton);
         controls.add(showAllButton);
         controls.add(closeDisasterButton);
+        controls.add(deleteButton);
         area.add(controls, BorderLayout.NORTH);
 
         searchButton.addActionListener(event -> refreshTable());
@@ -118,6 +125,7 @@ public class DisasterPanel extends JPanel {
             refreshTable();
         });
         closeDisasterButton.addActionListener(event -> closeSelected());
+        deleteButton.addActionListener(event -> deleteSelected());
 
         // MouseAdapter demonstrates the adapter-class idiom: we only need one click event
         table.addMouseListener(new MouseAdapter() {
@@ -185,6 +193,28 @@ public class DisasterPanel extends JPanel {
         }
         Long id = (Long) tableModel.getValueAt(viewRow, 0);
         ActionResult result = controller.closeDisaster(id);
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        refreshTable();
+    }
+
+    private void deleteSelected() {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            ViewUtil.error(this, "Select a disaster in the table first");
+            return;
+        }
+        Long id = (Long) tableModel.getValueAt(viewRow, 0);
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Permanently delete disaster #" + id + "?",
+                "Confirm delete", JOptionPane.YES_NO_OPTION);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+        ActionResult result = controller.deleteDisaster(id);
         if (result.isSuccess()) {
             ViewUtil.info(this, result.getMessage());
         } else {

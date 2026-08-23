@@ -126,4 +126,23 @@ public class DisasterService {
         }
         return disasterDAO.search(keyword.trim());
     }
+
+    /** ADMIN-only hard delete; blocked while victims or rescue requests
+     *  still reference the disaster (FK RESTRICT). */
+    public void deleteDisaster(long disasterId)
+            throws UnauthorizedOperationException, InvalidDisasterDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN);
+        try {
+            if (!disasterDAO.deleteById(disasterId)) {
+                throw new InvalidDisasterDataException(
+                        "No disaster with id " + disasterId);
+            }
+        } catch (DataAccessException e) {
+            throw new InvalidDisasterDataException(
+                    "Cannot delete disaster #" + disasterId
+                            + " - victims or rescue requests still reference it");
+        }
+    }
 }
