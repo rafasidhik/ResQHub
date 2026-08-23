@@ -100,6 +100,18 @@ public class RescueRequestController {
         }
     }
 
+    /** Latest assignment id for a selected request (-1 when none yet). */
+    public long getLatestAssignmentId(long requestId) {
+        try {
+            Long assignmentId = requestService.getLatestAssignmentId(requestId);
+            return assignmentId == null ? -1 : assignmentId;
+        } catch (ResQHubException e) {
+            return -1;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
     /** Score breakdown text for the details dialog. */
     public ActionResult explainPriority(long requestId) {
         try {

@@ -220,6 +220,14 @@ public class RescueRequestService {
                 RequestStatus.CANCELLED);
     }
 
+    /** Latest assignment for a request, or null - used by the operations UI. */
+    public Long getLatestAssignmentId(long requestId)
+            throws InvalidRescueRequestException, DataAccessException {
+        requireExisting(requestId);
+        List<RescueAssignment> assignments = assignmentDAO.findByRequest(requestId);
+        return assignments.isEmpty() ? null : assignments.get(0).getId();
+    }
+
     public RescueRequest getRequest(long requestId)
             throws InvalidRescueRequestException, DataAccessException {
         return requireExisting(requestId);
