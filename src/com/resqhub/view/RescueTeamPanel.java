@@ -26,7 +26,7 @@ import com.resqhub.model.TeamType;
 import com.resqhub.service.SessionManager;
 
 /** Rescue team screen: registration + availability control. */
-public class RescueTeamPanel extends JPanel {
+public class RescueTeamPanel extends JPanel implements Refreshable {
 
     private final RescueTeamController controller = new RescueTeamController();
 
@@ -123,6 +123,11 @@ public class RescueTeamPanel extends JPanel {
         deleteButton.addActionListener(event -> deleteSelected());
 
         return area;
+    }
+
+    @Override
+    public void refreshData() {
+        refreshTable();
     }
 
     private void deleteSelected() {

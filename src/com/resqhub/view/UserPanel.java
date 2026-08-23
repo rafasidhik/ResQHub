@@ -25,7 +25,7 @@ import com.resqhub.model.User;
 import com.resqhub.service.SessionManager;
 
 /** ADMIN-only user administration: create staff accounts, unlock, status. */
-public class UserPanel extends JPanel {
+public class UserPanel extends JPanel implements Refreshable {
 
     private final UserController controller = new UserController();
 
@@ -163,6 +163,11 @@ public class UserPanel extends JPanel {
             emailField.setText("");
             phoneField.setText("");
         }
+        refreshTable();
+    }
+
+    @Override
+    public void refreshData() {
         refreshTable();
     }
 

@@ -29,7 +29,7 @@ import com.resqhub.model.RoleType;
 import com.resqhub.service.SessionManager;
 
 /** Disaster management screen: register, search, close. */
-public class DisasterPanel extends JPanel {
+public class DisasterPanel extends JPanel implements Refreshable {
 
     private final DisasterController controller = new DisasterController();
 
@@ -198,6 +198,11 @@ public class DisasterPanel extends JPanel {
         } else {
             ViewUtil.error(this, result.getMessage());
         }
+        refreshTable();
+    }
+
+    @Override
+    public void refreshData() {
         refreshTable();
     }
 

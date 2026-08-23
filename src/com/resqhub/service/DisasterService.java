@@ -115,8 +115,16 @@ public class DisasterService {
         return disasterDAO.findAll();
     }
 
+    /** Every disaster not yet RESOLVED - newly reported ones included -
+     *  so victims and rescue requests can link to them immediately. */
     public List<Disaster> getActiveDisasters() throws DataAccessException {
-        return disasterDAO.findByStatus(DisasterStatus.ACTIVE);
+        List<Disaster> open = new ArrayList<>();
+        for (Disaster disaster : disasterDAO.findAll()) {
+            if (disaster.getStatus() != DisasterStatus.RESOLVED) {
+                open.add(disaster);
+            }
+        }
+        return open;
     }
 
     public List<Disaster> search(String keyword) throws DataAccessException {

@@ -40,7 +40,7 @@ import com.resqhub.model.RescueTeam;
  * operational=true : officers/admins - assignment workflow enabled
  * operational=false: citizens - submission form only
  */
-public class RescueRequestPanel extends JPanel {
+public class RescueRequestPanel extends JPanel implements Refreshable {
 
     private final RescueRequestController controller = new RescueRequestController();
     private final DisasterController disasterController = new DisasterController();
@@ -370,6 +370,12 @@ public class RescueRequestPanel extends JPanel {
         } else {
             ViewUtil.error(this, result.getMessage());
         }
+    }
+
+    @Override
+    public void refreshData() {
+        refreshDisasters();
+        refreshQueue();
     }
 
     private void deleteSelected() {

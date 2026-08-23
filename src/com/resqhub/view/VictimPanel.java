@@ -33,7 +33,7 @@ import com.resqhub.model.Victim;
 import com.resqhub.service.SessionManager;
 
 /** Victim management screen. JRadioButtons + ButtonGroup for gender. */
-public class VictimPanel extends JPanel {
+public class VictimPanel extends JPanel implements Refreshable {
 
     private final VictimController controller = new VictimController();
     private final DisasterController disasterController = new DisasterController();
@@ -247,6 +247,12 @@ public class VictimPanel extends JPanel {
         maleRadio.setSelected(false);
         femaleRadio.setSelected(false);
         otherRadio.setSelected(false);
+    }
+
+    @Override
+    public void refreshData() {
+        refreshDisasterCombo();
+        refreshTable();
     }
 
     private void deleteSelected() {

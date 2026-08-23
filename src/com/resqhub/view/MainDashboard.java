@@ -61,7 +61,8 @@ public class MainDashboard extends JFrame {
         return authController.hasRole(roles);
     }
 
-    /** Opens a module lazily; the panel class is only loaded on first use. */
+    /** Opens a module lazily; the panel class is only loaded on first use.
+     *  Refreshable panels reload their data on every visit. */
     private void openModule(String cardName, JPanel modulePanel) {
         boolean added = false;
         for (java.awt.Component component : cardHost.getComponents()) {
@@ -72,6 +73,9 @@ public class MainDashboard extends JFrame {
         if (!added) {
             modulePanel.setName(cardName);
             cardHost.add(modulePanel, cardName);
+        }
+        if (modulePanel instanceof Refreshable) {
+            ((Refreshable) modulePanel).refreshData();
         }
         cards.show(cardHost, cardName);
         statusLabel.setText(" Active module: " + cardName
