@@ -231,6 +231,13 @@ public class RescueRequestService {
         return requestDAO.findPendingByPriority();
     }
 
+    public List<RescueRequest> getByStatus(RequestStatus status)
+            throws UnauthorizedOperationException, DataAccessException {
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER,
+                RoleType.CAMP_MANAGER, RoleType.MEDICAL_OFFICER);
+        return requestDAO.findByStatus(status);
+    }
+
     public int countPending() throws DataAccessException {
         return requestDAO.countByStatus(RequestStatus.PENDING);
     }
