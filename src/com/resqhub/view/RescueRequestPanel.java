@@ -230,6 +230,26 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
         return (Long) tableModel.getValueAt(viewRow, 0);
     }
 
+    /** After a status change: widen the filter to All and re-highlight
+     *  the row so it never "vanishes" right after an action. */
+    private void revealRequest(Long requestId) {
+        if (!"All".equals(filterCombo.getSelectedItem())) {
+            filterCombo.setSelectedItem("All");
+        }
+        refreshQueue();
+        if (requestId == null) {
+            return;
+        }
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            if (requestId.equals(tableModel.getValueAt(i, 0))) {
+                table.setRowSelectionInterval(i, i);
+                table.scrollRectToVisible(
+                        table.getCellRect(i, 0, true));
+                break;
+            }
+        }
+    }
+
     private void submitRequest() {
         DisasterOption selected = (DisasterOption) disasterCombo.getSelectedItem();
         ActionResult result = controller.submitRequest(
@@ -303,7 +323,7 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
             if (result.isSuccess()) {
                 ViewUtil.info(dialog, result.getMessage());
                 dialog.dispose();
-                refreshQueue();
+                revealRequest(requestId);
             } else {
                 ViewUtil.error(dialog, result.getMessage());
             }
@@ -375,7 +395,7 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
         } else {
             ViewUtil.error(this, result.getMessage());
         }
-        refreshQueue();
+        revealRequest(requestId);
     }
 
     private void cancelSelected() {
@@ -389,7 +409,7 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
         } else {
             ViewUtil.error(this, result.getMessage());
         }
-        refreshQueue();
+        revealRequest(requestId);
     }
 
     private void explainPriority() {
@@ -483,7 +503,7 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
         } else {
             ViewUtil.error(this, result.getMessage());
         }
-        refreshQueue();
+        revealRequest(requestId);
     }
 
     /** Shows every past assignment of the selected request with notes. */
@@ -586,13 +606,14 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
                 medicalBox.isSelected(),
                 trappedBox.isSelected(),
                 assistanceArea.getText());
+        Long edited = editingId;
         if (result.isSuccess()) {
             ViewUtil.info(this, result.getMessage());
             clearEditMode();
         } else {
             ViewUtil.error(this, result.getMessage());
         }
-        refreshQueue();
+        revealRequest(edited);
     }
 
     private void clearEditMode() {

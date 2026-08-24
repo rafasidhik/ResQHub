@@ -66,8 +66,24 @@ public class MainDashboard extends JFrame {
             }
         }).start();
 
+        // Staff roles land on the live overview; citizens pick a module.
+        if (has(RoleType.ADMIN, RoleType.RESCUE_OFFICER, RoleType.CAMP_MANAGER)) {
+            openModule("overview", new StatsPanel(this::openQuickAction));
+        }
+
         setSize(1024, 680);
         setLocationRelativeTo(null);
+    }
+
+    /** Quick-action buttons on the overview jump straight to modules. */
+    private void openQuickAction(String moduleName) {
+        if ("victims".equals(moduleName)) {
+            openModule("victims", new VictimPanel(true));
+        } else if ("teams".equals(moduleName)) {
+            openModule("teams", new RescueTeamPanel());
+        } else {
+            openModule("requests", new RescueRequestPanel(true));
+        }
     }
 
     private boolean has(RoleType... roles) {
@@ -110,8 +126,9 @@ public class MainDashboard extends JFrame {
         JMenu modulesMenu = new JMenu("Modules");
 
         if (has(RoleType.ADMIN, RoleType.RESCUE_OFFICER, RoleType.CAMP_MANAGER)) {
-            modulesMenu.add(item("Overview", () ->
-                    openModule("overview", new StatsPanel())));
+            modulesMenu.add(item("Home", () ->
+                    openModule("overview",
+                            new StatsPanel(this::openQuickAction))));
         }
         if (has(RoleType.ADMIN, RoleType.RESCUE_OFFICER)) {
             modulesMenu.add(item("Disasters", () ->
