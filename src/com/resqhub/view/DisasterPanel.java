@@ -1,7 +1,10 @@
 package com.resqhub.view;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -9,12 +12,16 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
 
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -29,171 +36,255 @@ import com.resqhub.model.DisasterType;
 import com.resqhub.model.RoleType;
 import com.resqhub.service.SessionManager;
 
-/** Disaster management screen: register, search, close. */
+/**
+ * Disaster module: live status tiles, registration/edit form,
+ * searchable records and a context action bar.
+ */
 public class DisasterPanel extends JPanel implements Refreshable {
 
     private final DisasterController controller = new DisasterController();
 
-    private final JTextField titleField = new JTextField(20);
+    private final JTextField titleField = new JTextField(18);
     private final JComboBox<DisasterType> typeCombo =
             new JComboBox<>(DisasterType.values());
     private final JComboBox<DisasterSeverity> severityCombo =
             new JComboBox<>(DisasterSeverity.values());
-    private final JTextField locationField = new JTextField(20);
+    private final JTextField locationField = new JTextField(18);
     private final JTextField populationField = new JTextField(8);
     private final JTextField startField = new JTextField(12);
     private final JTextField endField = new JTextField(12);
-    private final JTextArea descriptionArea = new JTextArea(3, 20);
-    private final JTextField searchField = new JTextField(16);
+    private final JTextArea descriptionArea = new JTextArea(3, 18);
 
     private final javax.swing.table.DefaultTableModel tableModel =
             ViewUtil.readOnlyModel(DisasterController.tableHeaders());
     private final JTable table = new JTable(tableModel);
+    private final JTextField searchField = new JTextField(14);
+    private final JComboBox<String> statusFilter =
+            new JComboBox<>(new String[] {"All", "Reported", "Active",
+                    "Contained", "Resolved"});
+
+    private final JLabel activeTile = new JLabel("0");
+    private final JLabel containedTile = new JLabel("0");
+    private final JLabel resolvedTile = new JLabel("0");
+    private final JLabel totalTile = new JLabel("0");
+
+    private final JLabel selectedLabel = new JLabel(
+            "No disaster selected - click a row");
+    private final JComboBox<DisasterStatus> changeStatusCombo =
+            new JComboBox<>();
+    private static final String STATUS_SENTINEL = "-- choose --";
 
     private Long editingId = null;
-    private final JButton saveChangesButton = new JButton("Save changes");
+    private final JButton saveChangesButton = new JButton("Save Changes");
 
     public DisasterPanel() {
-        setLayout(new BorderLayout(10, 10));
-        setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        add(buildForm(), BorderLayout.WEST);
-        add(buildTableArea(), BorderLayout.CENTER);
-        refreshTable();
+        setLayout(new BorderLayout(8, 8));
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        add(buildHeader(), BorderLayout.NORTH);
+        add(buildSplit(), BorderLayout.CENTER);
+        add(buildActionBar(), BorderLayout.SOUTH);
+
+        for (DisasterStatus status : DisasterStatus.values()) {
+            changeStatusCombo.addItem(status);
+        }
+        changeStatusCombo.insertItemAt(null, 0);
+        changeStatusCombo.setSelectedIndex(0);
+        changeStatusCombo.addActionListener(e -> applyLifecycleChange());
+
+        refreshData();
     }
 
-    private JPanel buildForm() {
+    // ---------------------------------------------------------- header
+
+    private JPanel buildHeader() {
+        JLabel title = new JLabel("DISASTER MANAGEMENT");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
+
+        JButton refreshButton = new JButton("\u21bb Refresh");
+        refreshButton.addActionListener(e -> refreshData());
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.add(title, BorderLayout.WEST);
+        header.add(refreshButton, BorderLayout.EAST);
+
+        JPanel tiles = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 6));
+        tiles.add(statTile("ACTIVE", activeTile, new Color(170, 60, 30)));
+        tiles.add(statTile("CONTAINED", containedTile, new Color(150, 110, 20)));
+        tiles.add(statTile("RESOLVED", resolvedTile, new Color(40, 110, 40)));
+        tiles.add(statTile("TOTAL", totalTile, new Color(60, 60, 60)));
+
+        JPanel north = new JPanel(new BorderLayout(0, 4));
+        north.add(header, BorderLayout.NORTH);
+        north.add(tiles, BorderLayout.CENTER);
+        return north;
+    }
+
+    private JPanel statTile(String caption, JLabel valueLabel, Color color) {
+        valueLabel.setFont(valueLabel.getFont().deriveFont(Font.BOLD, 26f));
+        valueLabel.setForeground(color);
+        valueLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        JLabel captionLabel = new JLabel(caption);
+        captionLabel.setHorizontalAlignment(
+                javax.swing.SwingConstants.CENTER);
+        captionLabel.setFont(captionLabel.getFont().deriveFont(11f));
+        captionLabel.setForeground(new Color(90, 90, 90));
+
+        JPanel tile = new JPanel();
+        tile.setLayout(new BoxLayout(tile, BoxLayout.Y_AXIS));
+        tile.setPreferredSize(new Dimension(140, 84));
+        tile.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200)),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+        tile.add(Box.createVerticalGlue());
+        tile.add(valueLabel);
+        tile.add(captionLabel);
+        tile.add(Box.createVerticalGlue());
+        return tile;
+    }
+
+    // --------------------------------------------- form | records split
+
+    private JSplitPane buildSplit() {
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+                buildForm(), buildRecords());
+        split.setDividerLocation(360);
+        split.setResizeWeight(0.32);
+        return split;
+    }
+
+    private JScrollPane buildForm() {
         JPanel form = new JPanel(new GridBagLayout());
+        form.setBorder(BorderFactory.createTitledBorder(
+                "REGISTER / EDIT DISASTER"));
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(4, 4, 4, 4);
+        gbc.insets = new Insets(4, 6, 4, 6);
         gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         int row = 0;
         gbc.gridx = 0; gbc.gridy = row; form.add(new JLabel("Title:"), gbc);
         gbc.gridx = 1; form.add(titleField, gbc);
-
-        row++; gbc.gridx = 0; gbc.gridy = row; form.add(new JLabel("Type:"), gbc);
+        row++;
+        gbc.gridx = 0; gbc.gridy = row; form.add(new JLabel("Type:"), gbc);
         gbc.gridx = 1; form.add(typeCombo, gbc);
-
-        row++; gbc.gridx = 0; gbc.gridy = row; form.add(new JLabel("Severity:"), gbc);
+        row++;
+        gbc.gridx = 0; gbc.gridy = row; form.add(new JLabel("Severity:"), gbc);
         gbc.gridx = 1; form.add(severityCombo, gbc);
-
-        row++; gbc.gridx = 0; gbc.gridy = row; form.add(new JLabel("Location:"), gbc);
+        row++;
+        gbc.gridx = 0; gbc.gridy = row; form.add(new JLabel("Location:"), gbc);
         gbc.gridx = 1; form.add(locationField, gbc);
-
-        row++; gbc.gridx = 0; gbc.gridy = row; form.add(new JLabel("Affected population:"), gbc);
+        row++;
+        gbc.gridx = 0; gbc.gridy = row;
+        form.add(new JLabel("Affected Population:"), gbc);
         gbc.gridx = 1; form.add(populationField, gbc);
-
-        row++; gbc.gridx = 0; gbc.gridy = row;
-        form.add(new JLabel("Start (yyyy-MM-dd HH:mm):"), gbc);
+        row++;
+        gbc.gridx = 0; gbc.gridy = row;
+        form.add(new JLabel("Start Date & Time:"), gbc);
         gbc.gridx = 1; form.add(startField, gbc);
-        startField.setText(java.time.LocalDateTime.now()
-                .format(com.resqhub.util.InputParser.DATE_TIME_FORMAT));
-
-        row++; gbc.gridx = 0; gbc.gridy = row;
-        form.add(new JLabel("End (optional):"), gbc);
+        row++;
+        gbc.gridx = 0; gbc.gridy = row;
+        form.add(new JLabel("End Date & Time:"), gbc);
         gbc.gridx = 1; form.add(endField, gbc);
-
-        row++; gbc.gridx = 0; gbc.gridy = row;
+        row++;
+        gbc.gridx = 0; gbc.gridy = row;
         form.add(new JLabel("Description:"), gbc);
         gbc.gridx = 1; form.add(new JScrollPane(descriptionArea), gbc);
+        row++;
 
-        JButton createButton = new JButton("Register disaster");
-        row++; gbc.gridx = 1; gbc.gridy = row; form.add(createButton, gbc);
-        createButton.addActionListener(event -> createDisaster());
+        JButton registerButton = new JButton("+ Register Disaster");
+        gbc.gridx = 1; gbc.gridy = row; form.add(registerButton, gbc);
+        registerButton.addActionListener(e -> registerDisaster());
 
-        return form;
+        return new JScrollPane(form);
     }
 
-    private JPanel buildTableArea() {
-        JPanel area = new JPanel(new BorderLayout(6, 6));
-        area.add(new JScrollPane(table), BorderLayout.CENTER);
+    private JPanel buildRecords() {
+        JPanel records = new JPanel(new BorderLayout(6, 6));
+        records.setBorder(BorderFactory.createTitledBorder(
+                "DISASTER RECORDS"));
 
-        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        controls.add(new JLabel("Search:"));
-        controls.add(searchField);
+        JPanel searchRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        searchRow.add(new JLabel("Search:"));
+        searchRow.add(searchField);
         JButton searchButton = new JButton("Search");
-        JButton showAllButton = new JButton("Show all");
-        JButton editButton = new JButton("Edit selected");
-        saveChangesButton.setEnabled(false);
-        JButton closeDisasterButton = new JButton("Close selected disaster");
-        JButton exportButton = new JButton("Export CSV");
-        JButton deleteButton = new JButton("Delete selected");
-        deleteButton.setEnabled(
-                SessionManager.getInstance().hasRole(RoleType.ADMIN));
+        JButton showAllButton = new JButton("Show All");
+        searchRow.add(searchButton);
+        searchRow.add(showAllButton);
 
-        controls.add(new JLabel("Set status:"));
-        JComboBox<DisasterStatus> statusCombo =
-                new JComboBox<>(new DisasterStatus[] {
-                        DisasterStatus.ACTIVE, DisasterStatus.CONTAINED,
-                        DisasterStatus.RESOLVED});
-        JButton applyStatusButton = new JButton("Apply");
+        JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        filterRow.add(new JLabel("Filter Status:"));
+        filterRow.add(statusFilter);
+        JButton applyFilterButton = new JButton("Apply");
+        filterRow.add(applyFilterButton);
 
-        controls.add(searchButton);
-        controls.add(showAllButton);
-        controls.add(statusCombo);
-        controls.add(applyStatusButton);
-        controls.add(editButton);
-        controls.add(saveChangesButton);
-        controls.add(closeDisasterButton);
-        controls.add(exportButton);
-        controls.add(deleteButton);
-        area.add(controls, BorderLayout.NORTH);
+        JPanel northStack = new JPanel();
+        northStack.setLayout(new BoxLayout(northStack, BoxLayout.Y_AXIS));
+        northStack.add(searchRow);
+        northStack.add(filterRow);
+        records.add(northStack, BorderLayout.NORTH);
+        records.add(new JScrollPane(table), BorderLayout.CENTER);
 
-        searchButton.addActionListener(event -> refreshTable());
-        showAllButton.addActionListener(event -> {
+        searchButton.addActionListener(e -> refreshTable());
+        showAllButton.addActionListener(e -> {
             searchField.setText("");
+            statusFilter.setSelectedIndex(0);
             refreshTable();
         });
-        closeDisasterButton.addActionListener(event -> closeSelected());
-        deleteButton.addActionListener(event -> deleteSelected());
-        applyStatusButton.addActionListener(event -> applyStatus(
-                (DisasterStatus) statusCombo.getSelectedItem()));
-        editButton.addActionListener(event -> editSelected());
-        saveChangesButton.addActionListener(event -> saveChanges());
-        exportButton.addActionListener(event ->
-                ViewUtil.exportTableToCsv(this, table, "disasters"));
+        applyFilterButton.addActionListener(e -> refreshTable());
 
-        // MouseAdapter demonstrates the adapter-class idiom: we only need one click event
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent event) {
-                fillFormFromSelection();
-            }
-        });
-        return area;
-    }
-
-    /** Fills the form with the clicked row so it can be edited and saved. */
-    private void fillFormFromSelection() {
-        int viewRow = table.getSelectedRow();
-        if (viewRow < 0) {
-            return;
-        }
-        Long id = (Long) tableModel.getValueAt(viewRow, 0);
-        try {
-            for (Disaster disaster : controller.getAllDisasters()) {
-                if (disaster.getId().equals(id)) {
-                    titleField.setText(disaster.getTitle());
-                    typeCombo.setSelectedItem(disaster.getDisasterType());
-                    severityCombo.setSelectedItem(disaster.getSeverity());
-                    locationField.setText(disaster.getLocation());
-                    populationField.setText(
-                            String.valueOf(disaster.getAffectedPopulation()));
-                    startField.setText(disaster.getStartDateTime() == null ? ""
-                            : disaster.getStartDateTime()
-                                    .format(com.resqhub.util.InputParser.DATE_TIME_FORMAT));
-                    endField.setText(disaster.getEndDateTime() == null ? ""
-                            : disaster.getEndDateTime()
-                                    .format(com.resqhub.util.InputParser.DATE_TIME_FORMAT));
-                    descriptionArea.setText(disaster.getDescription());
+                if (event.getClickCount() == 2) {
+                    editSelected(true);
                 }
             }
-        } catch (DataAccessException e) {
-            ViewUtil.error(this, e.getMessage());
-        }
+        });
+        return records;
     }
 
-    private void createDisaster() {
+    // ------------------------------------------------------- action bar
+
+    private JPanel buildActionBar() {
+        JPanel bar = new JPanel(new BorderLayout(8, 4));
+        bar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("ACTIONS"),
+                BorderFactory.createEmptyBorder(2, 6, 4, 6)));
+        bar.add(selectedLabel, BorderLayout.NORTH);
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton editButton = new JButton("Edit Selected");
+        saveChangesButton.setEnabled(false);
+        JButton closeButton = new JButton("Close / Resolve Now");
+        JButton viewButton = new JButton("View Details");
+        JButton exportButton = new JButton("Export CSV");
+        JButton deleteButton = new JButton("Delete Selected");
+        deleteButton.setEnabled(
+                SessionManager.getInstance().hasRole(RoleType.ADMIN));
+
+        buttons.add(editButton);
+        buttons.add(new JLabel("Change Status:"));
+        buttons.add(changeStatusCombo);
+        buttons.add(saveChangesButton);
+        buttons.add(closeButton);
+        buttons.add(viewButton);
+        buttons.add(exportButton);
+        buttons.add(deleteButton);
+        bar.add(buttons, BorderLayout.CENTER);
+
+        editButton.addActionListener(e -> editSelected(false));
+        saveChangesButton.addActionListener(e -> saveChanges());
+        closeButton.addActionListener(e -> closeSelected());
+        viewButton.addActionListener(e -> viewDetails());
+        exportButton.addActionListener(e ->
+                ViewUtil.exportTableToCsv(this, table, "disasters"));
+        deleteButton.addActionListener(e -> deleteSelected());
+        return bar;
+    }
+
+    // -------------------------------------------------------- handlers
+
+    private void registerDisaster() {
         ActionResult result = controller.createDisaster(
                 titleField.getText(),
                 (DisasterType) typeCombo.getSelectedItem(),
@@ -205,44 +296,53 @@ public class DisasterPanel extends JPanel implements Refreshable {
                 descriptionArea.getText());
         if (result.isSuccess()) {
             ViewUtil.info(this, result.getMessage());
-            refreshTable();
+            clearForm();
         } else {
             ViewUtil.error(this, result.getMessage());
         }
+        refreshData();
     }
 
-    private void closeSelected() {
+    /** Loads the selected row into the form. silent=true for double-click. */
+    private void editSelected(boolean silent) {
         int viewRow = table.getSelectedRow();
         if (viewRow < 0) {
-            ViewUtil.error(this, "Select a disaster in the table first");
+            if (!silent) {
+                ViewUtil.error(this, "Select a disaster in the table first");
+            }
             return;
         }
         Long id = (Long) tableModel.getValueAt(viewRow, 0);
-        ActionResult result = controller.closeDisaster(id);
-        if (result.isSuccess()) {
-            ViewUtil.info(this, result.getMessage());
-        } else {
-            ViewUtil.error(this, result.getMessage());
-        }
-        refreshTable();
-    }
-
-    @Override
-    public void refreshData() {
-        refreshTable();
-    }
-
-    private void editSelected() {
-        int viewRow = table.getSelectedRow();
-        if (viewRow < 0) {
-            ViewUtil.error(this, "Select a disaster in the table first");
+        try {
+            for (Disaster candidate : controller.getAllDisasters()) {
+                if (candidate.getId().equals(id)) {
+                    titleField.setText(candidate.getTitle());
+                    typeCombo.setSelectedItem(candidate.getDisasterType());
+                    severityCombo.setSelectedItem(candidate.getSeverity());
+                    locationField.setText(candidate.getLocation());
+                    populationField.setText(
+                            String.valueOf(candidate.getAffectedPopulation()));
+                    startField.setText(candidate.getStartDateTime()
+                            .format(java.time.format.DateTimeFormatter
+                                    .ofPattern("yyyy-MM-dd HH:mm")));
+                    endField.setText(candidate.getEndDateTime() == null ? ""
+                            : candidate.getEndDateTime()
+                                    .format(java.time.format.DateTimeFormatter
+                                            .ofPattern("yyyy-MM-dd HH:mm")));
+                    descriptionArea.setText(candidate.getDescription());
+                }
+            }
+        } catch (DataAccessException e) {
+            ViewUtil.error(this, e.getMessage());
             return;
         }
-        fillFormFromSelection();
-        editingId = (Long) tableModel.getValueAt(viewRow, 0);
+        editingId = id;
         saveChangesButton.setEnabled(true);
-        ViewUtil.info(this, "Editing disaster #" + editingId
-                + " - change the form and press Save changes");
+        selectedLabel.setText("Editing disaster #" + id
+                + " - modify the form and press Save Changes");
+        if (!silent) {
+            ViewUtil.info(this, "Loaded disaster #" + id + " into the form");
+        }
     }
 
     private void saveChanges() {
@@ -260,32 +360,115 @@ public class DisasterPanel extends JPanel implements Refreshable {
                 descriptionArea.getText());
         if (result.isSuccess()) {
             ViewUtil.info(this, result.getMessage());
-            clearEditMode();
+            editingId = null;
+            saveChangesButton.setEnabled(false);
         } else {
             ViewUtil.error(this, result.getMessage());
         }
-        refreshTable();
+        refreshData();
     }
 
-    private void clearEditMode() {
-        editingId = null;
-        saveChangesButton.setEnabled(false);
-    }
-
-    private void applyStatus(DisasterStatus newStatus) {
+    private void viewDetails() {
         int viewRow = table.getSelectedRow();
         if (viewRow < 0) {
             ViewUtil.error(this, "Select a disaster in the table first");
             return;
         }
         Long id = (Long) tableModel.getValueAt(viewRow, 0);
-        ActionResult result = controller.updateStatus(id, newStatus);
+        try {
+            for (Disaster candidate : controller.getAllDisasters()) {
+                if (candidate.getId().equals(id)) {
+                    StringBuilder text = new StringBuilder();
+                    text.append("#").append(candidate.getId()).append(" ")
+                            .append(candidate.getTitle()).append("\n")
+                            .append("Type     : ")
+                            .append(candidate.getDisasterType().getLabel())
+                            .append("\n")
+                            .append("Severity : ")
+                            .append(candidate.getSeverity().getLabel())
+                            .append("\n")
+                            .append("Status   : ")
+                            .append(candidate.getStatus().getLabel())
+                            .append("\n")
+                            .append("Location : ")
+                            .append(candidate.getLocation()).append("\n")
+                            .append("Population affected: ")
+                            .append(candidate.getAffectedPopulation())
+                            .append("\n")
+                            .append("Started  : ")
+                            .append(candidate.getStartDateTime())
+                            .append("\n")
+                            .append("Ended    : ")
+                            .append(candidate.getEndDateTime() == null
+                                    ? "-" : candidate.getEndDateTime())
+                            .append("\n\n")
+                            .append(candidate.getDescription() == null
+                                    || candidate.getDescription().isEmpty()
+                                    ? "(no description)"
+                                    : candidate.getDescription());
+                    JOptionPane.showMessageDialog(this, text.toString(),
+                            "Disaster #" + id,
+                            JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        } catch (DataAccessException e) {
+            ViewUtil.error(this, e.getMessage());
+        }
+    }
+
+    /** Early resolution from any non-resolved state (skips lifecycle). */
+    private void closeSelected() {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            ViewUtil.error(this, "Select a disaster in the table first");
+            return;
+        }
+        Long id = (Long) tableModel.getValueAt(viewRow, 0);
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Resolve disaster #" + id + " immediately?",
+                "Confirm close", JOptionPane.YES_NO_OPTION);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+        ActionResult result = controller.closeDisaster(id);
         if (result.isSuccess()) {
             ViewUtil.info(this, result.getMessage());
         } else {
             ViewUtil.error(this, result.getMessage());
         }
-        refreshTable();
+        refreshData();
+    }
+
+    /** Forward-only lifecycle move on the selected disaster. */
+    private void applyLifecycleChange() {
+        Object chosen = changeStatusCombo.getSelectedItem();
+        if (chosen == null) {
+            return;
+        }
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            ViewUtil.error(this, "Select a disaster in the table first");
+            changeStatusCombo.setSelectedIndex(0);
+            return;
+        }
+        Long id = (Long) tableModel.getValueAt(viewRow, 0);
+        DisasterStatus target = (DisasterStatus) chosen;
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Move disaster #" + id + " to "
+                        + target.getLabel() + "?",
+                "Confirm status change", JOptionPane.YES_NO_OPTION);
+        if (choice != JOptionPane.YES_OPTION) {
+            changeStatusCombo.setSelectedIndex(0);
+            return;
+        }
+        ActionResult result = controller.updateStatus(id, target);
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        changeStatusCombo.setSelectedIndex(0);
+        refreshData();
     }
 
     private void deleteSelected() {
@@ -307,23 +490,66 @@ public class DisasterPanel extends JPanel implements Refreshable {
         } else {
             ViewUtil.error(this, result.getMessage());
         }
+        refreshData();
+    }
+
+    private void clearForm() {
+        titleField.setText("");
+        locationField.setText("");
+        populationField.setText("");
+        startField.setText("");
+        endField.setText("");
+        descriptionArea.setText("");
+        editingId = null;
+        saveChangesButton.setEnabled(false);
+    }
+
+    // --------------------------------------------------------- refresh
+
+    @Override
+    public void refreshData() {
         refreshTable();
     }
 
+    /** Reloads rows honouring search + status filter and updates tiles. */
     private void refreshTable() {
         tableModel.setRowCount(0);
+        int active = 0;
+        int contained = 0;
+        int resolved = 0;
+        int total = 0;
+        String needle = searchField.getText() == null ? ""
+                : searchField.getText().trim().toLowerCase();
+        Object filter = statusFilter.getSelectedItem();
         try {
-            List<Disaster> disasters = controller.search(searchField.getText());
-            for (Disaster disaster : disasters) {
-                tableModel.addRow(DisasterController.toRow(disaster));
+            for (Disaster disaster : controller.getAllDisasters()) {
+                total++;
+                switch (disaster.getStatus()) {
+                    case ACTIVE -> active++;
+                    case CONTAINED -> contained++;
+                    case RESOLVED -> resolved++;
+                    default -> { }
+                }
+                boolean matchesNeedle = needle.isEmpty()
+                        || disaster.getTitle().toLowerCase().contains(needle)
+                        || disaster.getLocation().toLowerCase()
+                                .contains(needle);
+                boolean matchesStatus = "All".equals(filter)
+                        || disaster.getStatus().getLabel()
+                                .equalsIgnoreCase(String.valueOf(filter));
+                if (matchesNeedle && matchesStatus) {
+                    tableModel.addRow(DisasterController.toRow(disaster));
+                }
             }
         } catch (DataAccessException e) {
             ViewUtil.error(this, e.getMessage());
         }
-    }
-
-    /** Lets other panels trigger a reload when data may have changed. */
-    public void onExternalDataChanged() {
-        refreshTable();
+        activeTile.setText(String.valueOf(active));
+        containedTile.setText(String.valueOf(contained));
+        resolvedTile.setText(String.valueOf(resolved));
+        totalTile.setText(String.valueOf(total));
+        selectedLabel.setText(editingId == null
+                ? "No disaster selected - click a row"
+                : "Editing disaster #" + editingId);
     }
 }
