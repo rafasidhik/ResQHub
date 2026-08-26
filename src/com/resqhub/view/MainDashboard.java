@@ -17,6 +17,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
+import javax.swing.JTextField;
 
 import com.resqhub.controller.ActionResult;
 import com.resqhub.controller.AuthController;
@@ -156,6 +157,7 @@ public class MainDashboard extends JFrame {
         }
 
         JMenu accountMenu = new JMenu("Account");
+        accountMenu.add(item("My Profile...", this::showMyProfileDialog));
         accountMenu.add(item("Change Password...", this::showChangePasswordDialog));
         accountMenu.add(item("Logout", this::logout));
 
@@ -187,6 +189,60 @@ public class MainDashboard extends JFrame {
         if (choice == JOptionPane.YES_OPTION) {
             System.exit(0);
         }
+    }
+
+    /** Modal profile editor: any user can update their own name / email / phone. */
+    private void showMyProfileDialog() {
+        final JDialog dialog = new JDialog(this, "My Profile", true);
+        JPanel form = new JPanel(new java.awt.GridBagLayout());
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.insets = new java.awt.Insets(6, 6, 6, 6);
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+
+        User current = authController.getCurrentUser();
+        final JTextField nameField = new JTextField(current.getFullName(), 20);
+        final JTextField emailField = new JTextField(current.getEmail(), 20);
+        final JTextField phoneField = new JTextField(
+                current.getPhone() == null ? "" : current.getPhone(), 12);
+        JLabel roleLabel = new JLabel(current.getRole().getLabel());
+        JLabel statusLabel = new JLabel(
+                current.getAccountStatus().getLabel());
+
+        gbc.gridx = 0; gbc.gridy = 0; form.add(new JLabel("Full name:"), gbc);
+        gbc.gridx = 1; form.add(nameField, gbc);
+        gbc.gridy = 1; gbc.gridx = 0; form.add(new JLabel("Email:"), gbc);
+        gbc.gridx = 1; form.add(emailField, gbc);
+        gbc.gridy = 2; gbc.gridx = 0; form.add(new JLabel("Phone:"), gbc);
+        gbc.gridx = 1; form.add(phoneField, gbc);
+        gbc.gridy = 3; gbc.gridx = 0; form.add(new JLabel("Role:"), gbc);
+        gbc.gridx = 1; form.add(roleLabel, gbc);
+        gbc.gridy = 4; gbc.gridx = 0; form.add(new JLabel("Status:"), gbc);
+        gbc.gridx = 1; form.add(statusLabel, gbc);
+
+        JButton saveButton = new JButton("Save");
+        gbc.gridy = 5; gbc.gridx = 1; form.add(saveButton, gbc);
+        dialog.setContentPane(form);
+
+        saveButton.addActionListener(event -> {
+            ActionResult result = authController.updateOwnProfile(
+                    nameField.getText(), emailField.getText(),
+                    phoneField.getText());
+            if (result.isSuccess()) {
+                User refreshed = authController.getCurrentUser();
+                MainDashboard.this.statusLabel.setText(" Active module: "
+                        + "overview   |   Logged in: "
+                        + refreshed.getUsername() + " ("
+                        + refreshed.getRole().getLabel() + ")");
+                ViewUtil.info(dialog, result.getMessage());
+                dialog.dispose();
+            } else {
+                ViewUtil.error(dialog, result.getMessage());
+            }
+        });
+
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 
     /** JDialog example: modal password change form. */

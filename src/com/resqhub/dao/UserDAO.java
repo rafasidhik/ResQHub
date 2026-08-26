@@ -129,6 +129,20 @@ public class UserDAO extends BaseDao implements Repository<User> {
         }
     }
 
+    public User findByEmail(String email) throws DataAccessException {
+        String sql = SELECT_COLUMNS + "WHERE u.email = ?";
+        try (Connection con = openConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapRow(rs) : null;
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not load user by email", e);
+        }
+    }
+
     @Override
     public List<User> findAll() throws DataAccessException {
         String sql = SELECT_COLUMNS + "ORDER BY u.username";

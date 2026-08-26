@@ -468,6 +468,31 @@ public class Phase8Test {
         check("admin session restored after Section H",
                 auth.login("admin", "Admin@123").isSuccess());
 
+        System.out.println("--- Section I: auth & profile features ---------------");
+
+        check("login accepts email instead of username",
+                auth.login("zztest_resetpw@resqhub.local", "Newpw@456")
+                        .isSuccess());
+        auth.logout();
+        check("login rejects wrong password via email path",
+                !auth.login("zztest_resetpw@resqhub.local", "bad")
+                        .isSuccess());
+        check("login rejects unknown email gracefully",
+                !auth.login("nobody@example.com", "X").isSuccess());
+
+        auth.login("admin", "Admin@123");
+        AuthController authCtrl = new AuthController();
+        com.resqhub.model.User selfBefore = authCtrl.getCurrentUser();
+        check("self-service profile update succeeds",
+                authCtrl.updateOwnProfile("ZZTEST Admin Edited",
+                        selfBefore.getEmail(), "9999900000").isSuccess());
+        check("profile update persisted in session",
+                "ZZTEST Admin Edited".equals(
+                        authCtrl.getCurrentUser().getFullName()));
+        check("self-service profile rejects invalid email",
+                !authCtrl.updateOwnProfile("ZZTEST Admin Edited",
+                        "not-an-email", "9999900000").isSuccess());
+
         System.out.println("--- Section E: citizen role restrictions --------------");
 
         auth.logout();

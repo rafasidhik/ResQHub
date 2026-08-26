@@ -154,6 +154,46 @@ public class UserService {
         return userDAO.save(user);
     }
 
+    /** Self-service profile edit — any logged-in user, own record only. */
+    public User updateOwnProfile(String fullName, String email, String phone)
+            throws InvalidUserDataException, DataAccessException {
+
+        if (!session.isLoggedIn()) {
+            throw new InvalidUserDataException("No active session");
+        }
+        User user = requireExisting(session.currentUserId());
+
+        List<String> errors = new ArrayList<>();
+        if (!ValidationUtil.isValidName(fullName)) {
+            errors.add("full name is invalid");
+        }
+        if (!ValidationUtil.isValidEmail(email)) {
+            errors.add("email is invalid");
+        }
+        String cleanPhone = ValidationUtil.clean(phone);
+        if (cleanPhone != null && !cleanPhone.isEmpty()
+                && !ValidationUtil.isValidPhone(cleanPhone)) {
+            errors.add("phone must be 10 digits");
+        }
+        if (!errors.isEmpty()) {
+            throw new InvalidUserDataException(String.join("; ", errors));
+        }
+        String cleanedEmail = ValidationUtil.clean(email);
+        for (User other : userDAO.findAll()) {
+            if (!other.getId().equals(user.getId())
+                    && other.getEmail().equalsIgnoreCase(cleanedEmail)) {
+                throw new InvalidUserDataException(
+                        "email already registered to another account");
+            }
+        }
+
+        user.setFullName(ValidationUtil.clean(fullName));
+        user.setEmail(cleanedEmail);
+        user.setPhone(cleanPhone == null || cleanPhone.isEmpty()
+                ? null : cleanPhone);
+        return userDAO.save(user);
+    }
+
     /** ADMIN reset that skips the old-password check (forgot-password flow). */
     public void resetPassword(long userId, String newPassword)
             throws UnauthorizedOperationException, InvalidUserDataException,

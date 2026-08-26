@@ -25,7 +25,7 @@ public final class SessionManager {
         return INSTANCE;
     }
 
-    void login(User user) {
+    public void login(User user) {
         this.currentUser = user;
     }
 

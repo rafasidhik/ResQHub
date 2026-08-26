@@ -40,6 +40,7 @@ public class UserPanel extends JPanel implements Refreshable {
     private final javax.swing.table.DefaultTableModel tableModel =
             ViewUtil.readOnlyModel(UserController.tableHeaders());
     private final JTable table = new JTable(tableModel);
+    private final JTextField searchField = new JTextField(12);
 
     public UserPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -87,6 +88,13 @@ public class UserPanel extends JPanel implements Refreshable {
         area.add(new JScrollPane(table), BorderLayout.CENTER);
 
         JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        controls.add(new JLabel("Search:"));
+        controls.add(searchField);
+        JButton searchButton = new JButton("Search");
+        JButton showAllButton = new JButton("Show All");
+        controls.add(searchButton);
+        controls.add(showAllButton);
+
         JButton unlockButton = new JButton("Unlock selected");
         controls.add(unlockButton);
 
@@ -108,9 +116,11 @@ public class UserPanel extends JPanel implements Refreshable {
 
         JButton editButton = new JButton("Update selected");
         JButton resetButton = new JButton("Reset password...");
+        JButton detailsButton = new JButton("View Details");
         JButton exportButton = new JButton("Export CSV");
         controls.add(editButton);
         controls.add(resetButton);
+        controls.add(detailsButton);
         controls.add(exportButton);
         area.add(controls, BorderLayout.NORTH);
 
@@ -135,8 +145,14 @@ public class UserPanel extends JPanel implements Refreshable {
             refreshTable();
         });
         refreshButton.addActionListener(event -> refreshTable());
+        searchButton.addActionListener(event -> refreshTable());
+        showAllButton.addActionListener(event -> {
+            searchField.setText("");
+            refreshTable();
+        });
         editButton.addActionListener(event -> updateSelected());
         resetButton.addActionListener(event -> resetPassword());
+        detailsButton.addActionListener(event -> viewDetails());
         exportButton.addActionListener(event ->
                 ViewUtil.exportTableToCsv(this, table, "users"));
 
@@ -243,6 +259,35 @@ public class UserPanel extends JPanel implements Refreshable {
         refreshTable();
     }
 
+    private void viewDetails() {
+        Long id = selectedUserId();
+        if (id == null) {
+            return;
+        }
+        try {
+            for (User candidate : controller.listUsers()) {
+                if (candidate.getId().equals(id)) {
+                    String text = "#" + candidate.getId() + "  "
+                            + candidate.getUsername() + "\n"
+                            + "Full name : " + candidate.getFullName() + "\n"
+                            + "Email     : " + candidate.getEmail() + "\n"
+                            + "Phone     : " + (candidate.getPhone() == null
+                                    ? "-" : candidate.getPhone()) + "\n"
+                            + "Role      : " + candidate.getRole().getLabel()
+                            + "\n"
+                            + "Status    : "
+                            + candidate.getAccountStatus().getLabel() + "\n"
+                            + "Last login: " + (candidate.getLastLogin() == null
+                                    ? "never" : candidate.getLastLogin());
+                    JOptionPane.showMessageDialog(this, text,
+                            "User #" + id, JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        } catch (DataAccessException e) {
+            ViewUtil.error(this, e.getMessage());
+        }
+    }
+
     private void deleteSelected() {
         Long id = selectedUserId();
         if (id == null) {
@@ -261,10 +306,17 @@ public class UserPanel extends JPanel implements Refreshable {
 
     private void refreshTable() {
         tableModel.setRowCount(0);
+        String needle = searchField.getText() == null ? ""
+                : searchField.getText().trim().toLowerCase();
         try {
-            List<User> users = controller.listUsers();
-            for (User user : users) {
-                tableModel.addRow(UserController.toRow(user));
+            for (User user : controller.listUsers()) {
+                boolean matches = needle.isEmpty()
+                        || user.getUsername().toLowerCase().contains(needle)
+                        || user.getFullName().toLowerCase().contains(needle)
+                        || user.getEmail().toLowerCase().contains(needle);
+                if (matches) {
+                    tableModel.addRow(UserController.toRow(user));
+                }
             }
         } catch (DataAccessException e) {
             ViewUtil.error(this, e.getMessage());

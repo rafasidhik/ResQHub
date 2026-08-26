@@ -37,6 +37,9 @@ public class AuthService {
         }
 
         User user = userDAO.findByUsername(username.trim());
+        if (user == null && username.trim().contains("@")) {
+            user = userDAO.findByEmail(username.trim());
+        }
         if (user == null) {
             throw new AuthenticationException("Invalid username or password");
         }
