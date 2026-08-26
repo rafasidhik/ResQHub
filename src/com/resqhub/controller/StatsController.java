@@ -9,6 +9,7 @@ import com.resqhub.model.DisasterStatus;
 import com.resqhub.model.EmergencyStatus;
 import com.resqhub.model.RescueTeam;
 import com.resqhub.model.Victim;
+import com.resqhub.service.AccountDeletionRequestService;
 import com.resqhub.service.DisasterService;
 import com.resqhub.service.RescueRequestService;
 import com.resqhub.service.RescueTeamService;
@@ -31,11 +32,13 @@ public class StatsController {
         public final int availableTeams;
         public final int deployedTeams;
         public final int totalTeams;
+        public final int pendingDeletions;
 
         Snapshot(int activeDisasters, int totalDisasters,
                  int criticalVictims, int totalVictims,
                  int pendingRequests, int availableTeams,
-                 int deployedTeams, int totalTeams) {
+                 int deployedTeams, int totalTeams,
+                 int pendingDeletions) {
             this.activeDisasters = activeDisasters;
             this.totalDisasters = totalDisasters;
             this.criticalVictims = criticalVictims;
@@ -44,6 +47,7 @@ public class StatsController {
             this.availableTeams = availableTeams;
             this.deployedTeams = deployedTeams;
             this.totalTeams = totalTeams;
+            this.pendingDeletions = pendingDeletions;
         }
     }
 
@@ -85,7 +89,8 @@ public class StatsController {
 
             Snapshot snapshot = new Snapshot(active, disasters.size(),
                     critical, victims.size(), requestService.countPending(),
-                    available, deployed, teams.size());
+                    available, deployed, teams.size(),
+                    new AccountDeletionRequestService().countPending());
             return ActionResult.successWithData("Live snapshot", snapshot);
         } catch (DataAccessException e) {
             return ActionResult.failure(e.getMessage());

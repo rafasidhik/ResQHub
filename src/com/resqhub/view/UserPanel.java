@@ -7,8 +7,10 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.util.List;
 
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -16,6 +18,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 
+import com.resqhub.controller.AccountDeletionRequestController;
 import com.resqhub.controller.ActionResult;
 import com.resqhub.controller.UserController;
 import com.resqhub.exception.DataAccessException;
@@ -87,41 +90,49 @@ public class UserPanel extends JPanel implements Refreshable {
         JPanel area = new JPanel(new BorderLayout(6, 6));
         area.add(new JScrollPane(table), BorderLayout.CENTER);
 
-        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        controls.add(new JLabel("Search:"));
-        controls.add(searchField);
+        JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        row1.add(new JLabel("Search:"));
+        row1.add(searchField);
         JButton searchButton = new JButton("Search");
         JButton showAllButton = new JButton("Show All");
-        controls.add(searchButton);
-        controls.add(showAllButton);
+        row1.add(searchButton);
+        row1.add(showAllButton);
 
         JButton unlockButton = new JButton("Unlock selected");
-        controls.add(unlockButton);
+        row1.add(unlockButton);
 
         JButton deleteButton = new JButton("Delete selected");
         deleteButton.setEnabled(
                 SessionManager.getInstance().hasRole(RoleType.ADMIN));
-        controls.add(deleteButton);
+        row1.add(deleteButton);
 
-        controls.add(new JLabel("Set status:"));
+        row1.add(new JLabel("Set status:"));
         JComboBox<AccountStatus> statusCombo =
                 new JComboBox<>(new AccountStatus[] {
                         AccountStatus.ACTIVE, AccountStatus.INACTIVE});
         JButton applyButton = new JButton("Apply");
-        controls.add(statusCombo);
-        controls.add(applyButton);
+        row1.add(statusCombo);
+        row1.add(applyButton);
 
         JButton refreshButton = new JButton("Refresh");
-        controls.add(refreshButton);
+        row1.add(refreshButton);
 
+        JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton editButton = new JButton("Update selected");
         JButton resetButton = new JButton("Reset password...");
         JButton detailsButton = new JButton("View Details");
         JButton exportButton = new JButton("Export CSV");
-        controls.add(editButton);
-        controls.add(resetButton);
-        controls.add(detailsButton);
-        controls.add(exportButton);
+        JButton deletionRequestsButton = new JButton("Deletion Requests");
+        row2.add(editButton);
+        row2.add(resetButton);
+        row2.add(detailsButton);
+        row2.add(exportButton);
+        row2.add(deletionRequestsButton);
+
+        JPanel controls = new JPanel();
+        controls.setLayout(new BoxLayout(controls, BoxLayout.Y_AXIS));
+        controls.add(row1);
+        controls.add(row2);
         area.add(controls, BorderLayout.NORTH);
 
         unlockButton.addActionListener(event -> {
@@ -153,6 +164,8 @@ public class UserPanel extends JPanel implements Refreshable {
         editButton.addActionListener(event -> updateSelected());
         resetButton.addActionListener(event -> resetPassword());
         detailsButton.addActionListener(event -> viewDetails());
+        deletionRequestsButton.addActionListener(
+                event -> showDeletionRequestsDialog());
         exportButton.addActionListener(event ->
                 ViewUtil.exportTableToCsv(this, table, "users"));
 
@@ -286,6 +299,95 @@ public class UserPanel extends JPanel implements Refreshable {
         } catch (DataAccessException e) {
             ViewUtil.error(this, e.getMessage());
         }
+    }
+
+    /** Admin dialog listing pending account-deletion requests. */
+    private void showDeletionRequestsDialog() {
+        AccountDeletionRequestController deletionCtrl =
+                new AccountDeletionRequestController();
+        List<com.resqhub.model.AccountDeletionRequest> pending =
+                deletionCtrl.getPendingRequests();
+        if (pending.isEmpty()) {
+            ViewUtil.info(this, "No pending deletion requests");
+            return;
+        }
+
+        String[] columns = {"ID", "User ID", "Requested"};
+        javax.swing.table.DefaultTableModel model =
+                ViewUtil.readOnlyModel(columns);
+        for (com.resqhub.model.AccountDeletionRequest req : pending) {
+            model.addRow(new Object[]{req.getId(), req.getUserId(),
+                    req.getRequestedAt()});
+        }
+        JTable table = new JTable(model);
+        table.setSelectionMode(
+                javax.swing.ListSelectionModel.SINGLE_SELECTION);
+
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+
+        JButton approveBtn = new JButton("Approve (delete user)");
+        JButton denyBtn = new JButton("Deny");
+        JPanel buttons = new JPanel(new FlowLayout());
+        buttons.add(approveBtn);
+        buttons.add(denyBtn);
+        panel.add(buttons, BorderLayout.SOUTH);
+
+        JDialog dialog = new JDialog(
+                (java.awt.Frame) javax.swing.SwingUtilities
+                        .getWindowAncestor(this),
+                "Deletion Requests", true);
+        dialog.setContentPane(panel);
+
+        approveBtn.addActionListener(ev -> {
+            int row = table.getSelectedRow();
+            if (row < 0) {
+                ViewUtil.error(dialog, "Select a request first");
+                return;
+            }
+            long reqId = (Long) model.getValueAt(row, 0);
+            long targetUserId = (Long) model.getValueAt(row, 1);
+            int confirm = JOptionPane.showConfirmDialog(dialog,
+                    "Approve deletion of user #" + targetUserId + "?",
+                    "Confirm", JOptionPane.YES_NO_OPTION);
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+            ActionResult result = deletionCtrl.approveRequest(reqId, "");
+            if (result.isSuccess()) {
+                ViewUtil.info(dialog, result.getMessage());
+                dialog.dispose();
+                refreshTable();
+            } else {
+                ViewUtil.error(dialog, result.getMessage());
+            }
+        });
+
+        denyBtn.addActionListener(ev -> {
+            int row = table.getSelectedRow();
+            if (row < 0) {
+                ViewUtil.error(dialog, "Select a request first");
+                return;
+            }
+            long reqId = (Long) model.getValueAt(row, 0);
+            int confirm = JOptionPane.showConfirmDialog(dialog,
+                    "Deny this deletion request?",
+                    "Confirm", JOptionPane.YES_NO_OPTION);
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+            ActionResult result = deletionCtrl.denyRequest(reqId, "");
+            if (result.isSuccess()) {
+                ViewUtil.info(dialog, result.getMessage());
+                dialog.dispose();
+            } else {
+                ViewUtil.error(dialog, result.getMessage());
+            }
+        });
+
+        dialog.setSize(450, 300);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 
     private void deleteSelected() {

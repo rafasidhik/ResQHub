@@ -249,3 +249,21 @@ INSERT INTO rescue_requests (disaster_id, victim_id, requester_name, contact_num
  4, 2, 0, TRUE, TRUE, FALSE, 'Immediate medical evacuation and boat rescue'),
 (2, NULL, 'Neighbour of Abdul', '9847000009', 'Kovalam cliff road',
  1, 0, 0, TRUE, FALSE, TRUE, 'Debris cutting team to extract trapped person');
+
+-- ---------------------------------------------------------------------
+-- 8. account_deletion_requests  (user-initiated deletion workflow)
+--    users(1) --< account_deletion_requests(N) : many requests per user
+-- ---------------------------------------------------------------------
+CREATE TABLE account_deletion_requests (
+    id          BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    user_id     BIGINT UNSIGNED  NOT NULL,
+    status      ENUM('PENDING','APPROVED','DENIED') NOT NULL DEFAULT 'PENDING',
+    requested_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_by BIGINT UNSIGNED  NULL,
+    reviewed_at TIMESTAMP        NULL,
+    admin_notes VARCHAR(500)     NULL,
+    PRIMARY KEY (id),
+    KEY idx_adr_user (user_id),
+    CONSTRAINT fk_adr_user   FOREIGN KEY (user_id)     REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_adr_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

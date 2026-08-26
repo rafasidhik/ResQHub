@@ -20,6 +20,7 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
 import com.resqhub.controller.ActionResult;
+import com.resqhub.controller.AccountDeletionRequestController;
 import com.resqhub.controller.AuthController;
 import com.resqhub.model.RoleType;
 import com.resqhub.model.User;
@@ -82,6 +83,8 @@ public class MainDashboard extends JFrame {
             openModule("victims", new VictimPanel(true));
         } else if ("teams".equals(moduleName)) {
             openModule("teams", new RescueTeamPanel());
+        } else if ("users".equals(moduleName)) {
+            openModule("users", new UserPanel());
         } else {
             openModule("requests", new RescueRequestPanel(true));
         }
@@ -159,6 +162,10 @@ public class MainDashboard extends JFrame {
         JMenu accountMenu = new JMenu("Account");
         accountMenu.add(item("My Profile...", this::showMyProfileDialog));
         accountMenu.add(item("Change Password...", this::showChangePasswordDialog));
+        if (!has(RoleType.ADMIN)) {
+            accountMenu.add(item("Request Account Deletion...",
+                    this::requestAccountDeletion));
+        }
         accountMenu.add(item("Logout", this::logout));
 
         JMenu helpMenu = new JMenu("Help");
@@ -204,23 +211,28 @@ public class MainDashboard extends JFrame {
         final JTextField emailField = new JTextField(current.getEmail(), 20);
         final JTextField phoneField = new JTextField(
                 current.getPhone() == null ? "" : current.getPhone(), 12);
+        JLabel usernameLabel = new JLabel(current.getUsername());
         JLabel roleLabel = new JLabel(current.getRole().getLabel());
         JLabel statusLabel = new JLabel(
                 current.getAccountStatus().getLabel());
 
-        gbc.gridx = 0; gbc.gridy = 0; form.add(new JLabel("Full name:"), gbc);
+        gbc.gridx = 0; gbc.gridy = 0;
+        form.add(new JLabel("Username:"), gbc);
+        gbc.gridx = 1; form.add(usernameLabel, gbc);
+        gbc.gridy = 1; gbc.gridx = 0;
+        form.add(new JLabel("Full name:"), gbc);
         gbc.gridx = 1; form.add(nameField, gbc);
-        gbc.gridy = 1; gbc.gridx = 0; form.add(new JLabel("Email:"), gbc);
+        gbc.gridy = 2; gbc.gridx = 0; form.add(new JLabel("Email:"), gbc);
         gbc.gridx = 1; form.add(emailField, gbc);
-        gbc.gridy = 2; gbc.gridx = 0; form.add(new JLabel("Phone:"), gbc);
+        gbc.gridy = 3; gbc.gridx = 0; form.add(new JLabel("Phone:"), gbc);
         gbc.gridx = 1; form.add(phoneField, gbc);
-        gbc.gridy = 3; gbc.gridx = 0; form.add(new JLabel("Role:"), gbc);
+        gbc.gridy = 4; gbc.gridx = 0; form.add(new JLabel("Role:"), gbc);
         gbc.gridx = 1; form.add(roleLabel, gbc);
-        gbc.gridy = 4; gbc.gridx = 0; form.add(new JLabel("Status:"), gbc);
+        gbc.gridy = 5; gbc.gridx = 0; form.add(new JLabel("Status:"), gbc);
         gbc.gridx = 1; form.add(statusLabel, gbc);
 
         JButton saveButton = new JButton("Save");
-        gbc.gridy = 5; gbc.gridx = 1; form.add(saveButton, gbc);
+        gbc.gridy = 6; gbc.gridx = 1; form.add(saveButton, gbc);
         dialog.setContentPane(form);
 
         saveButton.addActionListener(event -> {
@@ -246,6 +258,26 @@ public class MainDashboard extends JFrame {
     }
 
     /** JDialog example: modal password change form. */
+    private void requestAccountDeletion() {
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Submit a request to delete your account?\n"
+                        + "An admin will review and decide.",
+                "Request Account Deletion",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+        AccountDeletionRequestController deletionCtrl =
+                new AccountDeletionRequestController();
+        ActionResult result = deletionCtrl.requestDeletion();
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+    }
+
     private void showChangePasswordDialog() {
         final JDialog dialog = new JDialog(this, "Change Password", true);
         JPanel form = new JPanel(new java.awt.GridBagLayout());

@@ -61,7 +61,7 @@ public class LoginView extends JFrame {
         root.add(header, gbc);
 
         gbc.gridwidth = 1; gbc.gridy = 1; gbc.gridx = 0;
-        root.add(new JLabel("Username:"), gbc);
+        root.add(new JLabel("Username / Email:"), gbc);
         gbc.gridx = 1;
         root.add(usernameField, gbc);
 

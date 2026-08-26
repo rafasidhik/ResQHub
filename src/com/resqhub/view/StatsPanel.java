@@ -20,7 +20,10 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 
 import com.resqhub.controller.ActionResult;
+import com.resqhub.controller.AccountDeletionRequestController;
 import com.resqhub.controller.StatsController;
+import com.resqhub.model.RoleType;
+import com.resqhub.service.SessionManager;
 
 /**
  * Landing overview for staff logins: stat cards, attention list,
@@ -73,12 +76,21 @@ public class StatsPanel extends JPanel implements Refreshable {
         JButton requestsButton = new JButton("View Rescue Requests");
         JButton victimsButton = new JButton("Register Victim");
         JButton teamsButton = new JButton("Manage Rescue Teams");
+        JButton deletionButton = new JButton("Review Deletion Requests");
         reportButton.addActionListener(e -> moduleOpener.accept("requests"));
         requestsButton.addActionListener(e -> moduleOpener.accept("requests"));
         victimsButton.addActionListener(e -> moduleOpener.accept("victims"));
         teamsButton.addActionListener(e -> moduleOpener.accept("teams"));
-        for (JButton button : new JButton[] {reportButton, requestsButton,
-                victimsButton, teamsButton}) {
+        deletionButton.addActionListener(e -> moduleOpener.accept("users"));
+        List<JButton> buttonList = new ArrayList<>();
+        buttonList.add(reportButton);
+        buttonList.add(requestsButton);
+        buttonList.add(victimsButton);
+        buttonList.add(teamsButton);
+        if (SessionManager.getInstance().hasRole(RoleType.ADMIN)) {
+            buttonList.add(deletionButton);
+        }
+        for (JButton button : buttonList) {
             actionsPanel.add(button);
         }
         JPanel actions = new JPanel(new BorderLayout());
@@ -171,6 +183,12 @@ public class StatsPanel extends JPanel implements Refreshable {
                     + (s.pendingRequests == 1 ? "" : "s"));
         } else {
             alerts.add("\u2022 No pending rescue requests");
+        }
+        if (s.pendingDeletions > 0) {
+            alerts.add("\u2022 " + s.pendingDeletions
+                    + " Account deletion request"
+                    + (s.pendingDeletions == 1 ? "" : "s")
+                    + " awaiting review");
         }
         if (alerts.size() == 1 && s.pendingRequests == 0
                 && s.criticalVictims == 0 && s.activeDisasters == 0
