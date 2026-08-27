@@ -3,6 +3,7 @@ package com.resqhub.service;
 import com.resqhub.exception.UnauthorizedOperationException;
 import com.resqhub.model.RoleType;
 import com.resqhub.model.User;
+import com.resqhub.model.Volunteer;
 
 /**
  * EAGER singleton holding the logged-in user for this application run.
@@ -75,5 +76,18 @@ public final class SessionManager {
 
     public Long currentUserId() {
         return isLoggedIn() ? currentUser.getId() : null;
+    }
+
+    /** The volunteer record linked to the logged-in auth user (nullable). */
+    public Volunteer getCurrentVolunteer() {
+        if (!isLoggedIn() || currentUser.getId() == null) {
+            return null;
+        }
+        try {
+            return new com.resqhub.dao.VolunteerDAO()
+                    .findByUserId(currentUser.getId());
+        } catch (com.resqhub.exception.DataAccessException e) {
+            return null;
+        }
     }
 }

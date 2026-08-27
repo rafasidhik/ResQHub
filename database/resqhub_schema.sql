@@ -252,6 +252,87 @@ CREATE TABLE team_equipment (
         ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB;
 
+-- ---------------------------------------------------------------------
+-- 11. volunteers  (people volunteering for disaster-response tasks)
+-- ---------------------------------------------------------------------
+CREATE TABLE volunteers (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    full_name       VARCHAR(100)    NOT NULL,
+    contact_number  VARCHAR(15)     NOT NULL,
+    email           VARCHAR(120)    NULL,
+    user_id         BIGINT UNSIGNED NULL COMMENT 'link to auth user for self-service',
+    location        VARCHAR(200)    NOT NULL,
+    skills          TEXT            NULL COMMENT 'comma-separated summary',
+    availability    ENUM('AVAILABLE','BUSY','UNAVAILABLE') NOT NULL DEFAULT 'AVAILABLE',
+    emergency_role  ENUM('MEDICAL','SHELTER','FOOD','RESCUE','COMMUNICATION','TRANSPORT','GENERAL') NULL,
+    max_workload    INT UNSIGNED    NOT NULL DEFAULT 2,
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_volunteers_contact (contact_number),
+    INDEX idx_volunteers_availability (availability),
+    INDEX idx_volunteers_location (location),
+    CONSTRAINT fk_volunteers_user FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- 12. volunteer_skills  (normalised skill records per volunteer)
+--     volunteers(1) --< volunteer_skills(N)
+-- ---------------------------------------------------------------------
+CREATE TABLE volunteer_skills (
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    volunteer_id  BIGINT UNSIGNED NOT NULL,
+    skill_name    VARCHAR(100)    NOT NULL,
+    created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_vs_volunteer (volunteer_id),
+    CONSTRAINT fk_vs_volunteer FOREIGN KEY (volunteer_id) REFERENCES volunteers (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- 13. volunteer_assignments  (emergency tasks assigned to volunteers)
+--     volunteers(1) --< volunteer_assignments(N)
+-- ---------------------------------------------------------------------
+CREATE TABLE volunteer_assignments (
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    volunteer_id  BIGINT UNSIGNED NOT NULL,
+    task_name     VARCHAR(150)    NOT NULL,
+    description   TEXT            NULL,
+    location      VARCHAR(200)    NULL,
+    priority      INT             NOT NULL DEFAULT 1,
+    status        ENUM('ASSIGNED','ACCEPTED','IN_PROGRESS','COMPLETED') NOT NULL DEFAULT 'ASSIGNED',
+    assigned_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at  DATETIME        NULL,
+    created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_va_volunteer (volunteer_id),
+    INDEX idx_va_status (status),
+    CONSTRAINT fk_va_volunteer FOREIGN KEY (volunteer_id) REFERENCES volunteers (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- 14. volunteer_activity  (history of volunteer participation)
+--     volunteers(1) --< volunteer_activity(N)
+-- ---------------------------------------------------------------------
+CREATE TABLE volunteer_activity (
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    volunteer_id  BIGINT UNSIGNED NOT NULL,
+    activity_type VARCHAR(50)     NOT NULL COMMENT 'TASK_ASSIGNED, TASK_ACCEPTED, TASK_STARTED, TASK_COMPLETED, AVAILABILITY_CHANGED',
+    description   VARCHAR(300)    NULL,
+    activity_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_vact_volunteer (volunteer_id),
+    CONSTRAINT fk_vact_volunteer FOREIGN KEY (volunteer_id) REFERENCES volunteers (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
 -- =====================================================================
 -- SEED DATA
 -- Passwords below are SHA-256 hex digests.
@@ -324,6 +405,35 @@ INSERT INTO team_equipment (team_id, equipment_name, quantity, description) VALU
 (2, 'Cutters', 3, 'Hydraulic cutting tools'),
 (2, 'Stretchers', 4, 'Patient transport'),
 (2, 'Oxygen kits', 2, 'Emergency oxygen supply');
+
+INSERT INTO volunteers (full_name, contact_number, email, location, skills,
+                        availability, emergency_role, max_workload) VALUES
+('Nithin George',  '9847000101', 'nithin@resqhub.org', 'Wayanad',
+ 'first aid, swimming, logistics', 'AVAILABLE', 'MEDICAL', 3),
+('Priya Rajan',    '9847000102', 'priya@resqhub.org',   'Kozhikode',
+ 'shelter, counselling, first aid', 'AVAILABLE', 'SHELTER', 2),
+('Faizal Khan',    '9847000103', 'faizal@resqhub.org',  'Thiruvananthapuram',
+ 'food distribution, driving', 'AVAILABLE', 'FOOD', 2);
+
+INSERT INTO volunteer_skills (volunteer_id, skill_name) VALUES
+(1, 'First aid'),
+(1, 'Swimming'),
+(1, 'Logistics'),
+(2, 'Shelter management'),
+(2, 'Counselling'),
+(2, 'First aid'),
+(3, 'Food distribution'),
+(3, 'Driving');
+
+-- Demo VOLUNTEER auth account linked to volunteer 1 for self-service testing
+--   volunteer1 / Volunteer@123
+INSERT INTO users (username, password_hash, full_name, email, phone, role_id) VALUES
+('volunteer1', '3e789d2f398b50e9999d157196a68254dc44c67a04b9adefcefe8c7a195e2c6d',
+ 'Nithin George', 'nithin@resqhub.org', '9847000101', 6);
+
+UPDATE volunteers SET user_id = (SELECT id FROM users WHERE username = 'volunteer1')
+WHERE contact_number = '9847000101';
+
 
 INSERT INTO rescue_requests (disaster_id, victim_id, requester_name, contact_number, location,
                              people_count, children_count, elderly_count, life_threatening,

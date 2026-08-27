@@ -143,6 +143,8 @@ public class MainDashboard extends JFrame {
                     openModule("requests", new RescueRequestPanel(true))));
             modulesMenu.add(item("Rescue Teams", () ->
                     openModule("teams", new RescueTeamPanel())));
+            modulesMenu.add(item("Volunteers", () ->
+                    openModule("volunteers", new VolunteerPanel())));
             if (has(RoleType.ADMIN)) {
                 modulesMenu.add(item("Users", () ->
                         openModule("users", new UserPanel())));
@@ -152,8 +154,11 @@ public class MainDashboard extends JFrame {
                     openModule("victims", new VictimPanel(true))));
             modulesMenu.add(item("Rescue Requests", () ->
                     openModule("requests", new RescueRequestPanel(true))));
+        } else if (has(RoleType.VOLUNTEER)) {
+            modulesMenu.add(item("My Tasks", () ->
+                    openModule("volunteers", new VolunteerPanel())));
         } else {
-            // CITIZEN / VOLUNTEER / MEDICAL_OFFICER / BLOOD_COORDINATOR:
+            // CITIZEN / MEDICAL_OFFICER / BLOOD_COORDINATOR:
             // submission-only view of rescue requests
             modulesMenu.add(item("Report Emergency", () ->
                     openModule("requests", new RescueRequestPanel(false))));
