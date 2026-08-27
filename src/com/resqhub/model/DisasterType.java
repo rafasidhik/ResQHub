@@ -7,7 +7,9 @@ public enum DisasterType {
     CYCLONE("Cyclone"),
     LANDSLIDE("Landslide"),
     FIRE("Fire"),
+    BUILDING_COLLAPSE("Building Collapse"),
     INDUSTRIAL_ACCIDENT("Industrial Accident"),
+    ACCIDENT("Accident"),
     EPIDEMIC("Epidemic"),
     OTHER("Other");
 

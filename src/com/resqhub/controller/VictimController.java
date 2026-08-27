@@ -132,6 +132,19 @@ public class VictimController {
         };
     }
 
+    public static Object[] toRowWithShelter(Victim v) {
+        return new Object[] {
+                v.getId(),
+                v.getFullName(),
+                v.getAge(),
+                v.getGender() == null ? "-" : v.getGender().getLabel(),
+                v.getEmergencyStatus().getLabel(),
+                v.getShelterStatus().getLabel(),
+                v.getCurrentLocation(),
+                v.getDisasterId()
+        };
+    }
+
     public static String[] tableHeaders() {
         return new String[] {"ID", "Name", "Age", "Gender", "Status",
                 "Location", "Disaster #"};
