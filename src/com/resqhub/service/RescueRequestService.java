@@ -194,6 +194,11 @@ public class RescueRequestService {
         return requestDAO.findAll();
     }
 
+    /** Open requests rated CRITICAL - consumed by the alert generator. */
+    public List<RescueRequest> findCriticalOpen() throws DataAccessException {
+        return requestDAO.findCriticalOpen();
+    }
+
     public List<RescueRequest> search(String keyword) throws DataAccessException {
         if (keyword == null || keyword.trim().isEmpty()) {
             return requestDAO.findAll();
@@ -294,7 +299,17 @@ public class RescueRequestService {
                     + team.getAvailabilityStatus().getLabel());
         }
 
-        return assignmentDAO.assignTeam(requestId, teamId, session.currentUserId());
+        long assignmentId = assignmentDAO.assignTeam(
+                requestId, teamId, session.currentUserId());
+
+        try {
+            boolean critical = request.getPriority() == PriorityLevel.CRITICAL;
+            new NotificationService().notifyTeamAssigned(requestId, teamId,
+                    request.getLocation(), critical);
+        } catch (DataAccessException ignored) {
+            // a failed alert must never block the assignment itself
+        }
+        return assignmentId;
     }
 
     /** Progresses ASSIGNED -> EN_ROUTE -> ON_SITE; EN_ROUTE may be skipped

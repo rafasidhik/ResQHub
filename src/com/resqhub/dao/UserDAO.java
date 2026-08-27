@@ -160,6 +160,28 @@ public class UserDAO extends BaseDao implements Repository<User> {
         }
     }
 
+    /** All ACTIVE accounts holding a given role - used for role-based
+     *  notification routing (e.g. critical alerts to every officer). */
+    public List<User> findByRole(RoleType role) throws DataAccessException {
+        String sql = SELECT_COLUMNS + "WHERE r.role_name = ? "
+                + "AND u.account_status = 'ACTIVE' ORDER BY u.username";
+        List<User> result = new ArrayList<>();
+        try (Connection con = openConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, role.name());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(mapRow(rs));
+                }
+            }
+            return result;
+        } catch (SQLException e) {
+            throw new DataAccessException(
+                    "Could not list users by role " + role, e);
+        }
+    }
+
     @Override
     public boolean deleteById(long id) throws DataAccessException {
         String sql = "DELETE FROM users WHERE id = ?";

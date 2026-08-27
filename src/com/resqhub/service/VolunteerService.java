@@ -362,6 +362,13 @@ public class VolunteerService {
         logActivity(volunteerId, "TASK_ASSIGNED",
                 "Task assigned: " + taskName);
 
+        try {
+            new NotificationService().notifyVolunteerAssigned(
+                    volunteerId, taskName, location, priority);
+        } catch (DataAccessException ignored) {
+            // a failed alert must never block the assignment itself
+        }
+
         if (v.getAvailability() == VolunteerAvailability.AVAILABLE
                 && active + 1 >= v.getMaxWorkload()) {
             v.setAvailability(VolunteerAvailability.BUSY);

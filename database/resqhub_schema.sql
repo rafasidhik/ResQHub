@@ -539,3 +539,54 @@ CREATE TABLE account_deletion_requests (
     CONSTRAINT fk_adr_user   FOREIGN KEY (user_id)     REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_adr_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
+-- 9. notifications  (Notification Center / Alerts)
+--    users(1) --< notifications(N) : many alerts per user
+--    Notification type/priority/status are the alert classification.
+--    auto_generated + dedup_key drive automatic business-rule alerts so
+--    a condition that stays true does not flood users with duplicates.
+-- ---------------------------------------------------------------------
+CREATE TABLE notifications (
+    id               BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    recipient_user_id BIGINT UNSIGNED NOT NULL,
+    type             ENUM('CRITICAL_RESCUE','LOW_STOCK','ASSIGNMENT','SYSTEM')
+                     NOT NULL,
+    priority         ENUM('CRITICAL','WARNING','INFO') NOT NULL DEFAULT 'INFO',
+    status           ENUM('UNREAD','READ','ARCHIVED')  NOT NULL DEFAULT 'UNREAD',
+    message          VARCHAR(500)     NOT NULL,
+    related_module   VARCHAR(60)      NULL,
+    related_event_id BIGINT UNSIGNED  NULL,
+    auto_generated   TINYINT(1)       NOT NULL DEFAULT 0,
+    dedup_key        VARCHAR(120)     NULL,
+    read_at          DATETIME         NULL,
+    created_at       DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_notifications_recipient (recipient_user_id, status),
+    KEY idx_notifications_dedup (dedup_key),
+    CONSTRAINT fk_notifications_user FOREIGN KEY (recipient_user_id)
+        REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+-- Seed Notification Center history using the demo accounts:
+--   admin (1) and officer1 (2) receive the critical-rescue + low-stock alerts
+--   produced by the automatic-alert generator against the seed data.
+INSERT INTO notifications (recipient_user_id, type, priority, status,
+                           message, related_module, related_event_id,
+                           auto_generated, dedup_key) VALUES
+(1, 'SYSTEM',            'INFO',     'READ',
+ 'Welcome to ResQHub. This is your Notification Center.',
+ 'System', NULL, 0, NULL),
+(1, 'CRITICAL_RESCUE',   'CRITICAL', 'READ',
+ 'CRITICAL rescue request at Chundale, Wayanad - 4 people need rescue, medical emergency.',
+ 'Rescue Requests', 1, 1, 'CRITICAL_RESCUE:1'),
+(2, 'CRITICAL_RESCUE',   'CRITICAL', 'READ',
+ 'CRITICAL rescue request at Chundale, Wayanad - 4 people need rescue, medical emergency.',
+ 'Rescue Requests', 1, 1, 'CRITICAL_RESCUE:1'),
+(2, 'ASSIGNMENT',        'INFO',     'READ',
+ 'Rescue team #1 assigned to request #1 at Chundale, Wayanad (CRITICAL).',
+ 'Rescue Requests', 1, 1, 'ASSIGNMENT:T:1:1'),
+(1, 'ASSIGNMENT',        'INFO',     'READ',
+ 'Rescue team #1 assigned to request #1 at Chundale, Wayanad (CRITICAL).',
+ 'Rescue Requests', 1, 1, 'ASSIGNMENT:T:1:1');
