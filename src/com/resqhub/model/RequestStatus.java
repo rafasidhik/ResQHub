@@ -3,6 +3,7 @@ package com.resqhub.model;
 /** rescue_requests.status column. */
 public enum RequestStatus {
     PENDING("Pending"),
+    UNDER_REVIEW("Under Review"),
     ASSIGNED("Assigned"),
     IN_PROGRESS("In Progress"),
     RESCUED("Rescued"),

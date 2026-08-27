@@ -29,6 +29,7 @@ public class StatsController {
         public final int criticalVictims;
         public final int totalVictims;
         public final int pendingRequests;
+        public final int criticalRequests;
         public final int availableTeams;
         public final int deployedTeams;
         public final int totalTeams;
@@ -36,14 +37,15 @@ public class StatsController {
 
         Snapshot(int activeDisasters, int totalDisasters,
                  int criticalVictims, int totalVictims,
-                 int pendingRequests, int availableTeams,
-                 int deployedTeams, int totalTeams,
-                 int pendingDeletions) {
+                 int pendingRequests, int criticalRequests,
+                 int availableTeams, int deployedTeams,
+                 int totalTeams, int pendingDeletions) {
             this.activeDisasters = activeDisasters;
             this.totalDisasters = totalDisasters;
             this.criticalVictims = criticalVictims;
             this.totalVictims = totalVictims;
             this.pendingRequests = pendingRequests;
+            this.criticalRequests = criticalRequests;
             this.availableTeams = availableTeams;
             this.deployedTeams = deployedTeams;
             this.totalTeams = totalTeams;
@@ -89,6 +91,7 @@ public class StatsController {
 
             Snapshot snapshot = new Snapshot(active, disasters.size(),
                     critical, victims.size(), requestService.countPending(),
+                    requestService.countCritical(),
                     available, deployed, teams.size(),
                     new AccountDeletionRequestService().countPending());
             return ActionResult.successWithData("Live snapshot", snapshot);
@@ -111,6 +114,7 @@ public class StatsController {
                 + "CRITICAL VICTIMS      : " + s.criticalVictims
                 + "  (of " + s.totalVictims + " registered)\n"
                 + "PENDING RESCUE REQUESTS: " + s.pendingRequests + "\n"
+                + "CRITICAL REQUESTS     : " + s.criticalRequests + "\n"
                 + "TEAMS AVAILABLE       : " + s.availableTeams + "\n"
                 + "TEAMS DEPLOYED        : " + s.deployedTeams
                 + "  (of " + s.totalTeams + " total)";

@@ -186,6 +186,21 @@ public class RescueRequestDAO extends BaseDao implements Repository<RescueReques
         }
     }
 
+    public int countByPriority(PriorityLevel priority) throws DataAccessException {
+        String sql = "SELECT COUNT(*) FROM rescue_requests WHERE priority = ?";
+        try (Connection con = openConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, priority.name());
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Count by priority failed", e);
+        }
+    }
+
     @Override
     public List<RescueRequest> findAll() throws DataAccessException {
         String sql = "SELECT * FROM rescue_requests ORDER BY requested_at DESC";
@@ -213,6 +228,29 @@ public class RescueRequestDAO extends BaseDao implements Repository<RescueReques
             return ps.executeUpdate() == 1;
         } catch (SQLException e) {
             throw new DataAccessException("Could not delete rescue request " + id, e);
+        }
+    }
+
+    /** Keyword search across requester_name, contact_number, and location. */
+    public List<RescueRequest> search(String keyword) throws DataAccessException {
+        String sql = "SELECT * FROM rescue_requests WHERE "
+                + "LOWER(requester_name) LIKE ? OR contact_number LIKE ? "
+                + "OR LOWER(location) LIKE ? ORDER BY requested_at DESC";
+        String pattern = "%" + keyword.toLowerCase() + "%";
+        List<RescueRequest> result = new ArrayList<>();
+        try (Connection con = openConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, pattern);
+            ps.setString(2, pattern);
+            ps.setString(3, pattern);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(mapRow(rs));
+                }
+            }
+            return result;
+        } catch (SQLException e) {
+            throw new DataAccessException("Rescue request search failed", e);
         }
     }
 

@@ -133,7 +133,7 @@ CREATE TABLE rescue_requests (
     required_assistance TEXT            NULL,
     priority            ENUM('CRITICAL','HIGH','MEDIUM','LOW') NULL
                         COMMENT 'computed by Rescue Priority Algorithm',
-    status              ENUM('PENDING','ASSIGNED','IN_PROGRESS','RESCUED','CANCELLED')
+    status              ENUM('PENDING','UNDER_REVIEW','ASSIGNED','IN_PROGRESS','RESCUED','CANCELLED')
                         NOT NULL DEFAULT 'PENDING',
     requested_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,

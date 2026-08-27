@@ -166,6 +166,12 @@ public class StatsPanel extends JPanel implements Refreshable {
         cardsRowBottom.repaint();
 
         List<String> alerts = new ArrayList<>();
+        if (s.criticalRequests > 0) {
+            alerts.add("\u26A0 " + s.criticalRequests
+                    + " CRITICAL rescue request"
+                    + (s.criticalRequests == 1 ? "" : "s")
+                    + " need immediate attention!");
+        }
         if (s.criticalVictims > 0) {
             alerts.add("\u2022 " + s.criticalVictims + " Critical victim"
                     + (s.criticalVictims == 1 ? "" : "s"));

@@ -194,6 +194,13 @@ public class RescueRequestService {
         return requestDAO.findAll();
     }
 
+    public List<RescueRequest> search(String keyword) throws DataAccessException {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return requestDAO.findAll();
+        }
+        return requestDAO.search(keyword.trim());
+    }
+
     /**
      * Aborts the live assignment of a request: assignment -> ABORTED,
      * team released, request returns to PENDING for reassignment.
@@ -223,6 +230,38 @@ public class RescueRequestService {
         return assignmentDAO.findByRequest(requestId);
     }
 
+    /** Moves a PENDING request to UNDER_REVIEW. */
+    public void startReview(long requestId)
+            throws UnauthorizedOperationException, InvalidRescueRequestException,
+            OperationNotAllowedException, DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER);
+        RescueRequest request = requireExisting(requestId);
+        if (request.getStatus() != RequestStatus.PENDING) {
+            throw new OperationNotAllowedException("Request #" + requestId
+                    + " is " + request.getStatus().getLabel()
+                    + " - only PENDING requests can be reviewed");
+        }
+        request.setStatus(RequestStatus.UNDER_REVIEW);
+        requestDAO.save(request);
+    }
+
+    /** Moves an UNDER_REVIEW request back to PENDING. */
+    public void unreview(long requestId)
+            throws UnauthorizedOperationException, InvalidRescueRequestException,
+            OperationNotAllowedException, DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER);
+        RescueRequest request = requireExisting(requestId);
+        if (request.getStatus() != RequestStatus.UNDER_REVIEW) {
+            throw new OperationNotAllowedException("Request #" + requestId
+                    + " is " + request.getStatus().getLabel()
+                    + " - only UNDER REVIEW requests can be sent back");
+        }
+        request.setStatus(RequestStatus.PENDING);
+        requestDAO.save(request);
+    }
+
     /**
      * Assigns an available rescue team to a pending request using the
      * transactional DAO method (request + team + assignment update atomically).
@@ -234,10 +273,11 @@ public class RescueRequestService {
         session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER);
 
         RescueRequest request = requireExisting(requestId);
-        if (request.getStatus() != RequestStatus.PENDING) {
+        if (request.getStatus() != RequestStatus.PENDING
+                && request.getStatus() != RequestStatus.UNDER_REVIEW) {
             throw new OperationNotAllowedException("Request #" + requestId
                     + " is " + request.getStatus().getLabel()
-                    + " - only PENDING requests can be assigned");
+                    + " - only PENDING or UNDER REVIEW requests can be assigned");
         }
         if (request.getPriority() == null) {
             recomputePriority(requestId);
@@ -351,6 +391,10 @@ public class RescueRequestService {
 
     public int countPending() throws DataAccessException {
         return requestDAO.countByStatus(RequestStatus.PENDING);
+    }
+
+    public int countCritical() throws DataAccessException {
+        return requestDAO.countByPriority(PriorityLevel.CRITICAL);
     }
 
     public String explainPriority(RescueRequest request, Long disasterId)

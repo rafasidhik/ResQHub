@@ -1,7 +1,10 @@
 package com.resqhub.view;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -10,6 +13,8 @@ import java.awt.event.MouseEvent;
 import java.util.List;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -29,6 +34,7 @@ import com.resqhub.controller.RescueTeamController;
 import com.resqhub.exception.DataAccessException;
 import com.resqhub.model.AssignmentStatus;
 import com.resqhub.model.Disaster;
+import com.resqhub.model.PriorityLevel;
 import com.resqhub.model.RequestStatus;
 import com.resqhub.model.RescueAssignment;
 import com.resqhub.model.RescueRequest;
@@ -52,6 +58,7 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
     private final JTextField requesterField = new JTextField(16);
     private final JTextField contactField = new JTextField(12);
     private final JTextField locationField = new JTextField(16);
+    private final JTextField searchField = new JTextField(14);
     private final JTextField peopleField = new JTextField(4);
     private final JTextField childrenField = new JTextField(4);
     private final JTextField elderlyField = new JTextField(4);
@@ -66,11 +73,17 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
     private final JTable table = new JTable(tableModel);
 
     private final JComboBox<String> filterCombo = new JComboBox<>(
-            new String[] {"Pending", "Assigned", "In Progress", "Rescued",
-                    "Cancelled", "All"});
+            new String[] {"Pending", "Under Review", "Assigned",
+                    "In Progress", "Rescued", "Cancelled", "All"});
     private Long editingId = null;
     private Long editingVictimId = null;
     private final JButton saveChangesButton = new JButton("Save changes");
+
+    private final JLabel totalTile = new JLabel("0");
+    private final JLabel pendingTile = new JLabel("0");
+    private final JLabel criticalTile = new JLabel("0");
+    private final JLabel assignedTile = new JLabel("0");
+    private final JLabel rescuedTile = new JLabel("0");
 
     private record DisasterOption(Long id, String label) {
         @Override
@@ -81,12 +94,52 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
 
     public RescueRequestPanel(boolean operational) {
         this.operational = operational;
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout(8, 8));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        add(buildHeader(), BorderLayout.NORTH);
         add(buildForm(), BorderLayout.WEST);
         add(buildQueueArea(), BorderLayout.CENTER);
         refreshDisasters();
         refreshQueue();
+    }
+
+    private JPanel buildHeader() {
+        JLabel title = new JLabel("RESCUE REQUESTS");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
+
+        JPanel tiles = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 6));
+        tiles.add(statTile("TOTAL", totalTile, new Color(60, 60, 60)));
+        tiles.add(statTile("PENDING", pendingTile, new Color(170, 130, 20)));
+        tiles.add(statTile("CRITICAL", criticalTile, new Color(170, 40, 40)));
+        tiles.add(statTile("ASSIGNED", assignedTile, new Color(40, 100, 160)));
+        tiles.add(statTile("RESCUED", rescuedTile, new Color(40, 110, 40)));
+
+        JPanel north = new JPanel(new BorderLayout(0, 4));
+        north.add(title, BorderLayout.NORTH);
+        north.add(tiles, BorderLayout.CENTER);
+        return north;
+    }
+
+    private JPanel statTile(String caption, JLabel valueLabel, Color color) {
+        valueLabel.setFont(valueLabel.getFont().deriveFont(Font.BOLD, 24f));
+        valueLabel.setForeground(color);
+        valueLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        JLabel captionLabel = new JLabel(caption);
+        captionLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        captionLabel.setFont(captionLabel.getFont().deriveFont(11f));
+        captionLabel.setForeground(new Color(90, 90, 90));
+
+        JPanel tile = new JPanel();
+        tile.setLayout(new BoxLayout(tile, BoxLayout.Y_AXIS));
+        tile.setPreferredSize(new Dimension(110, 80));
+        tile.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200)),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+        tile.add(Box.createVerticalGlue());
+        tile.add(valueLabel);
+        tile.add(captionLabel);
+        tile.add(Box.createVerticalGlue());
+        return tile;
     }
 
     private JPanel buildForm() {
@@ -145,6 +198,8 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
         JButton progressButton = new JButton("Progress assignment...");
         JButton completeButton = new JButton("Complete assignment");
         JButton cancelButton = new JButton("Cancel request");
+        JButton reviewButton = new JButton("Start Review");
+        JButton unreviewButton = new JButton("Back to Pending");
         JButton explainButton = new JButton("Why this priority?");
         JButton refreshButton = new JButton("Refresh");
 
@@ -152,6 +207,8 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
         controls.add(progressButton);
         controls.add(completeButton);
         controls.add(cancelButton);
+        controls.add(reviewButton);
+        controls.add(unreviewButton);
         controls.add(explainButton);
         controls.add(refreshButton);
 
@@ -159,6 +216,8 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
         progressButton.setEnabled(operational);
         completeButton.setEnabled(operational);
         cancelButton.setEnabled(operational);
+        reviewButton.setEnabled(operational);
+        unreviewButton.setEnabled(operational);
 
         JButton deleteButton = new JButton("Delete selected");
         deleteButton.setEnabled(
@@ -167,6 +226,12 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
 
         controls.add(new javax.swing.JLabel("Show:"));
         controls.add(filterCombo);
+        controls.add(new javax.swing.JLabel("Search:"));
+        controls.add(searchField);
+        JButton searchButton = new JButton("Search");
+        JButton showAllButton = new JButton("Show All");
+        controls.add(searchButton);
+        controls.add(showAllButton);
         JButton abortButton = new JButton("Abort mission");
         JButton historyButton = new JButton("History...");
         JButton editButton = new JButton("Edit selected");
@@ -187,10 +252,18 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
         progressButton.addActionListener(event -> showProgressDialog());
         completeButton.addActionListener(event -> completeSelected());
         cancelButton.addActionListener(event -> cancelSelected());
+        reviewButton.addActionListener(event -> startReview());
+        unreviewButton.addActionListener(event -> unreview());
         explainButton.addActionListener(event -> explainPriority());
         refreshButton.addActionListener(event -> refreshQueue());
         deleteButton.addActionListener(event -> deleteSelected());
         filterCombo.addActionListener(event -> refreshQueue());
+        searchButton.addActionListener(event -> refreshQueue());
+        showAllButton.addActionListener(event -> {
+            searchField.setText("");
+            filterCombo.setSelectedItem("Pending");
+            refreshQueue();
+        });
         abortButton.addActionListener(event -> abortSelected());
         historyButton.addActionListener(event -> showHistory());
         editButton.addActionListener(event -> editSelected());
@@ -268,6 +341,20 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
 
         if (result.isSuccess()) {
             ViewUtil.info(this, result.getMessage());
+            Object data = result.getData();
+            if (data instanceof RescueRequest req
+                    && req.getPriority() == PriorityLevel.CRITICAL) {
+                JOptionPane.showMessageDialog(this,
+                        "\u26A0 CRITICAL RESCUE REQUEST\n"
+                                + "Location: " + req.getLocation() + "\n"
+                                + "People: " + req.getPeopleCount() + "\n"
+                                + "Life-threatening: "
+                                + (req.isLifeThreatening() ? "Yes" : "No")
+                                + "\nMedical emergency: "
+                                + (req.isMedicalEmergency() ? "Yes" : "No"),
+                        "CRITICAL ALERT",
+                        JOptionPane.WARNING_MESSAGE);
+            }
             requesterField.setText("");
             contactField.setText("");
             locationField.setText("");
@@ -412,6 +499,34 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
         revealRequest(requestId);
     }
 
+    private void startReview() {
+        Long requestId = selectedRequestId();
+        if (requestId == null) {
+            return;
+        }
+        ActionResult result = controller.startReview(requestId);
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        refreshQueue();
+    }
+
+    private void unreview() {
+        Long requestId = selectedRequestId();
+        if (requestId == null) {
+            return;
+        }
+        ActionResult result = controller.unreview(requestId);
+        if (result.isSuccess()) {
+            ViewUtil.info(this, result.getMessage());
+        } else {
+            ViewUtil.error(this, result.getMessage());
+        }
+        refreshQueue();
+    }
+
     private void explainPriority() {
         Long requestId = selectedRequestId();
         if (requestId == null) {
@@ -453,14 +568,24 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
 
     private void refreshQueue() {
         tableModel.setRowCount(0);
+        int total = 0, pending = 0, critical = 0, assigned = 0, rescued = 0;
         if (!operational) {
-            // Citizens submit emergencies; the operations queue is staff-only.
             return;
         }
         try {
+            String needle = searchField.getText() == null
+                    ? "" : searchField.getText().trim();
             String filter = String.valueOf(filterCombo.getSelectedItem());
             List<RescueRequest> requests;
-            if ("All".equals(filter)) {
+
+            if (!needle.isEmpty()) {
+                requests = controller.search(needle);
+                if (!"All".equals(filter)) {
+                    RequestStatus status = RequestStatus.valueOf(
+                            filter.toUpperCase().replace(' ', '_'));
+                    requests.removeIf(r -> r.getStatus() != status);
+                }
+            } else if ("All".equals(filter)) {
                 requests = controller.getAllRequests();
             } else {
                 RequestStatus status = RequestStatus.valueOf(
@@ -468,11 +593,26 @@ public class RescueRequestPanel extends JPanel implements Refreshable {
                 requests = controller.getByStatus(status);
             }
             for (RescueRequest request : requests) {
+                total++;
+                switch (request.getStatus()) {
+                    case PENDING, UNDER_REVIEW -> pending++;
+                    case ASSIGNED, IN_PROGRESS -> assigned++;
+                    case RESCUED -> rescued++;
+                    default -> { }
+                }
+                if (request.getPriority() == PriorityLevel.CRITICAL) {
+                    critical++;
+                }
                 tableModel.addRow(RescueRequestController.toRow(request));
             }
         } catch (DataAccessException e) {
             ViewUtil.error(this, e.getMessage());
         }
+        totalTile.setText(String.valueOf(total));
+        pendingTile.setText(String.valueOf(pending));
+        criticalTile.setText(String.valueOf(critical));
+        assignedTile.setText(String.valueOf(assigned));
+        rescuedTile.setText(String.valueOf(rescued));
     }
 
     /** Releases the live team; the request returns to PENDING. */

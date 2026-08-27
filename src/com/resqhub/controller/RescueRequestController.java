@@ -216,8 +216,37 @@ public class RescueRequestController {
         }
     }
 
+    public List<RescueRequest> search(String keyword)
+            throws DataAccessException {
+        return requestService.search(keyword);
+    }
+
     public int countPending() throws DataAccessException {
         return requestService.countPending();
+    }
+
+    public ActionResult startReview(long requestId) {
+        try {
+            requestService.startReview(requestId);
+            return ActionResult.success("Request #" + requestId
+                    + " moved to Under Review");
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error: " + e.getMessage());
+        }
+    }
+
+    public ActionResult unreview(long requestId) {
+        try {
+            requestService.unreview(requestId);
+            return ActionResult.success("Request #" + requestId
+                    + " sent back to Pending");
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error: " + e.getMessage());
+        }
     }
 
     public static Object[] toRow(RescueRequest r) {
