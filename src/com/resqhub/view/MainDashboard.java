@@ -149,6 +149,8 @@ public class MainDashboard extends JFrame {
                     openModule("donations", new DonationPanel())));
             modulesMenu.add(item("Notifications", () ->
                     openModule("notifications", new NotificationPanel())));
+            modulesMenu.add(item("Reports & Analytics", () ->
+                    openModule("reports", new ReportPanel())));
             if (has(RoleType.ADMIN)) {
                 modulesMenu.add(item("Users", () ->
                         openModule("users", new UserPanel())));
@@ -158,11 +160,15 @@ public class MainDashboard extends JFrame {
                     openModule("victims", new VictimPanel(true))));
             modulesMenu.add(item("Rescue Requests", () ->
                     openModule("requests", new RescueRequestPanel(true))));
+            modulesMenu.add(item("Reports & Analytics", () ->
+                    openModule("reports", new ReportPanel())));
             modulesMenu.add(item("Notifications", () ->
                     openModule("notifications", new NotificationPanel())));
         } else if (has(RoleType.VOLUNTEER)) {
             modulesMenu.add(item("My Tasks", () ->
                     openModule("volunteers", new VolunteerPanel())));
+            modulesMenu.add(item("Reports & Analytics", () ->
+                    openModule("reports", new ReportPanel())));
             modulesMenu.add(item("Notifications", () ->
                     openModule("notifications", new NotificationPanel())));
         } else {
@@ -170,6 +176,8 @@ public class MainDashboard extends JFrame {
             // submission-only view of rescue requests
             modulesMenu.add(item("Report Emergency", () ->
                     openModule("requests", new RescueRequestPanel(false))));
+            modulesMenu.add(item("Reports & Analytics", () ->
+                    openModule("reports", new ReportPanel())));
             modulesMenu.add(item("Notifications", () ->
                     openModule("notifications", new NotificationPanel())));
         }

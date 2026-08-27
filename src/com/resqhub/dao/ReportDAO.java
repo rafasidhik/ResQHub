@@ -1,0 +1,374 @@
+package com.resqhub.dao;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.resqhub.exception.DataAccessException;
+import com.resqhub.model.ReportFilters;
+
+/**
+ * Analytical / reporting data access. Runs the SQL aggregation queries
+ * (COUNT, SUM, AVG, MIN, MAX, GROUP BY, HAVING, JOIN, filtering,
+ * sorting) that power the Reports &amp; Analytics module.
+ *
+ * Every method returns the raw result rows; the service layer labels the
+ * columns and computes the human-readable summary lines. Filter columns
+ * are appended to the WHERE clause only when supplied, so a filter-less
+ * run shows the whole dataset (demonstrating filtering + sorting).
+ */
+public class ReportDAO extends BaseDao {
+
+    // ── overview: cross-module summary cards ─────────────────────────
+
+    /**
+     * One row per key metric for the dashboard overview cards.
+     * Each row is { label, value }.
+     */
+    public List<Object[]> overview() throws DataAccessException {
+        String sql = """
+            SELECT 'ACTIVE DISASTERS' AS m,
+                   (SELECT COUNT(*) FROM disasters WHERE status <> 'RESOLVED') AS v
+            UNION ALL SELECT 'TOTAL DISASTERS',
+                   (SELECT COUNT(*) FROM disasters)
+            UNION ALL SELECT 'TOTAL VICTIMS',
+                   (SELECT COUNT(*) FROM victims)
+            UNION ALL SELECT 'CRITICAL VICTIMS',
+                   (SELECT COUNT(*) FROM victims WHERE emergency_status = 'CRITICAL')
+            UNION ALL SELECT 'PENDING RESCUES',
+                   (SELECT COUNT(*) FROM rescue_requests WHERE status = 'PENDING')
+            UNION ALL SELECT 'CRITICAL REQUESTS',
+                   (SELECT COUNT(*) FROM rescue_requests WHERE priority = 'CRITICAL'
+                    AND status NOT IN ('RESCUED','CANCELLED'))
+            UNION ALL SELECT 'TEAMS AVAILABLE',
+                   (SELECT COUNT(*) FROM rescue_teams WHERE availability_status = 'AVAILABLE')
+            UNION ALL SELECT 'VOLUNTEERS AVAILABLE',
+                   (SELECT COUNT(*) FROM volunteers WHERE availability = 'AVAILABLE')
+            UNION ALL SELECT 'TOTAL DONORS', (SELECT COUNT(*) FROM donors)
+            UNION ALL SELECT 'CASH DONATED (Rs)',
+                   (SELECT COALESCE(SUM(amount),0) FROM donations WHERE donation_type = 'CASH')
+            UNION ALL SELECT 'MATERIAL UNITS',
+                   (SELECT COALESCE(SUM(quantity),0) FROM donations
+                    WHERE donation_type = 'MATERIAL')
+            ORDER BY m
+            """;
+        return run(sql, List.of());
+    }
+
+    // ── active disaster report ───────────────────────────────────────
+
+    public List<Object[]> disastersByType() throws DataAccessException {
+        String sql = "SELECT disaster_type AS type, COUNT(*) AS count, "
+                + "SUM(affected_population) AS affected "
+                + "FROM disasters GROUP BY disaster_type ORDER BY count DESC";
+        return run(sql, List.of());
+    }
+
+    public List<Object[]> disastersByStatus() throws DataAccessException {
+        String sql = "SELECT status, COUNT(*) AS count, "
+                + "SUM(affected_population) AS affected "
+                + "FROM disasters GROUP BY status ORDER BY status";
+        return run(sql, List.of());
+    }
+
+    public List<Object[]> disastersBySeverity() throws DataAccessException {
+        String sql = "SELECT severity, COUNT(*) AS count, "
+                + "SUM(affected_population) AS affected "
+                + "FROM disasters GROUP BY severity ORDER BY count DESC";
+        return run(sql, List.of());
+    }
+
+    public List<Object[]> disastersByLocation() throws DataAccessException {
+        String sql = "SELECT location, COUNT(*) AS count, "
+                + "MAX(affected_population) AS max_affected "
+                + "FROM disasters GROUP BY location ORDER BY count DESC";
+        return run(sql, List.of());
+    }
+
+    /** HAVING demonstration: only locations/rows above a size threshold. */
+    public List<Object[]> disastersAbovePopulation(int threshold)
+            throws DataAccessException {
+        String sql = "SELECT title, location, severity, "
+                + "SUM(affected_population) AS affected "
+                + "FROM disasters "
+                + "GROUP BY title, location, severity "
+                + "HAVING SUM(affected_population) > ? "
+                + "ORDER BY affected DESC";
+        return run(sql, List.of(threshold));
+    }
+
+    // ── victim statistics ────────────────────────────────────────────
+
+    public List<Object[]> victimsByDisaster(ReportFilters filters)
+            throws DataAccessException {
+        String sql = """
+            SELECT d.title AS disaster,
+                   COUNT(v.id) AS total,
+                   SUM(v.emergency_status = 'SAFE') AS safe,
+                   SUM(v.emergency_status = 'RESCUE_REQUIRED') AS rescue_required,
+                   SUM(v.emergency_status = 'INJURED') AS injured,
+                   SUM(v.emergency_status = 'CRITICAL') AS critical,
+                   SUM(v.emergency_status = 'MISSING') AS missing
+            FROM disasters d
+            LEFT JOIN victims v ON v.disaster_id = d.id
+            """;
+        String group = " GROUP BY d.title ORDER BY total DESC";
+        if (filters != null && filters.disasterId() != null) {
+            sql += " WHERE d.id = ?";
+            return run(sql + group, List.of(filters.disasterId()));
+        }
+        return run(sql + group, List.of());
+    }
+
+    public List<Object[]> victimsByStatus() throws DataAccessException {
+        String sql = "SELECT emergency_status, COUNT(*) AS total "
+                + "FROM victims GROUP BY emergency_status ORDER BY total DESC";
+        return run(sql, List.of());
+    }
+
+    public List<Object[]> victimsByGender() throws DataAccessException {
+        String sql = "SELECT gender, COUNT(*) AS total, "
+                + "AVG(age) AS avg_age, MIN(age) AS min_age, MAX(age) AS max_age "
+                + "FROM victims GROUP BY gender ORDER BY total DESC";
+        return run(sql, List.of());
+    }
+
+    // ── rescue request statistics ────────────────────────────────────
+
+    public List<Object[]> requestsByStatus() throws DataAccessException {
+        String sql = "SELECT status, COUNT(*) AS total, SUM(people_count) AS people "
+                + "FROM rescue_requests GROUP BY status ORDER BY total DESC";
+        return run(sql, List.of());
+    }
+
+    public List<Object[]> requestsByPriority() throws DataAccessException {
+        String sql = "SELECT priority, COUNT(*) AS total "
+                + "FROM rescue_requests WHERE priority IS NOT NULL "
+                + "GROUP BY priority ORDER BY total DESC";
+        return run(sql, List.of());
+    }
+
+    /** JOIN demonstration: rescue requests joined with disasters + victims. */
+    public List<Object[]> requestsWithDetails(ReportFilters filters)
+            throws DataAccessException {
+        String sql = """
+            SELECT rr.id, rr.location, d.title AS disaster,
+                   rr.priority, rr.status, rr.people_count,
+                   COALESCE(v.full_name, '-') AS victim
+            FROM rescue_requests rr
+            JOIN disasters d ON d.id = rr.disaster_id
+            LEFT JOIN victims v ON v.id = rr.victim_id
+            """;
+        StringBuilder where = new StringBuilder(" WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+        if (filters != null && filters.disasterId() != null) {
+            where.append(" AND rr.disaster_id = ?");
+            params.add(filters.disasterId());
+        }
+        if (filters != null && filters.status() != null) {
+            where.append(" AND rr.status = ?");
+            params.add(filters.status().toUpperCase());
+        }
+        if (filters != null && filters.priority() != null) {
+            where.append(" AND rr.priority = ?");
+            params.add(filters.priority().toUpperCase());
+        }
+        if (filters != null && filters.location() != null) {
+            where.append(" AND rr.location LIKE ?");
+            params.add("%" + filters.location() + "%");
+        }
+        String order = " ORDER BY "
+                + "CASE rr.priority WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 "
+                + "WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 1 ELSE 0 END DESC, rr.id";
+        return run(sql + where + order, params);
+    }
+
+    // ── rescue performance report ────────────────────────────────────
+
+    public List<Object[]> assignmentsByTeam(ReportFilters filters)
+            throws DataAccessException {
+        String sql = """
+            SELECT t.team_name,
+                   COUNT(a.id) AS total,
+                   SUM(a.assignment_status = 'COMPLETED') AS completed,
+                   SUM(a.assignment_status NOT IN ('COMPLETED','ABORTED')) AS active
+            FROM rescue_teams t
+            LEFT JOIN rescue_assignments a ON a.rescue_team_id = t.id
+            """;
+        String group = " GROUP BY t.team_name ORDER BY total DESC";
+        if (filters != null && filters.disasterId() != null) {
+            String joinSql = sql.replace(
+                    "LEFT JOIN rescue_assignments a ON a.rescue_team_id = t.id",
+                    "LEFT JOIN rescue_assignments a ON a.rescue_team_id = t.id "
+                            + "LEFT JOIN rescue_requests rr ON rr.id = a.rescue_request_id");
+            sql = joinSql + " WHERE rr.disaster_id = ? ";
+            return run(sql + group, List.of(filters.disasterId()));
+        }
+        return run(sql + group, List.of());
+    }
+
+    public List<Object[]> assignmentsByStatus()
+            throws DataAccessException {
+        String sql = "SELECT a.assignment_status, COUNT(*) AS total "
+                + "FROM rescue_assignments a "
+                + "GROUP BY a.assignment_status ORDER BY total DESC";
+        return run(sql, List.of());
+    }
+
+    public List<Object[]> operationsByDisaster()
+            throws DataAccessException {
+        String sql = """
+            SELECT d.title AS disaster,
+                   COUNT(a.id) AS operations,
+                   SUM(a.assignment_status = 'COMPLETED') AS completed
+            FROM disasters d
+            JOIN rescue_requests rr ON rr.disaster_id = d.id
+            JOIN rescue_assignments a ON a.rescue_request_id = rr.id
+            GROUP BY d.title ORDER BY operations DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    // ── volunteer report ─────────────────────────────────────────────
+
+    public List<Object[]> volunteersByAvailability()
+            throws DataAccessException {
+        String sql = "SELECT availability, COUNT(*) AS total "
+                + "FROM volunteers GROUP BY availability ORDER BY total DESC";
+        return run(sql, List.of());
+    }
+
+    public List<Object[]> volunteersByRole()
+            throws DataAccessException {
+        String sql = "SELECT COALESCE(emergency_role, 'GENERAL') AS role, "
+                + "COUNT(*) AS total "
+                + "FROM volunteers GROUP BY role ORDER BY total DESC";
+        return run(sql, List.of());
+    }
+
+    public List<Object[]> volunteersByLocation()
+            throws DataAccessException {
+        String sql = "SELECT location, COUNT(*) AS total "
+                + "FROM volunteers GROUP BY location ORDER BY total DESC";
+        return run(sql, List.of());
+    }
+
+    public List<Object[]> volunteerTaskLoad()
+            throws DataAccessException {
+        String sql = """
+            SELECT v.full_name AS volunteer,
+                   SUM(va.status = 'COMPLETED') AS completed,
+                   SUM(va.status <> 'COMPLETED') AS active,
+                   SUM(va.status = 'COMPLETED' AND 1=1) AS workload
+            FROM volunteers v
+            LEFT JOIN volunteer_assignments va ON va.volunteer_id = v.id
+            GROUP BY v.full_name ORDER BY active DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    // ── donation statistics ──────────────────────────────────────────
+
+    public List<Object[]> donationsByType()
+            throws DataAccessException {
+        String sql = "SELECT donation_type, COUNT(*) AS total, "
+                + "SUM(quantity) AS units "
+                + "FROM donations GROUP BY donation_type ORDER BY total DESC";
+        return run(sql, List.of());
+    }
+
+    public List<Object[]> donationsByStatus()
+            throws DataAccessException {
+        String sql = "SELECT status, COUNT(*) AS total "
+                + "FROM donations GROUP BY status ORDER BY total DESC";
+        return run(sql, List.of());
+    }
+
+    /** JOIN demonstration: donations with their donor organisation. */
+    public List<Object[]> donationsByDonor(ReportFilters filters)
+            throws DataAccessException {
+        String sql = """
+            SELECT dn.full_name AS donor, dn.donor_type,
+                   COUNT(d.id) AS donations,
+                   COALESCE(SUM(CASE WHEN d.donation_type = 'CASH'
+                         THEN d.amount ELSE 0 END), 0) AS cash
+            FROM donors dn
+            LEFT JOIN donations d ON d.donor_id = dn.id
+            """;
+        String group = " GROUP BY dn.full_name, dn.donor_type ORDER BY cash DESC";
+        if (filters != null && filters.resourceCategory() != null) {
+            sql += " WHERE d.donation_type = ?";
+            return run(sql + group, List.of(filters.resourceCategory().toUpperCase()));
+        }
+        return run(sql + group, List.of());
+    }
+
+    public List<Object[]> distributionAggregate()
+            throws DataAccessException {
+        String sql = "SELECT DISTRIBUTED_TO AS where_used, "
+                + "COUNT(*) AS distributions, SUM(quantity) AS units "
+                + "FROM donation_distributions "
+                + "GROUP BY where_used ORDER BY units DESC";
+        return run(sql, List.of());
+    }
+
+    // ── module data not yet present in this build ────────────────────
+
+    /** Shelters/camps do not yet have a table in this build; we derive a
+     *  count of victims placed IN_SHELTER as a placeholder indicator. */
+    public List<Object[]> shelterOccupancy() throws DataAccessException {
+        String sql = """
+            SELECT d.title AS shelter_zone,
+                   COUNT(v.id) AS placed_in_shelter,
+                   SUM(v.emergency_status = 'SAFE') AS safe
+            FROM disasters d
+            LEFT JOIN victims v ON v.disaster_id = d.id
+            GROUP BY d.title ORDER BY placed_in_shelter DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    public List<Object[]> resourceInventory() throws DataAccessException {
+        String sql = """
+            SELECT material_name AS resource, SUM(quantity) AS total_units,
+                   SUM(CASE WHEN status = 'DISTRIBUTED' THEN quantity ELSE 0 END) AS used
+            FROM donations WHERE donation_type = 'MATERIAL'
+            GROUP BY material_name ORDER BY total_units DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    private List<Object[]> run(String sql, List<Object> params)
+            throws DataAccessException {
+        List<Object[]> rows = new ArrayList<>();
+        try (Connection con = openConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof Long) {
+                    ps.setLong(i + 1, (Long) p);
+                } else if (p instanceof Integer) {
+                    ps.setInt(i + 1, (Integer) p);
+                } else {
+                    ps.setString(i + 1, String.valueOf(p));
+                }
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                int cols = rs.getMetaData().getColumnCount();
+                while (rs.next()) {
+                    Object[] row = new Object[cols];
+                    for (int c = 1; c <= cols; c++) {
+                        row[c - 1] = rs.getObject(c);
+                    }
+                    rows.add(row);
+                }
+            }
+            return rows;
+        } catch (SQLException e) {
+            throw new DataAccessException("Report query failed", e);
+        }
+    }
+}
