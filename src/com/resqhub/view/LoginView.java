@@ -97,13 +97,10 @@ public class LoginView extends JFrame {
         forgotButton.addActionListener(event -> showForgotPasswordDialog());
 
         pack();
-        // Open directly at full-screen size so the form fills the display
-        // immediately (not just after a manual maximise).
-        java.awt.Dimension screen =
-                java.awt.Toolkit.getDefaultToolkit().getScreenSize();
-        setSize(screen);
+        // Match the dashboard's landing size (see MainDashboard) so every
+        // screen has the same fixed dimensions.
+        setSize(1024, 680);
         setLocationRelativeTo(null);
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
     }
 
     /** Forgot-password modal: verify username + email, then set a new password. */
@@ -191,10 +188,6 @@ public class LoginView extends JFrame {
 
     /** Entry helper used by ResQHubApplication to start the GUI safely on the EDT. */
     public static void launch(final String title) {
-        SwingUtilities.invokeLater(() -> {
-            LoginView view = new LoginView(title);
-            view.setVisible(true);
-            view.setExtendedState(JFrame.MAXIMIZED_BOTH);
-        });
+        SwingUtilities.invokeLater(() -> new LoginView(title).setVisible(true));
     }
 }

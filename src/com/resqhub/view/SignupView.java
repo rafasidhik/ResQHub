@@ -81,13 +81,10 @@ public class SignupView extends JFrame {
         backButton.addActionListener(event -> returnToLogin());
 
         pack();
-        // Open directly at full-screen size so the form fills the display
-        // immediately (not just after a manual maximise).
-        java.awt.Dimension screen =
-                java.awt.Toolkit.getDefaultToolkit().getScreenSize();
-        setSize(screen);
+        // Match the dashboard's landing size (see MainDashboard) so every
+        // screen has the same fixed dimensions.
+        setSize(1024, 680);
         setLocationRelativeTo(null);
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
     }
 
     private void addRow(JPanel root, GridBagConstraints gbc, int row,
@@ -127,10 +124,7 @@ public class SignupView extends JFrame {
 
     /** Entry helper used by LoginView to open this screen on the EDT. */
     public static void launch(final String title) {
-        javax.swing.SwingUtilities.invokeLater(() -> {
-            SignupView view = new SignupView(title);
-            view.setVisible(true);
-            view.setExtendedState(JFrame.MAXIMIZED_BOTH);
-        });
+        javax.swing.SwingUtilities.invokeLater(
+                () -> new SignupView(title).setVisible(true));
     }
 }
