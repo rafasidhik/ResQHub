@@ -412,6 +412,94 @@ public class ReportDAO extends BaseDao {
         return run(sql, List.of());
     }
 
+    // ── resource & inventory reports (real resources table) ───────────
+
+    /** High-level inventory metric cards over the resources table. */
+    public List<Object[]> resourceMetrics() throws DataAccessException {
+        String sql = """
+            SELECT 'TOTAL RESOURCES' AS metric,
+                   (SELECT COUNT(*) FROM resources) AS value
+            UNION ALL SELECT 'TOTAL UNITS',
+                   (SELECT COALESCE(SUM(available_quantity),0) FROM resources)
+            UNION ALL SELECT 'LOW STOCK',
+                   (SELECT COUNT(*) FROM resources
+                    WHERE available_quantity > 0
+                      AND available_quantity < minimum_level)
+            UNION ALL SELECT 'OUT OF STOCK',
+                   (SELECT COUNT(*) FROM resources
+                    WHERE available_quantity <= 0)
+            UNION ALL SELECT 'STOCK-IN MOVEMENTS',
+                   (SELECT COUNT(*) FROM stock_movements
+                    WHERE movement_type = 'STOCK_IN')
+            UNION ALL SELECT 'STOCK-OUT MOVEMENTS',
+                   (SELECT COUNT(*) FROM stock_movements
+                    WHERE movement_type = 'STOCK_OUT')
+            UNION ALL SELECT 'DISTRIBUTED UNITS',
+                   (SELECT COALESCE(SUM(quantity),0)
+                    FROM resource_distributions)
+            ORDER BY metric
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Inventory grouped by category (COUNT / SUM over resources). */
+    public List<Object[]> resourceByCategory() throws DataAccessException {
+        String sql = "SELECT category, COUNT(*) AS count, "
+                + "COALESCE(SUM(available_quantity),0) AS units "
+                + "FROM resources GROUP BY category ORDER BY units DESC";
+        return run(sql, List.of());
+    }
+
+    /** Resources currently below their minimum level (with the gap). */
+    public List<Object[]> resourceLowStock() throws DataAccessException {
+        String sql = """
+            SELECT name, category, available_quantity, minimum_level, unit,
+                   (minimum_level - available_quantity) AS shortfall
+            FROM resources
+            WHERE available_quantity < minimum_level
+            ORDER BY shortfall DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Stock movements netted by type (SUM IN / SUM OUT). */
+    public List<Object[]> resourceNetMovement() throws DataAccessException {
+        String sql = """
+            SELECT movement_type,
+                   COUNT(*) AS moves,
+                   COALESCE(SUM(quantity),0) AS units
+            FROM stock_movements
+            GROUP BY movement_type ORDER BY movement_type
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Distribution record aggregated by destination (COUNT / SUM). */
+    public List<Object[]> resourceDistributionByDestination()
+            throws DataAccessException {
+        String sql = """
+            SELECT destination,
+                   COUNT(*) AS records,
+                   COALESCE(SUM(quantity),0) AS units
+            FROM resource_distributions
+            GROUP BY destination ORDER BY units DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Resource usage grouped by resource (how much each was distributed). */
+    public List<Object[]> resourceUsage() throws DataAccessException {
+        String sql = """
+            SELECT r.name AS resource, r.category,
+                   COUNT(d.id) AS distributions,
+                   COALESCE(SUM(d.quantity),0) AS units
+            FROM resources r
+            LEFT JOIN resource_distributions d ON d.resource_id = r.id
+            GROUP BY r.name, r.category ORDER BY units DESC
+            """;
+        return run(sql, List.of());
+    }
+
     private List<Object[]> run(String sql, List<Object> params)
             throws DataAccessException {
         List<Object[]> rows = new ArrayList<>();

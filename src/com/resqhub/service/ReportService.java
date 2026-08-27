@@ -351,19 +351,61 @@ public class ReportService {
     }
 
     private ReportResult resourceInventoryReport() throws DataAccessException {
-        List<Object[]> rows = toDisplay(reportDAO.resourceInventory(),
+        List<Object[]> metrics = toDisplay(reportDAO.resourceMetrics(),
+                new int[]{1});
+        List<Object[]> byCategory = toDisplay(
+                reportDAO.resourceByCategory(), new int[]{1, 2});
+        List<Object[]> lowStock = toDisplay(reportDAO.resourceLowStock(),
+                new int[]{2, 3, 5});
+        List<Object[]> movement = toDisplay(
+                reportDAO.resourceNetMovement(), new int[]{1, 2});
+        List<Object[]> byDestination = toDisplay(
+                reportDAO.resourceDistributionByDestination(),
                 new int[]{1, 2});
-        List<String> summary = new ArrayList<>();
-        summary.add("Material donations act as the resource inventory in this "
-                + "build (aggregated by item name):");
-        for (Object[] r : rows) {
-            summary.add("  " + r[0] + " \u2192 " + r[1] + " units total, "
-                    + r[2] + " distributed");
+        List<Object[]> usage = toDisplay(reportDAO.resourceUsage(),
+                new int[]{2, 3});
+
+        List<Object[]> rows = new ArrayList<>();
+        for (Object[] r : usage) {
+            rows.add(new Object[]{r[0], r[1], r[2], r[3]});
         }
-        summary.add("Items with 10 or fewer units remaining raise a "
-                + "LOW_STOCK notification (see Alerts).");
+
+        List<String> summary = new ArrayList<>();
+        summary.add("Resource & Inventory overview (COUNT / SUM over resources, "
+                + "stock_movements and resource_distributions):");
+        for (Object[] m : metrics) {
+            summary.add("  " + m[0] + " \u2192 " + m[1]);
+        }
+        summary.add("Current stock by category:");
+        for (Object[] r : byCategory) {
+            summary.add("  " + r[0] + " \u2192 " + r[1] + " items, "
+                    + r[2] + " units");
+        }
+        summary.add("Shortages (below minimum level, biggest shortfall first):");
+        if (lowStock.isEmpty()) {
+            summary.add("  (none)");
+        } else {
+            for (Object[] r : lowStock) {
+                summary.add("  " + r[0] + " [" + r[1] + "] has "
+                        + r[2] + " " + r[3] + ", min "
+                        + r[4] + " (short by " + r[5] + ")");
+            }
+        }
+        summary.add("Stock movement (stock-in vs stock-out, SUM):");
+        for (Object[] r : movement) {
+            summary.add("  " + r[0] + " \u2192 " + r[1] + " moves, "
+                    + r[2] + " units");
+        }
+        summary.add("Resources distributed by destination (COUNT / SUM):");
+        for (Object[] r : byDestination) {
+            summary.add("  " + r[0] + " \u2192 " + r[1] + " records, "
+                    + r[2] + " units");
+        }
+        summary.add("Note: material donations may also feed inventory through "
+                + "the Stock In screen (source = Donation).");
         return new ReportResult("Resource & Inventory Report",
-                new String[]{"Resource", "Total Units", "Used"},
+                new String[]{"Resource", "Category", "Distributions",
+                        "Distributed Units"},
                 rows, summary, "");
     }
 

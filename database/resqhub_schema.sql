@@ -721,3 +721,142 @@ INSERT INTO shelter_allocations (shelter_id, victim_id, family_name, people_coun
  'Family completed their stay.', 'COMPLETED', 1),
 (2, NULL, 'Cancelled reservation', 3,
  'Family relocated to the Wayanad Base Camp instead.', 'CANCELLED', 1);
+
+-- =====================================================================
+-- RESOURCE & INVENTORY MANAGEMENT tables (Rafa)
+-- ---------------------------------------------------------------------
+-- resources            : the inventory registry (what + how much on hand)
+-- stock_movements      : auditable in/out quantity history
+-- resource_distributions: where resources were sent and validation + history
+-- ---------------------------------------------------------------------
+CREATE TABLE resources (
+    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name              VARCHAR(150)    NOT NULL,
+    code              VARCHAR(30)     NOT NULL,
+    category          ENUM('FOOD','WATER','MEDICINE','CLOTHING',
+                           'SHELTER_SUPPLIES','MEDICAL_SUPPLIES',
+                           'RESCUE_EQUIPMENT','OTHER') NOT NULL,
+    available_quantity INT UNSIGNED   NOT NULL DEFAULT 0,
+    minimum_level     INT UNSIGNED    NOT NULL DEFAULT 0,
+    unit              VARCHAR(40)     NULL COMMENT 'e.g. packets, bottles, kits',
+    description       VARCHAR(300)    NULL,
+    status            ENUM('AVAILABLE','LOW_STOCK','OUT_OF_STOCK')
+                      NOT NULL DEFAULT 'AVAILABLE'
+                      COMMENT 'derived from available_quantity vs minimum_level',
+    created_by        BIGINT UNSIGNED NULL,
+    created_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                      ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_resource_code (code),
+    KEY idx_resource_category (category),
+    KEY idx_resource_status (status),
+    CONSTRAINT fk_resource_created_by FOREIGN KEY (created_by)
+        REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE stock_movements (
+    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    resource_id       BIGINT UNSIGNED NOT NULL,
+    movement_type     ENUM('STOCK_IN','STOCK_OUT') NOT NULL,
+    quantity          INT UNSIGNED    NOT NULL,
+    previous_quantity INT UNSIGNED    NOT NULL,
+    new_quantity      INT UNSIGNED    NOT NULL,
+    source            VARCHAR(100)    NULL COMMENT 'for stock-in: donation, govt, ...',
+    destination       VARCHAR(150)    NULL COMMENT 'for stock-out: where it went',
+    reason            VARCHAR(300)    NULL,
+    disaster_id       BIGINT UNSIGNED NULL,
+    moved_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    recorded_by       BIGINT UNSIGNED NULL,
+    created_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                      ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_sm_resource (resource_id, moved_at),
+    KEY idx_sm_type (movement_type),
+    KEY idx_sm_disaster (disaster_id),
+    CONSTRAINT fk_sm_resource FOREIGN KEY (resource_id)
+        REFERENCES resources (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sm_disaster FOREIGN KEY (disaster_id)
+        REFERENCES disasters (id) ON DELETE SET NULL,
+    CONSTRAINT fk_sm_recorded_by FOREIGN KEY (recorded_by)
+        REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE resource_distributions (
+    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    resource_id       BIGINT UNSIGNED NOT NULL,
+    quantity          INT UNSIGNED    NOT NULL,
+    distributed_to    VARCHAR(150)    NOT NULL COMMENT 'recipient / camp / operation',
+    destination       ENUM('SHELTER','VICTIM','DISASTER_AREA','RESCUE_TEAM',
+                           'HOSPITAL','FOOD_DISTRIBUTION','OTHER') NOT NULL,
+    disaster_id       BIGINT UNSIGNED NULL,
+    shelter_id        BIGINT UNSIGNED NULL,
+    victim_id         BIGINT UNSIGNED NULL,
+    reason            VARCHAR(300)    NULL,
+    distributed_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    distributed_by    BIGINT UNSIGNED NULL,
+    created_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                      ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_rd_resource (resource_id, distributed_at),
+    KEY idx_rd_destination (destination),
+    KEY idx_rd_disaster (disaster_id),
+    KEY idx_rd_shelter (shelter_id),
+    KEY idx_rd_victim (victim_id),
+    CONSTRAINT fk_rd_resource FOREIGN KEY (resource_id)
+        REFERENCES resources (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rd_disaster FOREIGN KEY (disaster_id)
+        REFERENCES disasters (id) ON DELETE SET NULL,
+    CONSTRAINT fk_rd_shelter FOREIGN KEY (shelter_id)
+        REFERENCES shelters (id) ON DELETE SET NULL,
+    CONSTRAINT fk_rd_victim FOREIGN KEY (victim_id)
+        REFERENCES victims (id) ON DELETE SET NULL,
+    CONSTRAINT fk_rd_distributed_by FOREIGN KEY (distributed_by)
+        REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+-- Seed resources (incl. low-stock / out-of-stock examples) for the
+-- Wayanad flood (disaster #1).
+INSERT INTO resources (name, code, category, available_quantity,
+                        minimum_level, unit, description, status, created_by) VALUES
+('Food Packets', 'RES-FOOD-001', 'FOOD', 1500, 300, 'packets',
+ 'Meal packets for distribution.', 'AVAILABLE', 1),
+('Water Bottles', 'RES-WTR-002', 'WATER', 2000, 500, 'bottles',
+ '500 ml sealed water bottles.', 'AVAILABLE', 1),
+('Medicines', 'RES-MED-003', 'MEDICINE', 120, 200, 'boxes',
+ 'Assorted essential medicines.', 'LOW_STOCK', 1),
+('Blankets', 'RES-BLK-004', 'SHELTER_SUPPLIES', 700, 200, 'blankets',
+ 'Warm blankets for shelters and victims.', 'AVAILABLE', 2),
+('First-Aid Kits', 'RES-FAK-005', 'MEDICAL_SUPPLIES', 20, 50, 'kits',
+ 'Basic first-aid kits.', 'LOW_STOCK', 2),
+('Rescue Ropes', 'RES-RPE-006', 'RESCUE_EQUIPMENT', 0, 40, 'coils',
+ 'Ropes for rescue operations.', 'OUT_OF_STOCK', 1),
+('Clothing', 'RES-CLO-007', 'CLOTHING', 300, 100, 'sets',
+ 'Clothing sets for affected families.', 'AVAILABLE', 1);
+
+-- Seed stock movements illustrating the in/out history.
+INSERT INTO stock_movements (resource_id, movement_type, quantity,
+    previous_quantity, new_quantity, source, destination, reason,
+    disaster_id, recorded_by) VALUES
+(1, 'STOCK_IN', 500, 1000, 1500, 'Donation', NULL,
+ 'Initial relief supply received.', 1, 1),
+(2, 'STOCK_IN', 800, 1200, 2000, 'Government Supplies', NULL,
+ 'State allocation for relief camps.', 1, 1),
+(4, 'STOCK_IN', 300, 400, 700, 'Partner Organization', NULL,
+ 'NGO blanket drive.', 1, 2),
+(2, 'STOCK_OUT', 100, 2000, 1900, NULL, 'Relief Camp A', 'Shelter support.', 1, 1),
+(4, 'STOCK_OUT', 50, 700, 650, NULL, 'Relief Camp A', 'Shelter support.', 1, 1);
+
+-- Seed distribution records tying resources to shelters / victims.
+INSERT INTO resource_distributions (resource_id, quantity, distributed_to,
+    destination, disaster_id, shelter_id, victim_id, reason, distributed_by) VALUES
+(2, 100, 'Relief Camp A', 'SHELTER', 1, 1, NULL,
+ 'Drinking water for residents.', 1),
+(4, 50, 'Relief Camp B', 'SHELTER', 1, 2, NULL,
+ 'Blankets for overnight stay.', 1),
+(1, 80, 'Anand Menon & family', 'VICTIM', 1, NULL, 1,
+ 'Food packets for family of 4.', 2),
+(3, 30, 'Medical camp', 'MEDICAL', 1, 1, NULL,
+ 'Medicines for camp first-aid.', 1);
