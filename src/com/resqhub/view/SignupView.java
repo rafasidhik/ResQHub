@@ -81,7 +81,11 @@ public class SignupView extends JFrame {
         backButton.addActionListener(event -> returnToLogin());
 
         pack();
-        // Full-screen presentation: maximise and centre the form.
+        // Open directly at full-screen size so the form fills the display
+        // immediately (not just after a manual maximise).
+        java.awt.Dimension screen =
+                java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+        setSize(screen);
         setLocationRelativeTo(null);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
     }

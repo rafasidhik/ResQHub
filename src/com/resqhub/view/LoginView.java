@@ -8,6 +8,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -90,10 +91,89 @@ public class LoginView extends JFrame {
             dispose();
         });
 
+        JButton forgotButton = new JButton("Forgot Password?");
+        gbc.gridy = 6;
+        root.add(forgotButton, gbc);
+        forgotButton.addActionListener(event -> showForgotPasswordDialog());
+
         pack();
-        // Full-screen presentation: maximise and centre the form.
+        // Open directly at full-screen size so the form fills the display
+        // immediately (not just after a manual maximise).
+        java.awt.Dimension screen =
+                java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+        setSize(screen);
         setLocationRelativeTo(null);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
+    }
+
+    /** Forgot-password modal: verify username + email, then set a new password. */
+    private void showForgotPasswordDialog() {
+        final JDialog dialog = new JDialog(
+                javax.swing.SwingUtilities.getWindowAncestor(this),
+                "Reset Password",
+                java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 8, 6, 8);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel hint = new JLabel("Enter your username and registered email "
+                + "to set a new password.");
+        hint.setFont(hint.getFont().deriveFont(12f));
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        form.add(hint, gbc);
+        gbc.gridwidth = 1;
+
+        JTextField usernameField = new JTextField(16);
+        JTextField emailField = new JTextField(16);
+        JPasswordField newField = new JPasswordField(16);
+        JPasswordField confirmField = new JPasswordField(16);
+
+        gbc.gridy = 1; gbc.gridx = 0;
+        form.add(new JLabel("Username:"), gbc);
+        gbc.gridx = 1; form.add(usernameField, gbc);
+        gbc.gridy = 2; gbc.gridx = 0;
+        form.add(new JLabel("Registered email:"), gbc);
+        gbc.gridx = 1; form.add(emailField, gbc);
+        gbc.gridy = 3; gbc.gridx = 0;
+        form.add(new JLabel("New password:"), gbc);
+        gbc.gridx = 1; form.add(newField, gbc);
+        gbc.gridy = 4; gbc.gridx = 0;
+        form.add(new JLabel("Confirm password:"), gbc);
+        gbc.gridx = 1; form.add(confirmField, gbc);
+
+        JButton resetButton = new JButton("Reset Password");
+        JButton cancelButton = new JButton("Cancel");
+        JPanel buttons = new JPanel();
+        buttons.add(resetButton);
+        buttons.add(cancelButton);
+        gbc.gridwidth = 2; gbc.gridy = 5; gbc.gridx = 0;
+        form.add(buttons, gbc);
+
+        final JLabel messageLabel = new JLabel(" ");
+        messageLabel.setForeground(java.awt.Color.RED);
+        gbc.gridy = 6;
+        form.add(messageLabel, gbc);
+
+        cancelButton.addActionListener(e -> dialog.dispose());
+        resetButton.addActionListener(e -> {
+            ActionResult result = authController.resetForgottenPassword(
+                    usernameField.getText(), emailField.getText(),
+                    new String(newField.getPassword()),
+                    new String(confirmField.getPassword()));
+            if (result.isSuccess()) {
+                ViewUtil.info(dialog, result.getMessage());
+                dialog.dispose();
+            } else {
+                messageLabel.setText(result.getMessage());
+            }
+        });
+
+        dialog.setContentPane(form);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 
     private void attemptLogin() {
