@@ -81,7 +81,9 @@ public class SignupView extends JFrame {
         backButton.addActionListener(event -> returnToLogin());
 
         pack();
+        // Full-screen presentation: maximise and centre the form.
         setLocationRelativeTo(null);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
     }
 
     private void addRow(JPanel root, GridBagConstraints gbc, int row,
@@ -121,7 +123,10 @@ public class SignupView extends JFrame {
 
     /** Entry helper used by LoginView to open this screen on the EDT. */
     public static void launch(final String title) {
-        javax.swing.SwingUtilities.invokeLater(
-                () -> new SignupView(title).setVisible(true));
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            SignupView view = new SignupView(title);
+            view.setVisible(true);
+            view.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        });
     }
 }

@@ -91,7 +91,9 @@ public class LoginView extends JFrame {
         });
 
         pack();
+        // Full-screen presentation: maximise and centre the form.
         setLocationRelativeTo(null);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
     }
 
     private void attemptLogin() {
@@ -109,6 +111,10 @@ public class LoginView extends JFrame {
 
     /** Entry helper used by ResQHubApplication to start the GUI safely on the EDT. */
     public static void launch(final String title) {
-        SwingUtilities.invokeLater(() -> new LoginView(title).setVisible(true));
+        SwingUtilities.invokeLater(() -> {
+            LoginView view = new LoginView(title);
+            view.setVisible(true);
+            view.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        });
     }
 }
