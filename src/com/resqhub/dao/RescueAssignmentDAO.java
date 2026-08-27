@@ -66,6 +66,12 @@ public class RescueAssignmentDAO extends BaseDao
                 ps.setLong(2, teamId);
                 ps.executeUpdate();
             }
+            try (PreparedStatement ps = con.prepareStatement(
+                    "UPDATE rescue_teams SET operational_status = 'ASSIGNED' "
+                            + "WHERE id = ?")) {
+                ps.setLong(1, teamId);
+                ps.executeUpdate();
+            }
 
             con.commit();
             return assignmentId;
@@ -114,6 +120,14 @@ public class RescueAssignmentDAO extends BaseDao
                 ps.setLong(2, assignmentId);
                 ps.executeUpdate();
             }
+            try (PreparedStatement ps = con.prepareStatement(
+                    "UPDATE rescue_teams t JOIN rescue_assignments a "
+                            + "ON a.rescue_team_id = t.id "
+                            + "SET t.operational_status = 'STANDBY' "
+                            + "WHERE a.id = ?")) {
+                ps.setLong(1, assignmentId);
+                ps.executeUpdate();
+            }
 
             con.commit();
         } catch (SQLException e) {
@@ -160,6 +174,14 @@ public class RescueAssignmentDAO extends BaseDao
                 ps.setLong(2, assignmentId);
                 ps.executeUpdate();
             }
+            try (PreparedStatement ps = con.prepareStatement(
+                    "UPDATE rescue_teams t JOIN rescue_assignments a "
+                            + "ON a.rescue_team_id = t.id "
+                            + "SET t.operational_status = 'STANDBY' "
+                            + "WHERE a.id = ?")) {
+                ps.setLong(1, assignmentId);
+                ps.executeUpdate();
+            }
 
             con.commit();
         } catch (SQLException e) {
@@ -171,11 +193,12 @@ public class RescueAssignmentDAO extends BaseDao
         }
     }
 
-    /** Simple status progression (EN_ROUTE / ON_SITE) with optional notes. */
-    public void updateStatus(long assignmentId, AssignmentStatus status, String notes)
-            throws DataAccessException {
-        String sql = "UPDATE rescue_assignments SET assignment_status = ?, notes = ? "
-                + "WHERE id = ?";
+    /** Simple status progression (EN_ROUTE / ON_SITE) with optional notes.
+     *  Also updates the team's operational_status to match. */
+    public void updateStatus(long assignmentId, AssignmentStatus status,
+                             String notes) throws DataAccessException {
+        String sql = "UPDATE rescue_assignments SET assignment_status = ?, "
+                + "notes = ? WHERE id = ?";
         try (Connection con = openConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
@@ -183,15 +206,34 @@ public class RescueAssignmentDAO extends BaseDao
             ps.setString(2, notes);
             ps.setLong(3, assignmentId);
             ps.executeUpdate();
+
+            String opStatus = switch (status) {
+                case EN_ROUTE -> "EN_ROUTE";
+                case ON_SITE  -> "ON_MISSION";
+                default       -> null;
+            };
+            if (opStatus != null) {
+                String teamSql = "UPDATE rescue_teams t "
+                        + "JOIN rescue_assignments a "
+                        + "ON a.rescue_team_id = t.id "
+                        + "SET t.operational_status = ? WHERE a.id = ?";
+                try (PreparedStatement tps =
+                             con.prepareStatement(teamSql)) {
+                    tps.setString(1, opStatus);
+                    tps.setLong(2, assignmentId);
+                    tps.executeUpdate();
+                }
+            }
         } catch (SQLException e) {
-            throw new DataAccessException("Could not update assignment status", e);
+            throw new DataAccessException(
+                    "Could not update assignment status", e);
         }
     }
 
     public List<RescueAssignment> findByRequest(long requestId)
             throws DataAccessException {
-        String sql = "SELECT * FROM rescue_assignments WHERE rescue_request_id = ? "
-                + "ORDER BY created_at DESC";
+        String sql = "SELECT * FROM rescue_assignments "
+                + "WHERE rescue_request_id = ? ORDER BY created_at DESC";
         List<RescueAssignment> result = new ArrayList<>();
         try (Connection con = openConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -204,7 +246,86 @@ public class RescueAssignmentDAO extends BaseDao
             }
             return result;
         } catch (SQLException e) {
-            throw new DataAccessException("Could not list assignments for request", e);
+            throw new DataAccessException(
+                    "Could not list assignments for request", e);
+        }
+    }
+
+    /** All assignments for a given team. */
+    public List<RescueAssignment> findByTeam(long teamId)
+            throws DataAccessException {
+        String sql = "SELECT * FROM rescue_assignments "
+                + "WHERE rescue_team_id = ? ORDER BY created_at DESC";
+        List<RescueAssignment> result = new ArrayList<>();
+        try (Connection con = openConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setLong(1, teamId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(mapRow(rs));
+                }
+            }
+            return result;
+        } catch (SQLException e) {
+            throw new DataAccessException(
+                    "Could not list assignments for team", e);
+        }
+    }
+
+    /** All assignments with a given status. */
+    public List<RescueAssignment> findByStatus(AssignmentStatus status)
+            throws DataAccessException {
+        String sql = "SELECT * FROM rescue_assignments "
+                + "WHERE assignment_status = ? ORDER BY created_at DESC";
+        List<RescueAssignment> result = new ArrayList<>();
+        try (Connection con = openConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, enumOrNull(status));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(mapRow(rs));
+                }
+            }
+            return result;
+        } catch (SQLException e) {
+            throw new DataAccessException(
+                    "Could not list assignments by status", e);
+        }
+    }
+
+    /** Count assignments for a given team. */
+    public int countByTeam(long teamId) throws DataAccessException {
+        String sql = "SELECT COUNT(*) FROM rescue_assignments "
+                + "WHERE rescue_team_id = ?";
+        try (Connection con = openConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setLong(1, teamId);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Count by team failed", e);
+        }
+    }
+
+    /** Count completed assignments for a given team. */
+    public int countCompletedByTeam(long teamId) throws DataAccessException {
+        String sql = "SELECT COUNT(*) FROM rescue_assignments "
+                + "WHERE rescue_team_id = ? AND assignment_status = 'COMPLETED'";
+        try (Connection con = openConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setLong(1, teamId);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Count completed by team failed", e);
         }
     }
 

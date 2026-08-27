@@ -159,13 +159,15 @@ CREATE TABLE rescue_teams (
     member_count        INT UNSIGNED    NOT NULL DEFAULT 1,
     skills              TEXT            NULL COMMENT 'swimming, first-aid, rope rescue...',
     equipment           TEXT            NULL COMMENT 'boats, stretchers, cutters...',
-    availability_status ENUM('AVAILABLE','DEPLOYED','OFF_DUTY') NOT NULL DEFAULT 'AVAILABLE',
+    availability_status ENUM('AVAILABLE','UNAVAILABLE','DEPLOYED','OFF_DUTY') NOT NULL DEFAULT 'AVAILABLE',
+    operational_status  ENUM('STANDBY','ASSIGNED','EN_ROUTE','ON_MISSION','RETURNING','OPERATION_COMPLETED','INACTIVE') NOT NULL DEFAULT 'STANDBY',
     base_location       VARCHAR(200)    NULL,
     created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_teams_team_name (team_name),
-    INDEX idx_teams_availability (availability_status)
+    INDEX idx_teams_availability (availability_status),
+    INDEX idx_teams_operational (operational_status)
 ) ENGINE = InnoDB;
 
 -- ---------------------------------------------------------------------
@@ -193,6 +195,61 @@ CREATE TABLE rescue_assignments (
         ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_assignments_assigned_by FOREIGN KEY (assigned_by) REFERENCES users (id)
         ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- 8. team_members  (individual members of a rescue team)
+--    rescue_teams(1) --< team_members(N)
+-- ---------------------------------------------------------------------
+CREATE TABLE team_members (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    team_id         BIGINT UNSIGNED NOT NULL,
+    member_name     VARCHAR(100)    NOT NULL,
+    role            VARCHAR(50)     NOT NULL COMMENT 'Team Leader, Medical Responder, etc.',
+    contact_number  VARCHAR(15)     NULL,
+    special_skills  TEXT            NULL,
+    availability    ENUM('AVAILABLE','UNAVAILABLE','DEPLOYED','OFF_DUTY') NOT NULL DEFAULT 'AVAILABLE',
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_tm_team (team_id),
+    CONSTRAINT fk_tm_team FOREIGN KEY (team_id) REFERENCES rescue_teams (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- 9. team_skills  (skills associated with a rescue team)
+--    rescue_teams(1) --< team_skills(N)
+-- ---------------------------------------------------------------------
+CREATE TABLE team_skills (
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    team_id     BIGINT UNSIGNED NOT NULL,
+    skill_name  VARCHAR(100)    NOT NULL,
+    description VARCHAR(300)    NULL,
+    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_ts_team (team_id),
+    CONSTRAINT fk_ts_team FOREIGN KEY (team_id) REFERENCES rescue_teams (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- 10. team_equipment  (equipment tracked per rescue team)
+--     rescue_teams(1) --< team_equipment(N)
+-- ---------------------------------------------------------------------
+CREATE TABLE team_equipment (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    team_id         BIGINT UNSIGNED NOT NULL,
+    equipment_name  VARCHAR(100)    NOT NULL,
+    quantity        INT UNSIGNED    NOT NULL DEFAULT 1,
+    description     VARCHAR(300)    NULL,
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_te_team (team_id),
+    CONSTRAINT fk_te_team FOREIGN KEY (team_id) REFERENCES rescue_teams (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB;
 
 -- =====================================================================

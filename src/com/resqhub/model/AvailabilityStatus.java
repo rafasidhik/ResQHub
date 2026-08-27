@@ -3,6 +3,7 @@ package com.resqhub.model;
 /** rescue_teams.availability_status column. */
 public enum AvailabilityStatus {
     AVAILABLE("Available"),
+    UNAVAILABLE("Unavailable"),
     DEPLOYED("Deployed"),
     OFF_DUTY("Off Duty");
 

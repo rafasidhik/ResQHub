@@ -11,6 +11,7 @@ public class RescueTeam extends BaseEntity {
     private String skills;
     private String equipment;
     private AvailabilityStatus availabilityStatus = AvailabilityStatus.AVAILABLE;
+    private TeamOperationalStatus operationalStatus = TeamOperationalStatus.STANDBY;
     private String baseLocation;
 
     public RescueTeam() {
@@ -30,7 +31,9 @@ public class RescueTeam extends BaseEntity {
     public String getDetails() {
         String typeLabel = teamType == null ? "?" : teamType.getLabel();
         String avail = availabilityStatus == null ? "?" : availabilityStatus.getLabel();
-        return teamName + " [" + typeLabel + "/" + avail + "] members: " + memberCount;
+        String op = operationalStatus == null ? "" : " / " + operationalStatus.getLabel();
+        return teamName + " [" + typeLabel + "/" + avail + op
+                + "] members: " + memberCount;
     }
 
     public boolean isAvailable() {
@@ -99,6 +102,14 @@ public class RescueTeam extends BaseEntity {
 
     public void setAvailabilityStatus(AvailabilityStatus availabilityStatus) {
         this.availabilityStatus = availabilityStatus;
+    }
+
+    public TeamOperationalStatus getOperationalStatus() {
+        return operationalStatus;
+    }
+
+    public void setOperationalStatus(TeamOperationalStatus operationalStatus) {
+        this.operationalStatus = operationalStatus;
     }
 
     public String getBaseLocation() {
