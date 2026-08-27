@@ -590,3 +590,127 @@ INSERT INTO notifications (recipient_user_id, type, priority, status,
 (1, 'ASSIGNMENT',        'INFO',     'READ',
  'Rescue team #1 assigned to request #1 at Chundale, Wayanad (CRITICAL).',
  'Rescue Requests', 1, 1, 'ASSIGNMENT:T:1:1');
+
+-- ---------------------------------------------------------------------
+-- Shelter Management
+-- ---------------------------------------------------------------------
+CREATE TABLE shelters (
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name                VARCHAR(150)    NOT NULL,
+    code                VARCHAR(30)     NOT NULL,
+    district            VARCHAR(80)     NOT NULL,
+    city                VARCHAR(80)     NULL,
+    address             VARCHAR(200)    NULL,
+    location_description VARCHAR(250)   NULL,
+    max_capacity        INT UNSIGNED    NOT NULL,
+    current_occupancy   INT UNSIGNED    NOT NULL DEFAULT 0,
+    available_capacity  INT GENERATED ALWAYS AS (max_capacity - current_occupancy)
+                        STORED,
+    contact_number      VARCHAR(15)     NULL,
+    manager_name        VARCHAR(100)    NULL,
+    disaster_id         BIGINT UNSIGNED NULL,
+    wheelchair_accessible TINYINT(1)    NOT NULL DEFAULT 0,
+    elderly_friendly    TINYINT(1)      NOT NULL DEFAULT 0,
+    medical_accessible  TINYINT(1)      NOT NULL DEFAULT 0,
+    special_assistance  TINYINT(1)      NOT NULL DEFAULT 0,
+    operational_status  ENUM('ACTIVE','AVAILABLE','NEAR_CAPACITY','FULL',
+                             'INACTIVE','CLOSED') NOT NULL DEFAULT 'AVAILABLE',
+    created_by          BIGINT UNSIGNED NULL,
+    created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                        ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_shelter_code (code),
+    KEY idx_shelter_status (operational_status),
+    KEY idx_shelter_district (district),
+    KEY idx_shelter_avail (available_capacity),
+    INDEX idx_shelter_victims_link (disaster_id),
+    INDEX idx_shelter_created_by (created_by),
+    CONSTRAINT fk_shelter_created_by FOREIGN KEY (created_by)
+        REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE shelter_facilities (
+    id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    shelter_id   BIGINT UNSIGNED NOT NULL,
+    facility_name VARCHAR(120)   NOT NULL,
+    available    TINYINT(1)      NOT NULL DEFAULT 1,
+    created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                 ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_shelter_facility (shelter_id, facility_name),
+    CONSTRAINT fk_facility_shelter FOREIGN KEY (shelter_id)
+        REFERENCES shelters (id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+CREATE TABLE shelter_allocations (
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    shelter_id    BIGINT UNSIGNED NOT NULL,
+    victim_id     BIGINT UNSIGNED NULL,
+    family_name   VARCHAR(150)    NULL,
+    people_count  INT UNSIGNED    NOT NULL DEFAULT 1,
+    notes         VARCHAR(300)    NULL,
+    allocated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    released_at   DATETIME        NULL,
+    status        ENUM('ACTIVE','RELEASED') NOT NULL DEFAULT 'ACTIVE',
+    allocated_by  BIGINT UNSIGNED NULL,
+    created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                  ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_alloc_shelter (shelter_id, status),
+    KEY idx_alloc_victim (victim_id),
+    CONSTRAINT fk_alloc_shelter FOREIGN KEY (shelter_id)
+        REFERENCES shelters (id) ON DELETE CASCADE,
+    CONSTRAINT fk_alloc_victim FOREIGN KEY (victim_id)
+        REFERENCES victims (id) ON DELETE SET NULL,
+    CONSTRAINT fk_alloc_created_by FOREIGN KEY (allocated_by)
+        REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+-- Seed shelters (referencing the Wayanad flood, disaster #1) and their
+-- facilities + a couple of victim allocations.
+INSERT INTO shelters (name, code, district, city, address, location_description,
+                      max_capacity, current_occupancy, contact_number, manager_name,
+                      disaster_id, wheelchair_accessible, elderly_friendly,
+                      medical_accessible, special_assistance, operational_status,
+                      created_by) VALUES
+('Relief Camp A', 'SHL-001', 'Malappuram', 'Malappuram',
+ 'Govt Higher Secondary School, Kottakkal', 'Main relief camp near the river bridge.',
+ 500, 480, '9846000001', 'Ravi Nair', 1, 1, 1, 1, 1, 'NEAR_CAPACITY', 1),
+('Relief Camp B', 'SHL-002', 'Malappuram', 'Tirur',
+ 'Community Hall, Tirur', 'Second camp with kitchen facilities.',
+ 300, 120, '9846000002', 'Suma Menon', 1, 1, 1, 0, 0, 'AVAILABLE', 1),
+('Wayanad Base Camp', 'SHL-003', 'Wayanad', 'Kalpetta',
+ 'Collectorate Annex, Kalpetta', 'District headquarter shelter.',
+ 800, 640, '9846000003', 'George Varghese', 1, 0, 1, 1, 1, 'ACTIVE', 2),
+('Kovalam Relief Hall', 'SHL-004', 'Thiruvananthapuram', 'Kovalam',
+ 'Tourist Village Hall', 'Near the landslide site.',
+ 150, 150, '9846000004', 'Anitha S', 2, 1, 1, 1, 0, 'FULL', 2);
+
+INSERT INTO shelter_facilities (shelter_id, facility_name, available) VALUES
+(1, 'Drinking Water',   1),
+(1, 'Food Facilities',  1),
+(1, 'Medical Support',  1),
+(1, 'Toilets',          1),
+(1, 'Electricity',      1),
+(2, 'Drinking Water',   1),
+(2, 'Food Facilities',  1),
+(2, 'Toilets',          1),
+(2, 'Electricity',      0),
+(3, 'Drinking Water',   1),
+(3, 'Medical Support',  1),
+(3, 'First Aid',        1),
+(3, 'Sleeping Arrangements', 1),
+(4, 'Drinking Water',   1),
+(4, 'Food Facilities',  0);
+
+INSERT INTO shelter_allocations (shelter_id, victim_id, family_name, people_count,
+                                 notes, status, allocated_by) VALUES
+(1, 1, 'Anand Menon & family', 4,
+ 'Allocated after rescue from Chundale.', 'ACTIVE', 1),
+(1, 2, 'Lakshmi Pillai', 1,
+ 'Elderly resident, diabetic - needs medical attention.', 'ACTIVE', 1),
+(3, NULL, 'Kollam family of 5', 5,
+ 'Family from Wayanad, awaiting individual victim records.', 'ACTIVE', 2);

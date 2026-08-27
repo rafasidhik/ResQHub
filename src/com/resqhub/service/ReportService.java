@@ -333,19 +333,20 @@ public class ReportService {
 
     private ReportResult shelterOccupancyReport() throws DataAccessException {
         List<Object[]> rows = toDisplay(reportDAO.shelterOccupancy(),
-                new int[]{1, 2});
-        List<String> summary = new ArrayList<>();
-        summary.add("The dedicated shelters/camps table is part of another team "
-                + "member's module and does not exist in this build.");
-        summary.add("As a placeholder, victims are grouped by their disaster "
-                + "(zones often used for sheltering):");
-        for (Object[] r : rows) {
-            summary.add("  " + r[0] + " \u2192 " + r[1]
-                    + " victims placed, " + r[2] + " safe");
+                new int[]{2, 3, 4, 6});
+        List<Object[]> summary = toDisplay(
+                reportDAO.shelterCapacitySummary(), new int[]{1});
+        List<String> lines = new ArrayList<>();
+        lines.add("Shelter capacity overview (COUNT / SUM / AVG / MIN / MAX):");
+        for (Object[] r : summary) {
+            lines.add("  " + r[0] + " \u2192 " + r[1]);
         }
+        lines.add("Per-shelter breakdown (utilisation % shows how full each "
+                + "camp currently is):");
         return new ReportResult("Shelter Occupancy Report",
-                new String[]{"Shelter Zone", "Victims Placed", "Safe"},
-                rows, summary, "");
+                new String[]{"Name", "District", "Capacity", "Occupancy",
+                        "Available", "Status", "Utilisation %"},
+                rows, lines, "");
     }
 
     private ReportResult resourceInventoryReport() throws DataAccessException {

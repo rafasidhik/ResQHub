@@ -321,12 +321,36 @@ public class ReportDAO extends BaseDao {
      *  count of victims placed IN_SHELTER as a placeholder indicator. */
     public List<Object[]> shelterOccupancy() throws DataAccessException {
         String sql = """
-            SELECT d.title AS shelter_zone,
-                   COUNT(v.id) AS placed_in_shelter,
-                   SUM(v.emergency_status = 'SAFE') AS safe
-            FROM disasters d
-            LEFT JOIN victims v ON v.disaster_id = d.id
-            GROUP BY d.title ORDER BY placed_in_shelter DESC
+            SELECT name, district, max_capacity, current_occupancy,
+                   available_capacity, operational_status,
+                   ROUND(current_occupancy * 100.0 / max_capacity) AS utilisation
+            FROM shelters ORDER BY district, name
+            """;
+        return run(sql, List.of());
+    }
+
+    /** High-level shelter capacity picture for the Reports summary
+     *  (COUNT / SUM / AVG / MIN / MAX over the shelters table). */
+    public List<Object[]> shelterCapacitySummary() throws DataAccessException {
+        String sql = """
+            SELECT 'TOTAL SHELTERS' AS metric, COUNT(*) AS value FROM shelters
+            UNION ALL
+            SELECT 'TOTAL CAPACITY', COALESCE(SUM(max_capacity),0) FROM shelters
+            UNION ALL
+            SELECT 'CURRENT OCCUPANCY', COALESCE(SUM(current_occupancy),0)
+                FROM shelters
+            UNION ALL
+            SELECT 'AVAILABLE SPACES', COALESCE(SUM(available_capacity),0)
+                FROM shelters
+            UNION ALL
+            SELECT 'FULL SHELTERS', COUNT(*)
+                FROM shelters WHERE available_capacity <= 0
+            UNION ALL
+            SELECT 'NEAR CAPACITY', COUNT(*)
+                FROM shelters WHERE max_capacity > 0
+                AND available_capacity <= max_capacity * 0.10
+                AND operational_status NOT IN ('FULL','CLOSED')
+            ORDER BY metric
             """;
         return run(sql, List.of());
     }

@@ -139,6 +139,8 @@ public class MainDashboard extends JFrame {
                     openModule("disasters", new DisasterPanel())));
             modulesMenu.add(item("Victims", () ->
                     openModule("victims", new VictimPanel(true))));
+            modulesMenu.add(item("Shelters", () ->
+                    openModule("shelters", new ShelterPanel())));
             modulesMenu.add(item("Rescue Requests", () ->
                     openModule("requests", new RescueRequestPanel(true))));
             modulesMenu.add(item("Rescue Teams", () ->
@@ -158,6 +160,8 @@ public class MainDashboard extends JFrame {
         } else if (has(RoleType.CAMP_MANAGER)) {
             modulesMenu.add(item("Victims", () ->
                     openModule("victims", new VictimPanel(true))));
+            modulesMenu.add(item("Shelters", () ->
+                    openModule("shelters", new ShelterPanel())));
             modulesMenu.add(item("Rescue Requests", () ->
                     openModule("requests", new RescueRequestPanel(true))));
             modulesMenu.add(item("Reports & Analytics", () ->
