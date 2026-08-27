@@ -333,6 +333,70 @@ CREATE TABLE volunteer_activity (
         ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB;
 
+-- ---------------------------------------------------------------------
+-- 15. donors  (people / organisations that contribute donations)
+--     donors(1) --< donations(N) : one donor can give many times
+-- ---------------------------------------------------------------------
+CREATE TABLE donors (
+    id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    full_name       VARCHAR(100)    NOT NULL,
+    contact_number  VARCHAR(15)     NULL,
+    email           VARCHAR(120)    NULL,
+    location        VARCHAR(200)    NULL,
+    donor_type      ENUM('INDIVIDUAL','ORGANIZATION','COMPANY') NOT NULL DEFAULT 'INDIVIDUAL',
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_donors_contact (contact_number),
+    INDEX idx_donors_donor_type (donor_type),
+    INDEX idx_donors_location (location)
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- 16. donations  (cash and material donations received)
+--     donors(1) --< donations(N)
+--     donation_type      : CASH | MATERIAL
+--     donation_status    : RECEIVED | ALLOCATED | PARTIALLY_DISTRIBUTED | DISTRIBUTED
+-- ---------------------------------------------------------------------
+CREATE TABLE donations (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    donor_id        BIGINT UNSIGNED NOT NULL,
+    donation_type   ENUM('CASH','MATERIAL') NOT NULL,
+    amount          DECIMAL(12,2)   NULL COMMENT 'cash amount in rupees',
+    material_name   VARCHAR(120)    NULL COMMENT 'for material donations',
+    quantity        INT UNSIGNED    NULL COMMENT 'units for material donations',
+    description     VARCHAR(300)    NULL,
+    status          ENUM('RECEIVED','ALLOCATED','PARTIALLY_DISTRIBUTED','DISTRIBUTED') NOT NULL DEFAULT 'RECEIVED',
+    donated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_donations_donor (donor_id),
+    INDEX idx_donations_type (donation_type),
+    INDEX idx_donations_status (status),
+    CONSTRAINT fk_donations_donor FOREIGN KEY (donor_id) REFERENCES donors (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- 17. donation_distributions  (how donated resources were distributed)
+--     donations(1) --< donation_distributions(N)
+-- ---------------------------------------------------------------------
+CREATE TABLE donation_distributions (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    donation_id     BIGINT UNSIGNED NOT NULL,
+    distributed_to  VARCHAR(150)    NOT NULL COMMENT 'beneficiary / camp / relief operation',
+    quantity        INT UNSIGNED    NOT NULL COMMENT 'units or amount distributed',
+    distributed_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    description     VARCHAR(300)    NULL,
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_dd_donation (donation_id),
+    CONSTRAINT fk_dd_donation FOREIGN KEY (donation_id) REFERENCES donations (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
 -- =====================================================================
 -- SEED DATA
 -- Passwords below are SHA-256 hex digests.
@@ -433,6 +497,21 @@ INSERT INTO users (username, password_hash, full_name, email, phone, role_id) VA
 
 UPDATE volunteers SET user_id = (SELECT id FROM users WHERE username = 'volunteer1')
 WHERE contact_number = '9847000101';
+
+INSERT INTO donors (full_name, contact_number, email, location, donor_type) VALUES
+('ABC Foundation', '9846000001', 'abc@foundation.org', 'Kochi', 'ORGANIZATION'),
+('Rahul Menon',    '9846000002', 'rahul@example.com',  'Wayanad', 'INDIVIDUAL'),
+('Kerala Steel Co', '9846000003', 'care@keralasteel.in', 'Thrissur', 'COMPANY');
+
+INSERT INTO donations (donor_id, donation_type, amount, material_name, quantity,
+                       description, status, donated_at) VALUES
+(1, 'CASH',    50000.00, NULL,        NULL, 'Flood relief cash support',   'ALLOCATED', NOW() - INTERVAL 3 DAY),
+(2, 'MATERIAL', NULL,     'Blankets', 100,  'Relief camp support',         'PARTIALLY_DISTRIBUTED', NOW() - INTERVAL 2 DAY),
+(3, 'MATERIAL', NULL,     'Food kits', 250, 'Emergency food for shelters', 'RECEIVED',   NOW() - INTERVAL 1 DAY);
+
+INSERT INTO donation_distributions (donation_id, distributed_to, quantity, description) VALUES
+(2, 'Wayanad relief camp', 40, 'Blankets given to Chundale camp'),
+(2, 'Meppadi camp',        30, 'Blankets given to Meppadi camp');
 
 
 INSERT INTO rescue_requests (disaster_id, victim_id, requester_name, contact_number, location,

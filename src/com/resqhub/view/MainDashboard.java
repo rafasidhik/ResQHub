@@ -145,6 +145,8 @@ public class MainDashboard extends JFrame {
                     openModule("teams", new RescueTeamPanel())));
             modulesMenu.add(item("Volunteers", () ->
                     openModule("volunteers", new VolunteerPanel())));
+            modulesMenu.add(item("Donations", () ->
+                    openModule("donations", new DonationPanel())));
             if (has(RoleType.ADMIN)) {
                 modulesMenu.add(item("Users", () ->
                         openModule("users", new UserPanel())));
