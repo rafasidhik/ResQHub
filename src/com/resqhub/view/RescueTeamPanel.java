@@ -326,7 +326,7 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
                 javax.swing.SwingUtilities.getWindowAncestor(this),
                 "Team Profile - " + team.getTeamName(),
                 java.awt.Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setSize(700, 520);
+        dialog.setSize(760, 580);
         dialog.setLocationRelativeTo(this);
 
         JPanel content = new JPanel(new BorderLayout(8, 8));
@@ -349,6 +349,9 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
                 team.getLeaderName());
         r = addInfoRow(infoPanel, gbc, r, "Contact:",
                 team.getContactNumber());
+        r = addInfoRow(infoPanel, gbc, r, "Base:",
+                team.getBaseLocation() == null
+                        ? "-" : team.getBaseLocation());
         r = addInfoRow(infoPanel, gbc, r, "Members:",
                 String.valueOf(team.getMemberCount()));
         r = addInfoRow(infoPanel, gbc, r, "Availability:",
@@ -357,9 +360,6 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
                 team.getOperationalStatus() == null
                         ? "-"
                         : team.getOperationalStatus().getLabel());
-        r = addInfoRow(infoPanel, gbc, r, "Base:",
-                team.getBaseLocation() == null
-                        ? "-" : team.getBaseLocation());
 
         content.add(infoPanel, BorderLayout.NORTH);
 
@@ -372,12 +372,101 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
 
         JButton closeBtn = new JButton("Close");
         closeBtn.addActionListener(event -> dialog.dispose());
+        JButton editBtn = new JButton("Edit Team Information");
+        editBtn.addActionListener(event -> {
+            editTeamDialog(team);
+            refreshTable();
+        });
         JPanel foot = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        foot.add(editBtn);
         foot.add(closeBtn);
         content.add(foot, BorderLayout.SOUTH);
 
         dialog.setContentPane(content);
         dialog.setVisible(true);
+    }
+
+    /** Editable dialog for changing a team's core information. */
+    private void editTeamDialog(RescueTeam team) {
+        JDialog dialog = new JDialog(
+                javax.swing.SwingUtilities.getWindowAncestor(this),
+                "Edit Team - " + team.getTeamName(),
+                java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setSize(420, 360);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setBorder(BorderFactory.createEmptyBorder(
+                10, 10, 10, 10));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(4, 4, 4, 4);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        JTextField nameIn = new JTextField(team.getTeamName(), 18);
+        JComboBox<TeamType> typeIn =
+                new JComboBox<>(TeamType.values());
+        typeIn.setSelectedItem(team.getTeamType());
+        JTextField leaderIn =
+                new JTextField(team.getLeaderName(), 18);
+        JTextField contactIn =
+                new JTextField(team.getContactNumber(), 12);
+        JTextField membersIn = new JTextField(
+                String.valueOf(team.getMemberCount()), 5);
+        JTextField skillsIn = new JTextField(
+                team.getSkills(), 18);
+        JTextField equipIn = new JTextField(
+                team.getEquipment(), 18);
+        JTextField baseIn = new JTextField(
+                team.getBaseLocation(), 18);
+
+        int row = 0;
+        row = editRow(form, gbc, row, "Team name:", nameIn);
+        row = editRow(form, gbc, row, "Type:", typeIn);
+        row = editRow(form, gbc, row, "Leader:", leaderIn);
+        row = editRow(form, gbc, row, "Contact (10 digits):",
+                contactIn);
+        row = editRow(form, gbc, row, "Members:", membersIn);
+        row = editRow(form, gbc, row, "Skills:", skillsIn);
+        row = editRow(form, gbc, row, "Equipment:", equipIn);
+        row = editRow(form, gbc, row, "Base location:", baseIn);
+
+        JButton saveBtn = new JButton("Save Changes");
+        gbc.gridx = 1;
+        gbc.gridy = row;
+        form.add(saveBtn, gbc);
+
+        saveBtn.addActionListener(event -> {
+            ActionResult r = controller.updateTeam(team.getId(),
+                    nameIn.getText(),
+                    (TeamType) typeIn.getSelectedItem(),
+                    leaderIn.getText(),
+                    contactIn.getText(),
+                    membersIn.getText(),
+                    skillsIn.getText(),
+                    equipIn.getText(),
+                    baseIn.getText());
+            if (r.isSuccess()) {
+                ViewUtil.info(dialog, r.getMessage());
+                dialog.dispose();
+                refreshTable();
+            } else {
+                ViewUtil.error(dialog, r.getMessage());
+            }
+        });
+
+        dialog.setContentPane(form);
+        dialog.setVisible(true);
+    }
+
+    private int editRow(JPanel panel, GridBagConstraints gbc,
+                        int row, String label,
+                        javax.swing.JComponent field) {
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel(label), gbc);
+        gbc.gridx = 1;
+        panel.add(field, gbc);
+        return row + 1;
     }
 
     private int addInfoRow(JPanel panel, GridBagConstraints gbc,
@@ -414,24 +503,43 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
 
         panel.add(new JScrollPane(tbl), BorderLayout.CENTER);
 
-        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints fgc = new GridBagConstraints();
+        fgc.insets = new Insets(3, 3, 3, 3);
+        fgc.anchor = GridBagConstraints.WEST;
+
         JTextField nameIn = new JTextField(12);
         JTextField roleIn = new JTextField(10);
         JTextField contactIn = new JTextField(10);
         JTextField skillsIn = new JTextField(10);
+
+        fgc.gridx = 0; fgc.gridy = 0;
+        form.add(new JLabel("Name:"), fgc);
+        fgc.gridx = 1;
+        form.add(nameIn, fgc);
+        fgc.gridx = 2;
+        form.add(new JLabel("Role:"), fgc);
+        fgc.gridx = 3;
+        form.add(roleIn, fgc);
+        fgc.gridy = 1; fgc.gridx = 0;
+        form.add(new JLabel("Contact:"), fgc);
+        fgc.gridx = 1;
+        form.add(contactIn, fgc);
+        fgc.gridx = 2;
+        form.add(new JLabel("Skills:"), fgc);
+        fgc.gridx = 3;
+        form.add(skillsIn, fgc);
+
         JButton addBtn = new JButton("Add member");
         JButton delBtn = new JButton("Delete selected");
-
-        btns.add(new JLabel("Name:"));
-        btns.add(nameIn);
-        btns.add(new JLabel("Role:"));
-        btns.add(roleIn);
-        btns.add(new JLabel("Contact:"));
-        btns.add(contactIn);
-        btns.add(new JLabel("Skills:"));
-        btns.add(skillsIn);
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT));
         btns.add(addBtn);
         btns.add(delBtn);
+
+        JPanel footer = new JPanel(new BorderLayout(6, 4));
+        footer.add(form, BorderLayout.NORTH);
+        footer.add(btns, BorderLayout.SOUTH);
+        panel.add(scrollableFooter(footer), BorderLayout.SOUTH);
 
         addBtn.addActionListener(event -> {
             ActionResult r = controller.addMember(teamId,
@@ -482,8 +590,17 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
             }
         });
 
-        panel.add(btns, BorderLayout.SOUTH);
         return panel;
+    }
+
+    /** Wraps footer content so it never gets clipped - scrolls if needed. */
+    private JScrollPane scrollableFooter(JPanel inner) {
+        JScrollPane sp = new JScrollPane(inner,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        sp.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+        sp.setAlignmentX(javax.swing.SwingConstants.LEFT);
+        return sp;
     }
 
     // ── skills tab ───────────────────────────────────────────────────
@@ -508,18 +625,31 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
 
         panel.add(new JScrollPane(tbl), BorderLayout.CENTER);
 
-        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints fgc = new GridBagConstraints();
+        fgc.insets = new Insets(3, 3, 3, 3);
+        fgc.anchor = GridBagConstraints.WEST;
         JTextField skillIn = new JTextField(14);
         JTextField descIn = new JTextField(14);
+        fgc.gridx = 0; fgc.gridy = 0;
+        form.add(new JLabel("Skill:"), fgc);
+        fgc.gridx = 1;
+        form.add(skillIn, fgc);
+        fgc.gridx = 2;
+        form.add(new JLabel("Description:"), fgc);
+        fgc.gridx = 3;
+        form.add(descIn, fgc);
+
         JButton addBtn = new JButton("Add skill");
         JButton delBtn = new JButton("Delete selected");
-
-        btns.add(new JLabel("Skill:"));
-        btns.add(skillIn);
-        btns.add(new JLabel("Description:"));
-        btns.add(descIn);
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT));
         btns.add(addBtn);
         btns.add(delBtn);
+
+        JPanel footer = new JPanel(new BorderLayout(6, 4));
+        footer.add(form, BorderLayout.NORTH);
+        footer.add(btns, BorderLayout.SOUTH);
+        panel.add(scrollableFooter(footer), BorderLayout.SOUTH);
 
         addBtn.addActionListener(event -> {
             ActionResult r = controller.addSkill(teamId,
@@ -567,7 +697,6 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
             }
         });
 
-        panel.add(btns, BorderLayout.SOUTH);
         return panel;
     }
 
@@ -594,21 +723,36 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
 
         panel.add(new JScrollPane(tbl), BorderLayout.CENTER);
 
-        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints fgc = new GridBagConstraints();
+        fgc.insets = new Insets(3, 3, 3, 3);
+        fgc.anchor = GridBagConstraints.WEST;
         JTextField eqIn = new JTextField(12);
         JTextField qtyIn = new JTextField(4);
         JTextField descIn = new JTextField(12);
+        fgc.gridx = 0; fgc.gridy = 0;
+        form.add(new JLabel("Equipment:"), fgc);
+        fgc.gridx = 1;
+        form.add(eqIn, fgc);
+        fgc.gridx = 2;
+        form.add(new JLabel("Qty:"), fgc);
+        fgc.gridx = 3;
+        form.add(qtyIn, fgc);
+        fgc.gridx = 4;
+        form.add(new JLabel("Description:"), fgc);
+        fgc.gridx = 5;
+        form.add(descIn, fgc);
+
         JButton addBtn = new JButton("Add equipment");
         JButton delBtn = new JButton("Delete selected");
-
-        btns.add(new JLabel("Equipment:"));
-        btns.add(eqIn);
-        btns.add(new JLabel("Qty:"));
-        btns.add(qtyIn);
-        btns.add(new JLabel("Description:"));
-        btns.add(descIn);
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT));
         btns.add(addBtn);
         btns.add(delBtn);
+
+        JPanel footer = new JPanel(new BorderLayout(6, 4));
+        footer.add(form, BorderLayout.NORTH);
+        footer.add(btns, BorderLayout.SOUTH);
+        panel.add(scrollableFooter(footer), BorderLayout.SOUTH);
 
         addBtn.addActionListener(event -> {
             ActionResult r = controller.addEquipment(teamId,
@@ -658,7 +802,6 @@ public class RescueTeamPanel extends JPanel implements Refreshable {
             }
         });
 
-        panel.add(btns, BorderLayout.SOUTH);
         return panel;
     }
 

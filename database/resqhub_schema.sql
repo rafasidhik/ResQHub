@@ -300,6 +300,31 @@ INSERT INTO rescue_teams (team_name, team_type, leader_name, contact_number,
  'debris cutting, first aid, confined space rescue', 'cutters, stretchers, oxygen kits',
  'Thiruvananthapuram Fire Station');
 
+INSERT INTO team_members (team_id, member_name, role, contact_number, special_skills) VALUES
+(1, 'Cmdr. Suresh', 'Team Leader', '9848000001', 'water rescue, navigation'),
+(1, 'Ajith Kumar',  'Medical Responder', '9848000011', 'first aid, emergency medicine'),
+(1, 'Ravi Menon',   'Rescue Specialist', '9848000012', 'swimming, rope rescue'),
+(1, 'Sreelakshmi',  'Driver',        '9848000013', 'boat handling'),
+(2, 'Officer Vinod','Team Leader',   '9848000002', 'fire and rescue'),
+(2, 'Deepak',       'Rescue Specialist', '9848000021', 'confined space rescue'),
+(2, 'Maya',         'Medical Responder', '9848000022', 'first aid');
+
+INSERT INTO team_skills (team_id, skill_name, description) VALUES
+(1, 'Water rescue', 'Rescue from flooded areas and water bodies'),
+(1, 'Swimming', 'Certified swimmers for deep water operations'),
+(1, 'Rope rescue', 'Rope systems for extraction'),
+(2, 'Debris cutting', 'Cutting through rubble and collapsed structures'),
+(2, 'First aid', 'On-site medical attention'),
+(2, 'Confined space rescue', 'Rescue in tight spaces');
+
+INSERT INTO team_equipment (team_id, equipment_name, quantity, description) VALUES
+(1, 'Inflatable boats', 4, 'For flood and water operations'),
+(1, 'Life jackets', 20, 'Personal flotation devices'),
+(1, 'Ropes', 12, 'Heavy-duty rescue ropes'),
+(2, 'Cutters', 3, 'Hydraulic cutting tools'),
+(2, 'Stretchers', 4, 'Patient transport'),
+(2, 'Oxygen kits', 2, 'Emergency oxygen supply');
+
 INSERT INTO rescue_requests (disaster_id, victim_id, requester_name, contact_number, location,
                              people_count, children_count, elderly_count, life_threatening,
                              medical_emergency, trapped_under_debris, required_assistance) VALUES
