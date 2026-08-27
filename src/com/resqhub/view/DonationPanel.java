@@ -101,8 +101,42 @@ public class DonationPanel extends JPanel implements Refreshable {
         centerTabs.add("Donors", buildDonorsArea());
         add(centerTabs, BorderLayout.CENTER);
 
-        add(buildForms(), BorderLayout.WEST);
+        add(buildSidePanel(), BorderLayout.EAST);
+        donationTypeCombo.addActionListener(event -> applyTypeFields());
+        applyTypeFields();
         refreshData();
+    }
+
+    /** Shows only the fields relevant to the selected donation type. */
+    private void applyTypeFields() {
+        boolean cash = donationTypeCombo.getSelectedItem()
+                == DonationType.CASH;
+        amountField.setEnabled(cash);
+        materialNameField.setEnabled(!cash);
+        quantityField.setEnabled(!cash);
+    }
+
+    /** Scrollable action panel on the right for inputs. */
+    private JScrollPane buildSidePanel() {
+        JPanel side = new JPanel();
+        side.setLayout(new BoxLayout(side, BoxLayout.Y_AXIS));
+        side.setPreferredSize(new Dimension(320, 0));
+
+        JLabel header = new JLabel("  Quick Actions");
+        header.setFont(header.getFont().deriveFont(Font.BOLD, 13f));
+        header.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
+        side.add(header);
+
+        side.add(buildDonorForm());
+        side.add(Box.createVerticalStrut(10));
+        side.add(buildDonationForm());
+
+        JScrollPane scroll = new JScrollPane(side,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        return scroll;
     }
 
     // ── header with stat tiles ───────────────────────────────────────
@@ -138,53 +172,54 @@ public class DonationPanel extends JPanel implements Refreshable {
         captionLabel.setHorizontalAlignment(
                 javax.swing.SwingConstants.CENTER);
         captionLabel.setFont(captionLabel.getFont().deriveFont(10f));
-        captionLabel.setForeground(new Color(90, 90, 90));
+        captionLabel.setForeground(Color.WHITE);
+        captionLabel.setOpaque(true);
+        captionLabel.setBackground(color);
+        captionLabel.setBorder(BorderFactory.createEmptyBorder(
+                3, 4, 3, 4));
 
         JPanel tile = new JPanel();
-        tile.setLayout(new BoxLayout(tile, BoxLayout.Y_AXIS));
-        tile.setPreferredSize(new Dimension(120, 80));
+        tile.setLayout(new BorderLayout());
+        tile.setPreferredSize(new Dimension(120, 78));
         tile.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(
                         new Color(200, 200, 200)),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)));
-        tile.add(Box.createVerticalGlue());
-        tile.add(valueLabel);
-        tile.add(captionLabel);
-        tile.add(Box.createVerticalGlue());
+        tile.add(valueLabel, BorderLayout.CENTER);
+        tile.add(captionLabel, BorderLayout.SOUTH);
         return tile;
     }
 
     // ── forms panel: register donor + record donation ────────────────
 
-    private JPanel buildForms() {
-        JPanel forms = new JPanel();
-        forms.setLayout(new BoxLayout(forms, BoxLayout.Y_AXIS));
-        forms.setPreferredSize(new Dimension(300, 0));
-
-        forms.add(buildDonorForm());
-        forms.add(Box.createVerticalStrut(10));
-        forms.add(buildDonationForm());
-        return forms;
-    }
-
     private JPanel buildDonorForm() {
         JPanel form = new JPanel(new GridBagLayout());
         form.setBorder(BorderFactory.createTitledBorder(
-                "Register donor"));
+                BorderFactory.createLineBorder(
+                        new Color(150, 150, 150)),
+                "Register Donor"));
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(3, 4, 3, 4);
+        gbc.insets = new Insets(3, 6, 3, 6);
         gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        setFieldWidth(donorNameField, 200);
+        setFieldWidth(donorContactField, 200);
+        setFieldWidth(donorEmailField, 200);
+        setFieldWidth(donorLocationField, 200);
 
         int row = 0;
-        row = addRow(form, gbc, row, "Full name:", donorNameField);
+        row = addRow(form, gbc, row, "Name:", donorNameField);
         row = addRow(form, gbc, row, "Contact:", donorContactField);
         row = addRow(form, gbc, row, "Email:", donorEmailField);
         row = addRow(form, gbc, row, "Location:", donorLocationField);
         row = addRow(form, gbc, row, "Type:", donorTypeCombo);
 
         JButton registerBtn = new JButton("Register donor");
-        gbc.gridx = 1;
+        gbc.gridx = 0;
         gbc.gridy = row;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.NONE;
         form.add(registerBtn, gbc);
         registerBtn.addActionListener(event -> registerDonor());
         return form;
@@ -193,33 +228,51 @@ public class DonationPanel extends JPanel implements Refreshable {
     private JPanel buildDonationForm() {
         JPanel form = new JPanel(new GridBagLayout());
         form.setBorder(BorderFactory.createTitledBorder(
-                "Record donation"));
+                BorderFactory.createLineBorder(
+                        new Color(150, 150, 150)),
+                "Record Donation"));
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(3, 4, 3, 4);
+        gbc.insets = new Insets(3, 6, 3, 6);
         gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        setFieldWidth(amountField, 120);
+        setFieldWidth(materialNameField, 120);
+        setFieldWidth(quantityField, 80);
+        setFieldWidth(donationDescField, 200);
 
         int row = 0;
         row = addRow(form, gbc, row, "Donor:", donorSelectCombo);
         row = addRow(form, gbc, row, "Type:", donationTypeCombo);
         row = addRow(form, gbc, row, "Amount (\u20B9):", amountField);
-        row = addRow(form, gbc, row, "Material / Item:", materialNameField);
+        row = addRow(form, gbc, row, "Item:", materialNameField);
         row = addRow(form, gbc, row, "Quantity:", quantityField);
         row = addRow(form, gbc, row, "Description:", donationDescField);
 
         JButton recordBtn = new JButton("Record donation");
-        gbc.gridx = 1;
+        gbc.gridx = 0;
         gbc.gridy = row;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.NONE;
         form.add(recordBtn, gbc);
         recordBtn.addActionListener(event -> recordDonation());
         return form;
+    }
+
+    private void setFieldWidth(javax.swing.JComponent field, int px) {
+        Dimension d = field.getPreferredSize();
+        field.setPreferredSize(new Dimension(px, d.height));
     }
 
     private int addRow(JPanel form, GridBagConstraints gbc, int row,
                        String label, javax.swing.JComponent field) {
         gbc.gridx = 0;
         gbc.gridy = row;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
         form.add(new JLabel(label), gbc);
         gbc.gridx = 1;
+        gbc.weightx = 1;
         form.add(field, gbc);
         return row + 1;
     }
@@ -230,35 +283,44 @@ public class DonationPanel extends JPanel implements Refreshable {
         JPanel area = new JPanel(new BorderLayout(6, 6));
         area.add(new JScrollPane(donationTable), BorderLayout.CENTER);
 
-        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        controls.add(new JLabel("Search:"));
-        controls.add(searchField);
-        JButton searchBtn = new JButton("Search");
-        controls.add(searchBtn);
-        JButton showAllBtn = new JButton("Show All");
-        controls.add(showAllBtn);
-        controls.add(Box.createHorizontalStrut(8));
-        controls.add(new JLabel("Type:"));
-        controls.add(typeFilterCombo);
-        controls.add(new JLabel("Status:"));
-        controls.add(statusFilterCombo);
-        controls.add(Box.createHorizontalStrut(8));
+        JPanel controls = new JPanel();
+        controls.setLayout(new BoxLayout(controls, BoxLayout.Y_AXIS));
+        controls.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
+        JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT,
+                6, 2));
+        filterRow.add(new JLabel("Search:"));
+        filterRow.add(searchField);
+        JButton searchBtn = new JButton("Search");
+        filterRow.add(searchBtn);
+        JButton showAllBtn = new JButton("Show All");
+        filterRow.add(showAllBtn);
+        filterRow.add(Box.createHorizontalStrut(10));
+        filterRow.add(new JLabel("Type:"));
+        filterRow.add(typeFilterCombo);
+        filterRow.add(new JLabel("Status:"));
+        filterRow.add(statusFilterCombo);
+
+        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT,
+                6, 2));
+        actionRow.add(new JLabel("Selected:"));
         JButton viewDonBtn = new JButton("View Donation");
-        controls.add(viewDonBtn);
+        actionRow.add(viewDonBtn);
         JButton distributeBtn = new JButton("Distribute");
-        controls.add(distributeBtn);
+        actionRow.add(distributeBtn);
         JButton updateStatusBtn = new JButton("Update Status");
-        controls.add(updateStatusBtn);
+        actionRow.add(updateStatusBtn);
         JButton editDonBtn = new JButton("Edit");
-        controls.add(editDonBtn);
+        actionRow.add(editDonBtn);
         JButton deleteDonBtn = new JButton("Delete");
         deleteDonBtn.setEnabled(
                 SessionManager.getInstance().hasRole(RoleType.ADMIN));
-        controls.add(deleteDonBtn);
+        actionRow.add(deleteDonBtn);
         JButton exportBtn = new JButton("Export CSV");
-        controls.add(exportBtn);
+        actionRow.add(exportBtn);
 
+        controls.add(filterRow);
+        controls.add(actionRow);
         area.add(controls, BorderLayout.NORTH);
 
         searchBtn.addActionListener(event -> refreshDonations());
@@ -287,25 +349,36 @@ public class DonationPanel extends JPanel implements Refreshable {
         JPanel area = new JPanel(new BorderLayout(6, 6));
         area.add(new JScrollPane(donorTable), BorderLayout.CENTER);
 
-        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JTextField donorSearchField = new JTextField(14);
-        controls.add(new JLabel("Search donors:"));
-        controls.add(donorSearchField);
+        JPanel controls = new JPanel();
+        controls.setLayout(new BoxLayout(controls, BoxLayout.Y_AXIS));
+        controls.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+
+        JTextField donorSearchField = new JTextField(16);
+        JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT,
+                6, 2));
+        filterRow.add(new JLabel("Search donors:"));
+        filterRow.add(donorSearchField);
         JButton searchBtn = new JButton("Search");
-        controls.add(searchBtn);
+        filterRow.add(searchBtn);
         JButton showAllBtn = new JButton("Show All");
-        controls.add(showAllBtn);
-        controls.add(Box.createHorizontalStrut(8));
+        filterRow.add(showAllBtn);
+
+        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT,
+                6, 2));
+        actionRow.add(new JLabel("Selected:"));
         JButton profileBtn = new JButton("View Profile");
-        controls.add(profileBtn);
+        actionRow.add(profileBtn);
         JButton editDonorBtn = new JButton("Edit");
-        controls.add(editDonorBtn);
+        actionRow.add(editDonorBtn);
         JButton deleteDonorBtn = new JButton("Delete");
         deleteDonorBtn.setEnabled(
                 SessionManager.getInstance().hasRole(RoleType.ADMIN));
-        controls.add(deleteDonorBtn);
+        actionRow.add(deleteDonorBtn);
         JButton exportDonorBtn = new JButton("Export CSV");
-        controls.add(exportDonorBtn);
+        actionRow.add(exportDonorBtn);
+
+        controls.add(filterRow);
+        controls.add(actionRow);
         area.add(controls, BorderLayout.NORTH);
 
         searchBtn.addActionListener(event -> refreshDonors(
