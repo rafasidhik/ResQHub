@@ -23,4 +23,10 @@ public enum ShelterOperationalStatus {
     public String getLabel() {
         return label;
     }
+
+    /** True when the shelter can still accept new people (not full /
+     *  inactive / closed). Used by smart allocation's suitability gate. */
+    public boolean isAccepting() {
+        return this == ACTIVE || this == AVAILABLE || this == NEAR_CAPACITY;
+    }
 }

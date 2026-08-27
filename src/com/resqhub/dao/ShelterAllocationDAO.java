@@ -80,23 +80,85 @@ public class ShelterAllocationDAO extends BaseDao {
 
     /** Marks an allocation released, stamping the release time. */
     public void release(long allocationId) throws DataAccessException {
-        String sql = "UPDATE shelter_allocations SET status = 'RELEASED', "
-                + "released_at = ? WHERE id = ? AND status = 'ACTIVE'";
+        updateStatus(allocationId, ShelterAllocationStatus.RELEASED);
+    }
+
+    /**
+     * Generic status transition. When the target status no longer counts
+     * the occupants (terminal: COMPLETED / CANCELLED / RELEASED) the
+     * release timestamp is stamped so the shelter can free the space.
+     */
+    public void updateStatus(long allocationId,
+                             ShelterAllocationStatus status)
+            throws DataAccessException {
+        String sql = "UPDATE shelter_allocations SET status = ?"
+                + ", released_at = ? WHERE id = ?";
         try (Connection con = openConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setObject(1, LocalDateTime.now());
-            ps.setLong(2, allocationId);
+            ps.setString(1, status.name());
+            ps.setObject(2, status.isOccupying() ? null
+                    : LocalDateTime.now());
+            ps.setLong(3, allocationId);
             ps.executeUpdate();
         } catch (SQLException e) {
-            throw new DataAccessException("Could not release allocation "
-                    + allocationId, e);
+            throw new DataAccessException("Could not update status of "
+                    + "allocation " + allocationId + " to " + status, e);
         }
     }
 
-    /** Total people currently accommodated (SUM over ACTIVE allocations). */
+    /** All allocation records, newest first (for the management view). */
+    public List<ShelterAllocation> findAll() throws DataAccessException {
+        String sql = "SELECT * FROM shelter_allocations "
+                + "ORDER BY allocated_at DESC";
+        return query(sql, List.of());
+    }
+
+    public List<ShelterAllocation> findByStatus(ShelterAllocationStatus status)
+            throws DataAccessException {
+        String sql = "SELECT * FROM shelter_allocations WHERE status = ? "
+                + "ORDER BY allocated_at DESC";
+        return query(sql, List.of(status.name()));
+    }
+
+    /** Any allocation in an occupying state for the given victim. */
+    public ShelterAllocation findActiveByVictim(long victimId)
+            throws DataAccessException {
+        String sql = "SELECT * FROM shelter_allocations WHERE victim_id = ? "
+                + "AND status IN ('ACTIVE','CHECKED_IN','PENDING') "
+                + "ORDER BY allocated_at DESC LIMIT 1";
+        List<ShelterAllocation> rows = query(sql, List.of(victimId));
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private List<ShelterAllocation> query(String sql, List<Object> params)
+            throws DataAccessException {
+        List<ShelterAllocation> result = new ArrayList<>();
+        try (Connection con = openConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof Long) {
+                    ps.setLong(i + 1, (Long) p);
+                } else {
+                    ps.setString(i + 1, String.valueOf(p));
+                }
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(mapRow(rs));
+                }
+            }
+            return result;
+        } catch (SQLException e) {
+            throw new DataAccessException("Allocation query failed", e);
+        }
+    }
+
+    /** Total people currently accommodated (SUM over occupying allocations). */
     public int sumActivePeople(long shelterId) throws DataAccessException {
         String sql = "SELECT COALESCE(SUM(people_count), 0) FROM "
-                + "shelter_allocations WHERE shelter_id = ? AND status = 'ACTIVE'";
+                + "shelter_allocations WHERE shelter_id = ? "
+                + "AND status IN ('ACTIVE','CHECKED_IN')";
         try (Connection con = openConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setLong(1, shelterId);

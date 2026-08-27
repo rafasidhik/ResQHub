@@ -36,6 +36,7 @@ public class ReportService {
             case VOLUNTEERS -> volunteerReport();
             case DONATIONS -> donationReport(f);
             case SHELTER_OCCUPANCY -> shelterOccupancyReport();
+            case ALLOCATION_OVERVIEW -> allocationOverviewReport();
             case HOSPITAL_CAPACITY -> notPresent("Hospital Capacity Report");
             case BLOOD_AVAILABILITY -> notPresent("Blood Availability Report");
             case RESOURCE_INVENTORY -> resourceInventoryReport();
@@ -364,6 +365,30 @@ public class ReportService {
         return new ReportResult("Resource & Inventory Report",
                 new String[]{"Resource", "Total Units", "Used"},
                 rows, summary, "");
+    }
+
+    private ReportResult allocationOverviewReport() throws DataAccessException {
+        List<Object[]> metrics = toDisplay(
+                reportDAO.allocationMetrics(), new int[]{1});
+        List<Object[]> byStatus = toDisplay(
+                reportDAO.allocationByStatus(), new int[]{1, 2});
+        List<String> lines = new ArrayList<>();
+        for (Object[] m : metrics) {
+            lines.add("  " + m[0] + " \u2192 " + m[1]);
+        }
+        lines.add("Allocations by status (COUNT / SUM people, JOIN "
+                + "shelter_allocations \u00d7 shelters):");
+        for (Object[] r : byStatus) {
+            lines.add("  " + r[0] + " \u2192 " + r[1] + " allocations, "
+                    + r[2] + " people");
+        }
+        List<Object[]> rows = new ArrayList<>();
+        for (Object[] r : byStatus) {
+            rows.add(new Object[]{r[0], r[1], r[2]});
+        }
+        return new ReportResult("Shelter Allocation Overview",
+                new String[]{"Status", "Allocations", "People"},
+                rows, lines, "");
     }
 
     private ReportResult notPresent(String label) {

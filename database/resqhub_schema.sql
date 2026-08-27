@@ -653,7 +653,8 @@ CREATE TABLE shelter_allocations (
     notes         VARCHAR(300)    NULL,
     allocated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     released_at   DATETIME        NULL,
-    status        ENUM('ACTIVE','RELEASED') NOT NULL DEFAULT 'ACTIVE',
+    status        ENUM('PENDING','ACTIVE','CHECKED_IN','COMPLETED',
+                       'CANCELLED','RELEASED') NOT NULL DEFAULT 'ACTIVE',
     allocated_by  BIGINT UNSIGNED NULL,
     created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -713,4 +714,10 @@ INSERT INTO shelter_allocations (shelter_id, victim_id, family_name, people_coun
 (1, 2, 'Lakshmi Pillai', 1,
  'Elderly resident, diabetic - needs medical attention.', 'ACTIVE', 1),
 (3, NULL, 'Kollam family of 5', 5,
- 'Family from Wayanad, awaiting individual victim records.', 'ACTIVE', 2);
+ 'Family from Wayanad, awaiting individual victim records.', 'ACTIVE', 2),
+(2, NULL, 'PENDING family - Malappuram evacuees', 6,
+ 'Reserved at Relief Camp B while transport is arranged.', 'PENDING', 1),
+(1, NULL, 'Completed camp stay', 2,
+ 'Family completed their stay.', 'COMPLETED', 1),
+(2, NULL, 'Cancelled reservation', 3,
+ 'Family relocated to the Wayanad Base Camp instead.', 'CANCELLED', 1);

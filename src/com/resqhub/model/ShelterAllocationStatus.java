@@ -1,12 +1,17 @@
 package com.resqhub.model;
 
 /**
- * Status of a shelter allocation record (a victim or family placed in
- * a shelter). ACTIVE means currently accommodated; RELEASED means the
- * allocation has been closed and the occupants no longer counted.
+ * Lifecycle status of a shelter allocation record. ACTIVE and CHECKED_IN
+ * currently count toward the shelter's occupancy; PENDING is a
+ * reservation that does NOT yet occupy space; COMPLETED / CANCELLED /
+ * RELEASED are terminal states that free the occupants.
  */
 public enum ShelterAllocationStatus {
+    PENDING("Pending"),
     ACTIVE("Active"),
+    CHECKED_IN("Checked In"),
+    COMPLETED("Completed"),
+    CANCELLED("Cancelled"),
     RELEASED("Released");
 
     private final String label;
@@ -17,5 +22,10 @@ public enum ShelterAllocationStatus {
 
     public String getLabel() {
         return label;
+    }
+
+    /** True when the occupants currently count toward shelter occupancy. */
+    public boolean isOccupying() {
+        return this == ACTIVE || this == CHECKED_IN;
     }
 }

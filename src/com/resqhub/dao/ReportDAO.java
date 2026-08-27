@@ -355,6 +355,53 @@ public class ReportDAO extends BaseDao {
         return run(sql, List.of());
     }
 
+    /** Allocation records grouped by status with people totals
+     *  (JOIN shelters for the location context). */
+    public List<Object[]> allocationByStatus() throws DataAccessException {
+        String sql = """
+            SELECT a.status,
+                   COUNT(*) AS allocations,
+                   COALESCE(SUM(a.people_count), 0) AS people,
+                   MIN(a.allocated_at) AS first_on,
+                   MAX(a.allocated_at) AS last_on
+            FROM shelter_allocations a
+            JOIN shelters s ON s.id = a.shelter_id
+            GROUP BY a.status ORDER BY a.status
+            """;
+        return run(sql, List.of());
+    }
+
+    /** High-level smart allocation picture (metric cards). */
+    public List<Object[]> allocationMetrics() throws DataAccessException {
+        String sql = """
+            SELECT 'TOTAL ALLOCATIONS' AS metric,
+                   (SELECT COUNT(*) FROM shelter_allocations) AS value
+            UNION ALL SELECT 'ACTIVE / CHECKED IN',
+                   (SELECT COUNT(*) FROM shelter_allocations
+                    WHERE status IN ('ACTIVE','CHECKED_IN'))
+            UNION ALL SELECT 'PENDING', COUNT(*) FROM shelter_allocations
+                WHERE status = 'PENDING'
+            UNION ALL SELECT 'COMPLETED', COUNT(*) FROM shelter_allocations
+                WHERE status = 'COMPLETED'
+            UNION ALL SELECT 'CANCELLED', COUNT(*) FROM shelter_allocations
+                WHERE status = 'CANCELLED'
+            UNION ALL SELECT 'PEOPLE ALLOCATED',
+                   (SELECT COALESCE(SUM(people_count),0)
+                    FROM shelter_allocations WHERE status IN
+                    ('ACTIVE','CHECKED_IN'))
+            UNION ALL SELECT 'WAITING VICTIMS',
+                   (SELECT COUNT(*) FROM victims
+                    WHERE shelter_status <> 'IN_SHELTER')
+            UNION ALL SELECT 'FULL SHELTERS',
+                   (SELECT COUNT(*) FROM shelters
+                    WHERE available_capacity <= 0)
+            UNION ALL SELECT 'AVAILABLE SPACES',
+                   (SELECT COALESCE(SUM(available_capacity),0) FROM shelters)
+            ORDER BY metric
+            """;
+        return run(sql, List.of());
+    }
+
     public List<Object[]> resourceInventory() throws DataAccessException {
         String sql = """
             SELECT material_name AS resource, SUM(quantity) AS total_units,

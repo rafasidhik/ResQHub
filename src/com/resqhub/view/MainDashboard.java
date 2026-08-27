@@ -141,6 +141,8 @@ public class MainDashboard extends JFrame {
                     openModule("victims", new VictimPanel(true))));
             modulesMenu.add(item("Shelters", () ->
                     openModule("shelters", new ShelterPanel())));
+            modulesMenu.add(item("Smart Allocation", () ->
+                    openModule("smartalloc", new SmartAllocationPanel())));
             modulesMenu.add(item("Rescue Requests", () ->
                     openModule("requests", new RescueRequestPanel(true))));
             modulesMenu.add(item("Rescue Teams", () ->
@@ -162,6 +164,8 @@ public class MainDashboard extends JFrame {
                     openModule("victims", new VictimPanel(true))));
             modulesMenu.add(item("Shelters", () ->
                     openModule("shelters", new ShelterPanel())));
+            modulesMenu.add(item("Smart Allocation", () ->
+                    openModule("smartalloc", new SmartAllocationPanel())));
             modulesMenu.add(item("Rescue Requests", () ->
                     openModule("requests", new RescueRequestPanel(true))));
             modulesMenu.add(item("Reports & Analytics", () ->

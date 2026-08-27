@@ -171,10 +171,12 @@ public class ShelterService {
     // ── allocation ───────────────────────────────────────────────────
 
     /**
-     * Allocates a victim / family to a shelter. Fails if the family size
-     * exceeds the shelter's available capacity (overcapacity prevention).
-     * Occupancy is recomputed, the victim flag is raised, and the shelter
-     * status is re-derived once the group is added.
+     * Allocates a victim / family to a shelter as an immediate ACTIVE
+     * placement. Fails if the family size exceeds the shelter's available
+     * capacity (overcapacity prevention) or if the victim already has an
+     * open allocation (duplicate prevention). Occupancy is incremented,
+     * the victim's shelter flag is raised and the shelter status is
+     * re-derived.
      */
     public ShelterAllocation allocateVictim(long shelterId, Long victimId,
                                             String familyName, int peopleCount,
@@ -184,17 +186,7 @@ public class ShelterService {
 
         session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER,
                 RoleType.CAMP_MANAGER);
-        Shelter shelter = requireExisting(shelterId);
-        if (!ValidationUtil.isPositive(peopleCount)) {
-            throw new InvalidShelterDataException(
-                    "People count must be at least 1");
-        }
-        if (shelter.availableCapacity() < peopleCount) {
-            throw new InvalidShelterDataException(
-                    "Allocation not possible: shelter has only "
-                            + shelter.availableCapacity()
-                            + " space but " + peopleCount + " people need it");
-        }
+        requireCanPlace(shelterId, victimId, peopleCount, true);
 
         ShelterAllocation a = new ShelterAllocation();
         a.setShelterId(shelterId);
@@ -206,51 +198,217 @@ public class ShelterService {
         a.setAllocatedBy(session.currentUserId());
         ShelterAllocation saved = allocationDAO.save(a);
 
-        if (victimId != null) {
-            try {
-                new VictimService().markShelterStatus(victimId,
-                        ShelterStatus.IN_SHELTER);
-            } catch (Exception ignored) {
-                // victim flag update is best-effort; allocation still stands
-            }
-        }
-        Shelter updated = requireExisting(shelterId);
-        updated.setCurrentOccupancy(updated.getCurrentOccupancy() + peopleCount);
-        updated.setOperationalStatus(deriveStatus(updated));
-        shelterDAO.save(updated);
+        syncVictimIn(victimId);
+        openSpace(shelterId, peopleCount);
         return saved;
     }
 
-    /** Releases a family/victim from a shelter, decreasing occupancy and
-     *  lowering the victim shelter flag. */
-    public void releaseAllocation(long allocationId)
+    /**
+     * Creates a PENDING reservation for a victim / family. The family is
+     * NOT yet counted toward shelter occupancy until the reservation is
+     * confirmed ({@link #confirmPending}). Still rejects overcapacity and
+     * duplicate active allocations.
+     */
+    public ShelterAllocation createPendingAllocation(long shelterId,
+                                                     Long victimId,
+                                                     String familyName,
+                                                     int peopleCount,
+                                                     String notes)
             throws UnauthorizedOperationException, InvalidShelterDataException,
             DataAccessException {
 
         session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER,
                 RoleType.CAMP_MANAGER);
-        ShelterAllocation a = allocationDAO.findById(allocationId);
-        if (a == null) {
+        requireCanPlace(shelterId, victimId, peopleCount, false);
+
+        ShelterAllocation a = new ShelterAllocation();
+        a.setShelterId(shelterId);
+        a.setVictimId(victimId);
+        a.setFamilyName(familyName);
+        a.setPeopleCount(peopleCount);
+        a.setNotes(notes);
+        a.setStatus(ShelterAllocationStatus.PENDING);
+        a.setAllocatedBy(session.currentUserId());
+        return allocationDAO.save(a);
+    }
+
+    /** Converts a PENDING reservation into an ACTIVE placement, opening
+     *  the occupied space and raising the victim's shelter flag. */
+    public ShelterAllocation confirmPending(long allocationId)
+            throws UnauthorizedOperationException, InvalidShelterDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER,
+                RoleType.CAMP_MANAGER);
+        ShelterAllocation a = loadAllocation(allocationId);
+        if (a.getStatus() != ShelterAllocationStatus.PENDING) {
             throw new InvalidShelterDataException(
-                    "No allocation with id " + allocationId);
+                    "Only a PENDING reservation can be confirmed");
         }
+        Shelter shelter = requireExisting(a.getShelterId());
+        if (shelter.availableCapacity() < a.getPeopleCount()) {
+            throw new InvalidShelterDataException("Cannot confirm: shelter "
+                    + shelter.getName() + " now has only "
+                    + shelter.availableCapacity() + " space but "
+                    + a.getPeopleCount() + " people need it");
+        }
+        allocationDAO.updateStatus(allocationId, ShelterAllocationStatus.ACTIVE);
+        a.setStatus(ShelterAllocationStatus.ACTIVE);
+        syncVictimIn(a.getVictimId());
+        openSpace(a.getShelterId(), a.getPeopleCount());
+        return a;
+    }
+
+    /** Marks an ACTIVE allocation as CHECKED IN once the family arrives.
+     *  Occupancy is unchanged - the family was already counted. */
+    public ShelterAllocation checkIn(long allocationId)
+            throws UnauthorizedOperationException, InvalidShelterDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER,
+                RoleType.CAMP_MANAGER);
+        ShelterAllocation a = loadAllocation(allocationId);
         if (a.getStatus() != ShelterAllocationStatus.ACTIVE) {
             throw new InvalidShelterDataException(
-                    "Allocation " + allocationId + " is already released");
+                    "Only an Active allocation can be checked in");
         }
-        allocationDAO.release(allocationId);
-        if (a.getVictimId() != null) {
-            try {
-                new VictimService().markShelterStatus(a.getVictimId(),
-                        ShelterStatus.NOT_SHELTERED);
-            } catch (Exception ignored) {
-                // best-effort
-            }
+        allocationDAO.updateStatus(allocationId,
+                ShelterAllocationStatus.CHECKED_IN);
+        a.setStatus(ShelterAllocationStatus.CHECKED_IN);
+        return a;
+    }
+
+    /** Completes an allocation (family left / accommodated), freeing the
+     *  occupied space once it was actually occupying. */
+    public ShelterAllocation complete(long allocationId)
+            throws UnauthorizedOperationException, InvalidShelterDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER,
+                RoleType.CAMP_MANAGER);
+        return closeAllocation(allocationId,
+                ShelterAllocationStatus.COMPLETED);
+    }
+
+    /** Cancels an allocation (place never taken / vacated early), freeing
+     *  occupied space once it was actually occupying. */
+    public ShelterAllocation cancel(long allocationId)
+            throws UnauthorizedOperationException, InvalidShelterDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER,
+                RoleType.CAMP_MANAGER);
+        return closeAllocation(allocationId,
+                ShelterAllocationStatus.CANCELLED);
+    }
+
+    /** Releases a family/victim from a shelter, decreasing occupancy and
+     *  lowering the victim shelter flag. */
+    public ShelterAllocation releaseAllocation(long allocationId)
+            throws UnauthorizedOperationException, InvalidShelterDataException,
+            DataAccessException {
+
+        session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER,
+                RoleType.CAMP_MANAGER);
+        return closeAllocation(allocationId,
+                ShelterAllocationStatus.RELEASED);
+    }
+
+    /** Shared terminal transition: closes the allocation and frees the
+     *  occupied space (and victim flag) when the source state occupied. */
+    private ShelterAllocation closeAllocation(long allocationId,
+                              ShelterAllocationStatus target)
+            throws InvalidShelterDataException, DataAccessException {
+        ShelterAllocation a = loadAllocation(allocationId);
+        if (a.getStatus() == ShelterAllocationStatus.COMPLETED
+                || a.getStatus() == ShelterAllocationStatus.CANCELLED
+                || a.getStatus() == ShelterAllocationStatus.RELEASED) {
+            throw new InvalidShelterDataException("Allocation " + allocationId
+                    + " is already " + a.getStatus().getLabel()
+                    + " - it cannot be closed again");
         }
-        Shelter updated = requireExisting(a.getShelterId());
-        int occupancy = Math.max(0,
-                updated.getCurrentOccupancy() - a.getPeopleCount());
-        updated.setCurrentOccupancy(occupancy);
+        boolean occupied = a.getStatus().isOccupying();
+        allocationDAO.updateStatus(allocationId, target);
+        a.setStatus(target);
+        if (occupied) {
+            syncVictimOut(a.getVictimId());
+            freeSpace(a.getShelterId(), a.getPeopleCount());
+        }
+        return a;
+    }
+
+    /**
+     * Validates a placement before it is created: shelter exists + is
+     * accepting, positive people count, enough available capacity, and
+     * (when a victim is named) no duplicate open allocation for them.
+     */
+    private void requireCanPlace(long shelterId, Long victimId,
+                                 int peopleCount, boolean requiringOccupancy)
+            throws InvalidShelterDataException, DataAccessException {
+        Shelter shelter = requireExisting(shelterId);
+        if (!shelter.getOperationalStatus().isAccepting()) {
+            throw new InvalidShelterDataException("Shelter " + shelter.getName()
+                    + " is " + shelter.getOperationalStatus().getLabel()
+                    + " and cannot accept new people");
+        }
+        if (!ValidationUtil.isPositive(peopleCount)) {
+            throw new InvalidShelterDataException(
+                    "People count must be at least 1");
+        }
+        if (shelter.availableCapacity() < peopleCount) {
+            throw new InvalidShelterDataException(
+                    "Allocation not possible: shelter has only "
+                            + shelter.availableCapacity()
+                            + " space but " + peopleCount + " people need it");
+        }
+        if (victimId != null && allocationDAO
+                .findActiveByVictim(victimId) != null) {
+            throw new InvalidShelterDataException(
+                    "Victim #" + victimId + " already has an open allocation");
+        }
+    }
+
+    /** Raises the victim shelter flag after an ACTIVE placement. */
+    private void syncVictimIn(Long victimId) {
+        if (victimId == null) {
+            return;
+        }
+        try {
+            new VictimService().markShelterStatus(victimId,
+                    ShelterStatus.IN_SHELTER);
+        } catch (Exception ignored) {
+            // best-effort; the allocation still stands
+        }
+    }
+
+    /** Lowers the victim shelter flag after they leave a shelter. */
+    private void syncVictimOut(Long victimId) {
+        if (victimId == null) {
+            return;
+        }
+        try {
+            new VictimService().markShelterStatus(victimId,
+                    ShelterStatus.NOT_SHELTERED);
+        } catch (Exception ignored) {
+            // best-effort
+        }
+    }
+
+    /** Adds people to a shelter's occupancy and re-derives its status. */
+    private void openSpace(long shelterId, int peopleCount)
+            throws InvalidShelterDataException, DataAccessException {
+        Shelter updated = requireExisting(shelterId);
+        updated.setCurrentOccupancy(updated.getCurrentOccupancy() + peopleCount);
+        updated.setOperationalStatus(deriveStatus(updated));
+        shelterDAO.save(updated);
+    }
+
+    /** Removes people from a shelter's occupancy and re-derives status. */
+    private void freeSpace(long shelterId, int peopleCount)
+            throws InvalidShelterDataException, DataAccessException {
+        Shelter updated = requireExisting(shelterId);
+        updated.setCurrentOccupancy(Math.max(0,
+                updated.getCurrentOccupancy() - peopleCount));
         updated.setOperationalStatus(deriveStatus(updated));
         shelterDAO.save(updated);
     }
@@ -258,6 +416,37 @@ public class ShelterService {
     public List<ShelterAllocation> getAllocations(long shelterId)
             throws DataAccessException {
         return allocationDAO.findByShelter(shelterId);
+    }
+
+    public List<ShelterAllocation> getAllAllocations()
+            throws DataAccessException {
+        return allocationDAO.findAll();
+    }
+
+    public List<ShelterAllocation> getByStatus(ShelterAllocationStatus status)
+            throws DataAccessException {
+        return allocationDAO.findByStatus(status);
+    }
+
+    public List<Shelter> getAcceptingShelters() throws DataAccessException {
+        List<Shelter> out = new ArrayList<>();
+        for (Shelter s : shelterDAO.findAll()) {
+            if (s.getOperationalStatus().isAccepting()
+                    && s.availableCapacity() > 0) {
+                out.add(s);
+            }
+        }
+        return out;
+    }
+
+    private ShelterAllocation loadAllocation(long allocationId)
+            throws InvalidShelterDataException, DataAccessException {
+        ShelterAllocation a = allocationDAO.findById(allocationId);
+        if (a == null) {
+            throw new InvalidShelterDataException(
+                    "No allocation with id " + allocationId);
+        }
+        return a;
     }
 
     // ── queries ──────────────────────────────────────────────────────
