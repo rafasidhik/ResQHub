@@ -6,6 +6,7 @@ public enum NotificationType {
     LOW_STOCK("Low Stock"),
     ASSIGNMENT("Assignment"),
     FOOD("Food Distribution"),
+    HOSPITAL("Hospital"),
     SYSTEM("System");
 
     private final String label;
