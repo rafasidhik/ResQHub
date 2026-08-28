@@ -40,7 +40,7 @@ public class ReportService {
             case HOSPITAL_CAPACITY -> notPresent("Hospital Capacity Report");
             case BLOOD_AVAILABILITY -> notPresent("Blood Availability Report");
             case RESOURCE_INVENTORY -> resourceInventoryReport();
-            case FOOD_DISTRIBUTION -> notPresent("Food Distribution Report");
+            case FOOD_DISTRIBUTION -> foodDistributionReport();
         };
     }
 
@@ -431,6 +431,72 @@ public class ReportService {
         return new ReportResult("Shelter Allocation Overview",
                 new String[]{"Status", "Allocations", "People"},
                 rows, lines, "");
+    }
+
+    private ReportResult foodDistributionReport() throws DataAccessException {
+        List<Object[]> metrics = toDisplay(reportDAO.foodMetrics(),
+                new int[]{1});
+        List<Object[]> byStatus = toDisplay(reportDAO.foodByStatus(),
+                new int[]{1, 2});
+        List<Object[]> byPriority = toDisplay(reportDAO.foodByPriority(),
+                new int[]{1, 2});
+        List<Object[]> byDisaster = toDisplay(reportDAO.foodByDisaster(),
+                new int[]{1, 2, 3});
+        List<Object[]> byLocation = toDisplay(reportDAO.foodByLocation(),
+                new int[]{1, 2});
+        List<Object[]> distributions = toDisplay(
+                reportDAO.foodDistributionsByLocation(),
+                new int[]{1, 2, 3});
+        List<Object[]> remaining = toDisplay(
+                reportDAO.foodRemainingRequirements(),
+                new int[]{2, 3, 5});
+
+        List<String> summary = new ArrayList<>();
+        summary.add("Food distribution overview (COUNT / SUM over "
+                + "food_requests and food_distributions):");
+        for (Object[] m : metrics) {
+            summary.add("  " + m[0] + " \u2192 " + m[1]);
+        }
+        summary.add("Requests by status (COUNT / SUM required):");
+        for (Object[] r : byStatus) {
+            summary.add("  " + r[0] + " \u2192 " + r[1] + " requests, "
+                    + r[2] + " required");
+        }
+        summary.add("Requests by priority:");
+        for (Object[] r : byPriority) {
+            summary.add("  " + r[0] + " \u2192 " + r[1] + " requests, "
+                    + r[2] + " required");
+        }
+        summary.add("Requests by disaster (JOIN disasters):");
+        for (Object[] r : byDisaster) {
+            summary.add("  " + r[0] + " \u2192 " + r[1] + " requests, "
+                    + r[2] + " required, " + r[3] + " allocated");
+        }
+        summary.add("Requests by location:");
+        for (Object[] r : byLocation) {
+            summary.add("  " + r[0] + " \u2192 " + r[1] + " requests, "
+                    + r[2] + " required");
+        }
+        summary.add("Distributed food by location (events / units / served):");
+        for (Object[] r : distributions) {
+            summary.add("  " + r[0] + " \u2192 " + r[1] + " events, "
+                    + r[2] + " units, " + r[3] + " people served");
+        }
+        summary.add("Open requests still owing food (biggest remaining "
+                + "requirement first):");
+        if (remaining.isEmpty()) {
+            summary.add("  (none)");
+        } else {
+            for (Object[] r : remaining) {
+                summary.add("  " + r[0] + " @ " + r[1] + " \u2192 "
+                        + r[2] + " required, " + r[3] + " allocated, "
+                        + r[4] + " status, " + r[5] + " remaining");
+            }
+        }
+        return new ReportResult("Food Distribution Report",
+                new String[]{"Request", "Location", "Required", "Allocated",
+                        "Status", "Remaining"},
+                remaining, summary, "");
     }
 
     private ReportResult notPresent(String label) {

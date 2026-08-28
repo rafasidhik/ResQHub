@@ -5,6 +5,7 @@ public enum NotificationType {
     CRITICAL_RESCUE("Critical Rescue"),
     LOW_STOCK("Low Stock"),
     ASSIGNMENT("Assignment"),
+    FOOD("Food Distribution"),
     SYSTEM("System");
 
     private final String label;

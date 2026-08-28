@@ -153,6 +153,8 @@ public class MainDashboard extends JFrame {
                     openModule("donations", new DonationPanel())));
             modulesMenu.add(item("Resources & Inventory", () ->
                     openModule("resources", new ResourcePanel())));
+            modulesMenu.add(item("Food Distribution", () ->
+                    openModule("food", new FoodDistributionPanel())));
             modulesMenu.add(item("Notifications", () ->
                     openModule("notifications", new NotificationPanel())));
             modulesMenu.add(item("Reports & Analytics", () ->
@@ -170,6 +172,8 @@ public class MainDashboard extends JFrame {
                     openModule("smartalloc", new SmartAllocationPanel())));
             modulesMenu.add(item("Resources & Inventory", () ->
                     openModule("resources", new ResourcePanel())));
+            modulesMenu.add(item("Food Distribution", () ->
+                    openModule("food", new FoodDistributionPanel())));
             modulesMenu.add(item("Rescue Requests", () ->
                     openModule("requests", new RescueRequestPanel(true))));
             modulesMenu.add(item("Reports & Analytics", () ->
