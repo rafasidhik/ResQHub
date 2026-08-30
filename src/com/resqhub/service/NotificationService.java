@@ -25,6 +25,7 @@ import com.resqhub.model.PriorityLevel;
 import com.resqhub.model.RequestStatus;
 import com.resqhub.model.RescueRequest;
 import com.resqhub.model.RoleType;
+import com.resqhub.model.Shelter;
 import com.resqhub.model.User;
 import com.resqhub.model.Volunteer;
 import com.resqhub.util.ValidationUtil;
@@ -198,6 +199,7 @@ public class NotificationService {
         int created = 0;
         created += generateCriticalRescueAlerts();
         created += generateLowStockAlerts();
+        created += generateShelterCapacityAlerts();
         return created;
     }
 
@@ -299,6 +301,47 @@ public class NotificationService {
                         userId, NotificationType.LOW_STOCK,
                         NotificationPriority.WARNING, message,
                         "Donations", null, dedup));
+                created++;
+            }
+        }
+        return created;
+    }
+
+    /** IF shelter occupancy >= 90% of capacity (and not already FULL /
+     *  CLOSED) -> SHELTER NEARING CAPACITY warning to camp coordination. */
+    private int generateShelterCapacityAlerts() throws DataAccessException {
+        List<Shelter> near = new ShelterService().getNearCapacity();
+        if (near.isEmpty()) {
+            return 0;
+        }
+        List<User> audience = new ArrayList<>();
+        audience.addAll(userDAO.findByRole(RoleType.ADMIN));
+        audience.addAll(userDAO.findByRole(RoleType.RESCUE_OFFICER));
+        audience.addAll(userDAO.findByRole(RoleType.CAMP_MANAGER));
+        if (audience.isEmpty()) {
+            return 0;
+        }
+        Set<Long> seen = new LinkedHashSet<>();
+        for (User user : audience) {
+            seen.add(user.getId());
+        }
+
+        int created = 0;
+        for (Shelter shelter : near) {
+            String dedup = "SHELTER_CAPACITY:" + shelter.getId();
+            if (notificationDAO.findRecentByDedupKey(
+                    dedup, DEDUP_WINDOW_SECONDS) != null) {
+                continue;
+            }
+            String message = "SHELTER NEARING CAPACITY: " + shelter.getName()
+                    + " has " + shelter.availableCapacity()
+                    + " space(s) left out of " + shelter.getMaxCapacity()
+                    + " (" + shelter.getCurrentOccupancy() + " occupied).";
+            for (Long userId : seen) {
+                notificationDAO.save(buildAuto(
+                        userId, NotificationType.SYSTEM,
+                        NotificationPriority.WARNING, message,
+                        "Shelters", shelter.getId(), dedup));
                 created++;
             }
         }

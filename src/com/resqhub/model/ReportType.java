@@ -15,6 +15,7 @@ public enum ReportType {
     VOLUNTEERS("Volunteer Reports"),
     DONATIONS("Donation Statistics"),
     SHELTER_OCCUPANCY("Shelter Occupancy Report"),
+    ALLOCATION_OVERVIEW("Shelter Allocation Overview"),
     HOSPITAL_CAPACITY("Hospital Capacity Report"),
     BLOOD_AVAILABILITY("Blood Availability Report"),
     RESOURCE_INVENTORY("Resource & Inventory Report"),

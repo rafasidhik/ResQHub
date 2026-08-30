@@ -321,12 +321,83 @@ public class ReportDAO extends BaseDao {
      *  count of victims placed IN_SHELTER as a placeholder indicator. */
     public List<Object[]> shelterOccupancy() throws DataAccessException {
         String sql = """
-            SELECT d.title AS shelter_zone,
-                   COUNT(v.id) AS placed_in_shelter,
-                   SUM(v.emergency_status = 'SAFE') AS safe
-            FROM disasters d
-            LEFT JOIN victims v ON v.disaster_id = d.id
-            GROUP BY d.title ORDER BY placed_in_shelter DESC
+            SELECT name, district, max_capacity, current_occupancy,
+                   available_capacity, operational_status,
+                   ROUND(current_occupancy * 100.0 / max_capacity) AS utilisation
+            FROM shelters ORDER BY district, name
+            """;
+        return run(sql, List.of());
+    }
+
+    /** High-level shelter capacity picture for the Reports summary
+     *  (COUNT / SUM / AVG / MIN / MAX over the shelters table). */
+    public List<Object[]> shelterCapacitySummary() throws DataAccessException {
+        String sql = """
+            SELECT 'TOTAL SHELTERS' AS metric, COUNT(*) AS value FROM shelters
+            UNION ALL
+            SELECT 'TOTAL CAPACITY', COALESCE(SUM(max_capacity),0) FROM shelters
+            UNION ALL
+            SELECT 'CURRENT OCCUPANCY', COALESCE(SUM(current_occupancy),0)
+                FROM shelters
+            UNION ALL
+            SELECT 'AVAILABLE SPACES', COALESCE(SUM(available_capacity),0)
+                FROM shelters
+            UNION ALL
+            SELECT 'FULL SHELTERS', COUNT(*)
+                FROM shelters WHERE available_capacity <= 0
+            UNION ALL
+            SELECT 'NEAR CAPACITY', COUNT(*)
+                FROM shelters WHERE max_capacity > 0
+                AND available_capacity <= max_capacity * 0.10
+                AND operational_status NOT IN ('FULL','CLOSED')
+            ORDER BY metric
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Allocation records grouped by status with people totals
+     *  (JOIN shelters for the location context). */
+    public List<Object[]> allocationByStatus() throws DataAccessException {
+        String sql = """
+            SELECT a.status,
+                   COUNT(*) AS allocations,
+                   COALESCE(SUM(a.people_count), 0) AS people,
+                   MIN(a.allocated_at) AS first_on,
+                   MAX(a.allocated_at) AS last_on
+            FROM shelter_allocations a
+            JOIN shelters s ON s.id = a.shelter_id
+            GROUP BY a.status ORDER BY a.status
+            """;
+        return run(sql, List.of());
+    }
+
+    /** High-level smart allocation picture (metric cards). */
+    public List<Object[]> allocationMetrics() throws DataAccessException {
+        String sql = """
+            SELECT 'TOTAL ALLOCATIONS' AS metric,
+                   (SELECT COUNT(*) FROM shelter_allocations) AS value
+            UNION ALL SELECT 'ACTIVE / CHECKED IN',
+                   (SELECT COUNT(*) FROM shelter_allocations
+                    WHERE status IN ('ACTIVE','CHECKED_IN'))
+            UNION ALL SELECT 'PENDING', COUNT(*) FROM shelter_allocations
+                WHERE status = 'PENDING'
+            UNION ALL SELECT 'COMPLETED', COUNT(*) FROM shelter_allocations
+                WHERE status = 'COMPLETED'
+            UNION ALL SELECT 'CANCELLED', COUNT(*) FROM shelter_allocations
+                WHERE status = 'CANCELLED'
+            UNION ALL SELECT 'PEOPLE ALLOCATED',
+                   (SELECT COALESCE(SUM(people_count),0)
+                    FROM shelter_allocations WHERE status IN
+                    ('ACTIVE','CHECKED_IN'))
+            UNION ALL SELECT 'WAITING VICTIMS',
+                   (SELECT COUNT(*) FROM victims
+                    WHERE shelter_status <> 'IN_SHELTER')
+            UNION ALL SELECT 'FULL SHELTERS',
+                   (SELECT COUNT(*) FROM shelters
+                    WHERE available_capacity <= 0)
+            UNION ALL SELECT 'AVAILABLE SPACES',
+                   (SELECT COALESCE(SUM(available_capacity),0) FROM shelters)
+            ORDER BY metric
             """;
         return run(sql, List.of());
     }
@@ -337,6 +408,94 @@ public class ReportDAO extends BaseDao {
                    SUM(CASE WHEN status = 'DISTRIBUTED' THEN quantity ELSE 0 END) AS used
             FROM donations WHERE donation_type = 'MATERIAL'
             GROUP BY material_name ORDER BY total_units DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    // ── resource & inventory reports (real resources table) ───────────
+
+    /** High-level inventory metric cards over the resources table. */
+    public List<Object[]> resourceMetrics() throws DataAccessException {
+        String sql = """
+            SELECT 'TOTAL RESOURCES' AS metric,
+                   (SELECT COUNT(*) FROM resources) AS value
+            UNION ALL SELECT 'TOTAL UNITS',
+                   (SELECT COALESCE(SUM(available_quantity),0) FROM resources)
+            UNION ALL SELECT 'LOW STOCK',
+                   (SELECT COUNT(*) FROM resources
+                    WHERE available_quantity > 0
+                      AND available_quantity < minimum_level)
+            UNION ALL SELECT 'OUT OF STOCK',
+                   (SELECT COUNT(*) FROM resources
+                    WHERE available_quantity <= 0)
+            UNION ALL SELECT 'STOCK-IN MOVEMENTS',
+                   (SELECT COUNT(*) FROM stock_movements
+                    WHERE movement_type = 'STOCK_IN')
+            UNION ALL SELECT 'STOCK-OUT MOVEMENTS',
+                   (SELECT COUNT(*) FROM stock_movements
+                    WHERE movement_type = 'STOCK_OUT')
+            UNION ALL SELECT 'DISTRIBUTED UNITS',
+                   (SELECT COALESCE(SUM(quantity),0)
+                    FROM resource_distributions)
+            ORDER BY metric
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Inventory grouped by category (COUNT / SUM over resources). */
+    public List<Object[]> resourceByCategory() throws DataAccessException {
+        String sql = "SELECT category, COUNT(*) AS count, "
+                + "COALESCE(SUM(available_quantity),0) AS units "
+                + "FROM resources GROUP BY category ORDER BY units DESC";
+        return run(sql, List.of());
+    }
+
+    /** Resources currently below their minimum level (with the gap). */
+    public List<Object[]> resourceLowStock() throws DataAccessException {
+        String sql = """
+            SELECT name, category, available_quantity, minimum_level, unit,
+                   (minimum_level - available_quantity) AS shortfall
+            FROM resources
+            WHERE available_quantity < minimum_level
+            ORDER BY shortfall DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Stock movements netted by type (SUM IN / SUM OUT). */
+    public List<Object[]> resourceNetMovement() throws DataAccessException {
+        String sql = """
+            SELECT movement_type,
+                   COUNT(*) AS moves,
+                   COALESCE(SUM(quantity),0) AS units
+            FROM stock_movements
+            GROUP BY movement_type ORDER BY movement_type
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Distribution record aggregated by destination (COUNT / SUM). */
+    public List<Object[]> resourceDistributionByDestination()
+            throws DataAccessException {
+        String sql = """
+            SELECT destination,
+                   COUNT(*) AS records,
+                   COALESCE(SUM(quantity),0) AS units
+            FROM resource_distributions
+            GROUP BY destination ORDER BY units DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Resource usage grouped by resource (how much each was distributed). */
+    public List<Object[]> resourceUsage() throws DataAccessException {
+        String sql = """
+            SELECT r.name AS resource, r.category,
+                   COUNT(d.id) AS distributions,
+                   COALESCE(SUM(d.quantity),0) AS units
+            FROM resources r
+            LEFT JOIN resource_distributions d ON d.resource_id = r.id
+            GROUP BY r.name, r.category ORDER BY units DESC
             """;
         return run(sql, List.of());
     }

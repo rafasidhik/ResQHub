@@ -139,6 +139,10 @@ public class MainDashboard extends JFrame {
                     openModule("disasters", new DisasterPanel())));
             modulesMenu.add(item("Victims", () ->
                     openModule("victims", new VictimPanel(true))));
+            modulesMenu.add(item("Shelters", () ->
+                    openModule("shelters", new ShelterPanel())));
+            modulesMenu.add(item("Smart Allocation", () ->
+                    openModule("smartalloc", new SmartAllocationPanel())));
             modulesMenu.add(item("Rescue Requests", () ->
                     openModule("requests", new RescueRequestPanel(true))));
             modulesMenu.add(item("Rescue Teams", () ->
@@ -147,6 +151,8 @@ public class MainDashboard extends JFrame {
                     openModule("volunteers", new VolunteerPanel())));
             modulesMenu.add(item("Donations", () ->
                     openModule("donations", new DonationPanel())));
+            modulesMenu.add(item("Resources & Inventory", () ->
+                    openModule("resources", new ResourcePanel())));
             modulesMenu.add(item("Notifications", () ->
                     openModule("notifications", new NotificationPanel())));
             modulesMenu.add(item("Reports & Analytics", () ->
@@ -158,6 +164,12 @@ public class MainDashboard extends JFrame {
         } else if (has(RoleType.CAMP_MANAGER)) {
             modulesMenu.add(item("Victims", () ->
                     openModule("victims", new VictimPanel(true))));
+            modulesMenu.add(item("Shelters", () ->
+                    openModule("shelters", new ShelterPanel())));
+            modulesMenu.add(item("Smart Allocation", () ->
+                    openModule("smartalloc", new SmartAllocationPanel())));
+            modulesMenu.add(item("Resources & Inventory", () ->
+                    openModule("resources", new ResourcePanel())));
             modulesMenu.add(item("Rescue Requests", () ->
                     openModule("requests", new RescueRequestPanel(true))));
             modulesMenu.add(item("Reports & Analytics", () ->
