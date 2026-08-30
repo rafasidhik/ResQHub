@@ -196,6 +196,18 @@ public class StatsPanel extends JPanel implements Refreshable {
                     + (s.pendingDeletions == 1 ? "" : "s")
                     + " awaiting review");
         }
+        try {
+            int unread = new com.resqhub.controller.NotificationController()
+                    .countUnread();
+            if (unread > 0) {
+                alerts.add("\u2022 " + unread + " unread notification"
+                        + (unread == 1 ? "" : "s")
+                        + " - check the Notification Center");
+            }
+        } catch (Exception ignored) {
+            // notifications are additive; a reporting failure must not
+            // break the overview
+        }
         if (alerts.size() == 1 && s.pendingRequests == 0
                 && s.criticalVictims == 0 && s.activeDisasters == 0
                 && s.deployedTeams == 0) {

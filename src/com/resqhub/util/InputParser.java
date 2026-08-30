@@ -32,6 +32,20 @@ public final class InputParser {
         }
     }
 
+    /** Parses a positive decimal amount (e.g. cash value); blank becomes 0. */
+    public static double parseAmount(String text, String fieldName) {
+        String cleaned = text == null ? "" : text.trim();
+        if (cleaned.isEmpty()) {
+            return 0;
+        }
+        try {
+            return Double.parseDouble(cleaned);
+        } catch (NumberFormatException e) {
+            throw new NumberFormatException(
+                    fieldName + " must be a valid amount");
+        }
+    }
+
     /** Parses "yyyy-MM-dd HH:mm"; blank text becomes null (optional field). */
     public static LocalDateTime parseOptionalDateTime(String text)
             throws DateTimeParseException {

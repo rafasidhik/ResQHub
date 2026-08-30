@@ -75,6 +75,37 @@ public class AuthService {
         session.logout();
     }
 
+    /**
+     * FORGOT-PASSWORD self-service reset (no session / old password).
+     * Identity is verified by matching the claimed username to its
+     * registered email before the new password is applied, so only the
+     * legitimate account holder can reset the credential.
+     */
+    public void resetForgottenPassword(String username, String email,
+                                       String newPassword)
+            throws InvalidUserDataException, DataAccessException {
+
+        if (username == null || username.trim().isEmpty()
+                || email == null || email.trim().isEmpty()) {
+            throw new InvalidUserDataException(
+                    "Username and registered email are required");
+        }
+        User user = userDAO.findByUsername(username.trim());
+        if (user == null
+                || !user.getEmail().equalsIgnoreCase(email.trim())) {
+            throw new InvalidUserDataException(
+                    "No account matches that username and email");
+        }
+        if (user.getAccountStatus() == AccountStatus.LOCKED) {
+            throw new InvalidUserDataException(
+                    "That account is locked; contact an administrator");
+        }
+
+        UserService.validatePasswordPolicy(newPassword);
+        user.setPasswordHash(PasswordUtil.hash(newPassword));
+        userDAO.save(user);
+    }
+
     /** Changes the logged-in user's own password after re-checking the old one. */
     public void changeOwnPassword(String oldPassword, String newPassword)
             throws AuthenticationException, InvalidUserDataException,

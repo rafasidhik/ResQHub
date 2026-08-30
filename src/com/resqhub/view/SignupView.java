@@ -81,6 +81,9 @@ public class SignupView extends JFrame {
         backButton.addActionListener(event -> returnToLogin());
 
         pack();
+        // Match the dashboard's landing size (see MainDashboard) so every
+        // screen has the same fixed dimensions.
+        setSize(1024, 680);
         setLocationRelativeTo(null);
     }
 

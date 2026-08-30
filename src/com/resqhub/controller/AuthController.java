@@ -47,6 +47,25 @@ public class AuthController {
         }
     }
 
+    /** Forgot-password self-service: verify username + email, then reset. */
+    public ActionResult resetForgottenPassword(String username, String email,
+                                               String newPassword,
+                                               String confirmPassword) {
+        if (newPassword == null || !newPassword.equals(confirmPassword)) {
+            return ActionResult.failure("New passwords do not match");
+        }
+        try {
+            authService.resetForgottenPassword(username, email, newPassword);
+            return ActionResult.success(
+                    "Password reset. You can now log in with your new password.");
+        } catch (ResQHubException e) {
+            return ActionResult.failure(e.getMessage());
+        } catch (Exception e) {
+            return ActionResult.failure("Unexpected error resetting password: "
+                    + e.getMessage());
+        }
+    }
+
     public boolean isLoggedIn() {
         return SessionManager.getInstance().isLoggedIn();
     }

@@ -151,6 +151,27 @@ public class RescueRequestDAO extends BaseDao implements Repository<RescueReques
         }
     }
 
+    /** Critical-priority requests that are still open (not rescued/cancelled). */
+    public List<RescueRequest> findCriticalOpen() throws DataAccessException {
+        String sql = "SELECT * FROM rescue_requests "
+                + "WHERE priority = 'CRITICAL' AND status NOT IN "
+                + "('RESCUED','CANCELLED') ORDER BY requested_at";
+        List<RescueRequest> result = new ArrayList<>();
+        try (Connection con = openConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(mapRow(rs));
+                }
+            }
+            return result;
+        } catch (SQLException e) {
+            throw new DataAccessException(
+                    "Could not list critical open requests", e);
+        }
+    }
+
     /** Targeted update used by the service layer after priority computation. */
     public void updatePriorityAndStatus(long id, PriorityLevel priority,
                                         RequestStatus status)
