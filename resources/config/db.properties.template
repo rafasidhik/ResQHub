@@ -1,0 +1,7 @@
+# ResQHub database configuration (team-shared template)
+# Copy this file to db.properties and fill in YOUR local MySQL password:
+#   copy resources\config\db.properties.template resources\config\db.properties
+# db.properties is gitignored - never commit real passwords.
+db.url=jdbc:mysql://localhost:3306/resqhub
+db.username=root
+db.password=CHANGE_ME

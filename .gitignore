@@ -1,0 +1,19 @@
+# Build output
+out/
+sources.txt
+*.class
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+nbproject/private/
+
+# Local configuration (each developer copies db.properties.template)
+resources/config/db.properties
+
+# JVM crash logs
+hs_err_pid*
