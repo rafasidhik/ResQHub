@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS shelters (
     KEY idx_shelter_district (district),
     KEY idx_shelter_avail (available_capacity),
     INDEX idx_shelter_victims_link (disaster_id),
-    INDEX idx_shelter_created_by (created_by)
+    INDEX idx_shelter_created_by (created_by),
+    CONSTRAINT fk_shelter_disaster FOREIGN KEY (disaster_id)
+        REFERENCES disasters (id) ON DELETE SET NULL
 ) ENGINE = InnoDB;
 
 CREATE TABLE IF NOT EXISTS shelter_facilities (

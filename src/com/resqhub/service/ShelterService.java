@@ -56,6 +56,12 @@ public class ShelterService {
         session.requireRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER,
                 RoleType.CAMP_MANAGER);
 
+        if (disasterId != null && new com.resqhub.dao.DisasterDAO()
+                .findById(disasterId) == null) {
+            throw new InvalidShelterDataException(
+                    "disaster #" + disasterId + " not found");
+        }
+
         Shelter shelter = new Shelter();
         shelter.setName(name);
         shelter.setCode(code);

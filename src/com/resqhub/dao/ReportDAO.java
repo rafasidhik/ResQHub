@@ -500,6 +500,123 @@ public class ReportDAO extends BaseDao {
         return run(sql, List.of());
     }
 
+    // ── food distribution reports (food_requests / food_distributions) ──
+
+    /** High-level food distribution metric cards. */
+    public List<Object[]> foodMetrics() throws DataAccessException {
+        String sql = """
+            SELECT 'TOTAL REQUESTS' AS metric,
+                   (SELECT COUNT(*) FROM food_requests) AS value
+            UNION ALL SELECT 'PENDING',
+                   (SELECT COUNT(*) FROM food_requests
+                    WHERE status = 'PENDING')
+            UNION ALL SELECT 'APPROVED',
+                   (SELECT COUNT(*) FROM food_requests
+                    WHERE status = 'APPROVED')
+            UNION ALL SELECT 'ALLOCATED',
+                   (SELECT COUNT(*) FROM food_requests
+                    WHERE status IN ('ALLOCATED','PARTIALLY_FULFILLED'))
+            UNION ALL SELECT 'COMPLETED',
+                   (SELECT COUNT(*) FROM food_requests
+                    WHERE status = 'COMPLETED')
+            UNION ALL SELECT 'TOTAL REQUIRED',
+                   (SELECT COALESCE(SUM(required_quantity),0)
+                    FROM food_requests)
+            UNION ALL SELECT 'TOTAL ALLOCATED',
+                   (SELECT COALESCE(SUM(allocated_quantity),0)
+                    FROM food_requests)
+            UNION ALL SELECT 'TOTAL DISTRIBUTED',
+                   (SELECT COALESCE(SUM(quantity),0)
+                    FROM food_distributions)
+            UNION ALL SELECT 'PEOPLE SERVED',
+                   (SELECT COALESCE(SUM(beneficiaries_served),0)
+                    FROM food_distributions)
+            ORDER BY metric
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Requests aggregated by status (COUNT / SUM). */
+    public List<Object[]> foodByStatus() throws DataAccessException {
+        String sql = """
+            SELECT status,
+                   COUNT(*) AS requests,
+                   COALESCE(SUM(required_quantity),0) AS required
+            FROM food_requests GROUP BY status ORDER BY requests DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Requests aggregated by priority (COUNT / SUM). */
+    public List<Object[]> foodByPriority() throws DataAccessException {
+        String sql = """
+            SELECT priority,
+                   COUNT(*) AS requests,
+                   COALESCE(SUM(required_quantity),0) AS required
+            FROM food_requests GROUP BY priority ORDER BY requests DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Requests grouped by disaster (JOIN disasters). */
+    public List<Object[]> foodByDisaster() throws DataAccessException {
+        String sql = """
+            SELECT d.title AS disaster,
+                   COUNT(r.id) AS requests,
+                   COALESCE(SUM(r.required_quantity),0) AS required,
+                   COALESCE(SUM(r.allocated_quantity),0) AS allocated
+            FROM food_requests r
+            LEFT JOIN disasters d ON d.id = r.disaster_id
+            GROUP BY d.title ORDER BY requests DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Requests grouped by distribution location. */
+    public List<Object[]> foodByLocation() throws DataAccessException {
+        String sql = """
+            SELECT location,
+                   COUNT(*) AS requests,
+                   COALESCE(SUM(required_quantity),0) AS required
+            FROM food_requests GROUP BY location ORDER BY requests DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Actual distribution events aggregated by location (COUNT / SUM). */
+    public List<Object[]> foodDistributionsByLocation()
+            throws DataAccessException {
+        String sql = """
+            SELECT location,
+                   COUNT(*) AS events,
+                   COALESCE(SUM(quantity),0) AS units,
+                   COALESCE(SUM(beneficiaries_served),0) AS served
+            FROM food_distributions
+            GROUP BY location ORDER BY units DESC
+            """;
+        return run(sql, List.of());
+    }
+
+    /** Open requests that still owe food (remaining > 0), biggest first. */
+    public List<Object[]> foodRemainingRequirements()
+            throws DataAccessException {
+        String sql = """
+            SELECT r.request_code, r.location, r.required_quantity,
+                   r.allocated_quantity, r.status,
+                   (r.required_quantity -
+                    (SELECT COALESCE(SUM(quantity),0)
+                     FROM food_distributions d WHERE d.request_id = r.id))
+                   AS remaining
+            FROM food_requests r
+            WHERE r.status NOT IN ('COMPLETED','CANCELLED')
+              AND (r.required_quantity -
+                   (SELECT COALESCE(SUM(quantity),0)
+                    FROM food_distributions d WHERE d.request_id = r.id)) > 0
+            ORDER BY remaining DESC
+            """;
+        return run(sql, List.of());
+    }
+
     private List<Object[]> run(String sql, List<Object> params)
             throws DataAccessException {
         List<Object[]> rows = new ArrayList<>();
