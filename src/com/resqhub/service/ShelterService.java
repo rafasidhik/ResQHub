@@ -542,20 +542,6 @@ public class ShelterService {
         return ShelterOperationalStatus.AVAILABLE;
     }
 
-    /** After occupancy changes, refresh the stored status (unless a
-     *  manager intentionally set INACTIVE / CLOSED). */
-    private void autoStatusAfterChange(long shelterId)
-            throws InvalidShelterDataException, DataAccessException {
-        Shelter s = requireExisting(shelterId);
-        ShelterOperationalStatus current = s.getOperationalStatus();
-        if (current == ShelterOperationalStatus.INACTIVE
-                || current == ShelterOperationalStatus.CLOSED) {
-            return;
-        }
-        s.setOperationalStatus(deriveStatus(s));
-        shelterDAO.save(s);
-    }
-
     private void validateBasic(Shelter s) throws InvalidShelterDataException {
         List<String> errors = new ArrayList<>();
         if (!ValidationUtil.requireNonBlank(s.getName())) {

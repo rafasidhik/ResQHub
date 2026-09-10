@@ -9,7 +9,6 @@ import com.resqhub.controller.ReportController;
 import com.resqhub.controller.ResourceController;
 import com.resqhub.dao.FoodDistributionRequestDAO;
 import com.resqhub.model.BeneficiaryType;
-import com.resqhub.model.FoodDistribution;
 import com.resqhub.model.FoodDistributionRequest;
 import com.resqhub.model.FoodRequestStatus;
 import com.resqhub.model.PriorityLevel;
@@ -319,21 +318,19 @@ public class FoodDistributionTest {
 
         check("createRequestFromShelter creates a request", () -> {
             List<com.resqhub.model.Shelter> shelters = c.getAllShelters();
-            Shell: {
-                for (com.resqhub.model.Shelter s : shelters) {
-                    if (s.getCurrentOccupancy() > 0) {
-                        ActionResult r = c.createRequestFromShelter(s.getId(),
-                                "2", PriorityLevel.HIGH);
-                        if (!r.isSuccess()) {
-                            throw new AssertionError(r.getMessage());
-                        }
-                        FoodDistributionRequest fr = r.getData();
-                        reqDup = fr.getId();
-                        return fr.getRequiredQuantity()
-                                == s.getCurrentOccupancy() * 2
-                                && fr.getBeneficiaries()
-                                        == s.getCurrentOccupancy();
+            for (com.resqhub.model.Shelter s : shelters) {
+                if (s.getCurrentOccupancy() > 0) {
+                    ActionResult r = c.createRequestFromShelter(s.getId(),
+                            "2", PriorityLevel.HIGH);
+                    if (!r.isSuccess()) {
+                        throw new AssertionError(r.getMessage());
                     }
+                    FoodDistributionRequest fr = r.getData();
+                    reqDup = fr.getId();
+                    return fr.getRequiredQuantity()
+                            == s.getCurrentOccupancy() * 2
+                            && fr.getBeneficiaries()
+                                    == s.getCurrentOccupancy();
                 }
             }
             return true; // no shelter with occupants - nothing to assert

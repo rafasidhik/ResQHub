@@ -39,7 +39,6 @@ import com.resqhub.model.VolunteerAvailability;
 import com.resqhub.model.VolunteerSkill;
 import com.resqhub.model.VolunteerTaskStatus;
 import com.resqhub.service.SessionManager;
-import com.resqhub.service.VolunteerService;
 
 /**
  * Volunteer management screen: registration, search/filter, profile dialog

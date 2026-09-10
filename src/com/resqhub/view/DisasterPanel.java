@@ -10,8 +10,6 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.List;
-
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -72,7 +70,6 @@ public class DisasterPanel extends JPanel implements Refreshable {
             "No disaster selected - click a row");
     private final JComboBox<DisasterStatus> changeStatusCombo =
             new JComboBox<>();
-    private static final String STATUS_SENTINEL = "-- choose --";
 
     private Long editingId = null;
     private final JButton saveChangesButton = new JButton("Save Changes");

@@ -34,8 +34,6 @@ public class DonationService {
             new DonationDistributionDAO();
     private final SessionManager session = SessionManager.getInstance();
 
-    private static final int MAX_DISTRIBUTION_FOR_CASH = Integer.MAX_VALUE;
-
     // ── donor registration ───────────────────────────────────────────
 
     public Donor registerDonor(String fullName, String contactNumber,

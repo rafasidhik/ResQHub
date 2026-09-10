@@ -14,7 +14,6 @@ import com.resqhub.model.PriorityLevel;
 import com.resqhub.model.ReportResult;
 import com.resqhub.model.ReportType;
 import com.resqhub.model.Shelter;
-import com.resqhub.model.ShelterAllocation;
 import com.resqhub.model.ShelterAllocationStatus;
 import com.resqhub.model.ShelterOperationalStatus;
 import com.resqhub.model.SmartAllocationResult;
@@ -33,7 +32,6 @@ public class SmartAllocationTest {
     // test-owned entities
     private static long victimId = -1;
     private static long selfShelterId = -1;
-    private static long victimAllocId = -1;
     private static long pendingAllocId = -1;
     private static long activeAllocId = -1;
 
@@ -99,7 +97,6 @@ public class SmartAllocationTest {
             if (result.getAllocation() == null) {
                 throw new AssertionError("no allocation created");
             }
-            victimAllocId = result.getAllocation().getId();
             return totalOcc(c) == beforeTotal + 2;
         });
 

@@ -186,10 +186,4 @@ public class ShelterTest {
     private interface Check {
         boolean run() throws Exception;
     }
-
-    private static void assertNotNull(Object o) {
-        if (o == null) {
-            throw new AssertionError("expected non-null");
-        }
-    }
 }

@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.resqhub.exception.BloodUnavailableException;
-import com.resqhub.exception.DataAccessException;
 import com.resqhub.exception.InvalidBloodDataException;
 import com.resqhub.model.BloodDonor;
 import com.resqhub.model.BloodGroup;
@@ -52,7 +50,6 @@ public class BloodMatchingEngine {
     private static final int URGENCY_CRITICAL_BONUS = 20;
     private static final int URGENCY_HIGH_BONUS = 10;
     private static final int URGENCY_MEDIUM_BONUS = 5;
-    private static final int LOCATION_MATCH_BONUS = 15;
 
     /**
      * Runs the complete matching pipeline and returns candidates ranked

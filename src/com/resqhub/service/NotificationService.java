@@ -21,8 +21,6 @@ import com.resqhub.model.Notification;
 import com.resqhub.model.NotificationPriority;
 import com.resqhub.model.NotificationStatus;
 import com.resqhub.model.NotificationType;
-import com.resqhub.model.PriorityLevel;
-import com.resqhub.model.RequestStatus;
 import com.resqhub.model.RescueRequest;
 import com.resqhub.model.RoleType;
 import com.resqhub.model.Shelter;

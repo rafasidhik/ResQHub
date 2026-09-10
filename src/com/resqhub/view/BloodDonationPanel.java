@@ -91,11 +91,6 @@ public class BloodDonationPanel extends JPanel implements Refreshable {
             ViewUtil.readOnlyModel(BloodDonorController.matchHeaders());
     private final JTable matchTable = new JTable(matchModel);
 
-    // ranking table (for suitable donors dialog)
-    private final DefaultTableModel rankingModel =
-            ViewUtil.readOnlyModel(BloodDonorController.rankingHeaders());
-    private final JTable rankingTable = new JTable(rankingModel);
-
     // matching history table
     private final DefaultTableModel matchingHistoryModel =
             ViewUtil.readOnlyModel(BloodDonorController.matchingHistoryHeaders());

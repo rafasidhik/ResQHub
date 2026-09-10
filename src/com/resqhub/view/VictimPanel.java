@@ -10,8 +10,6 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.List;
-
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -35,7 +33,6 @@ import com.resqhub.model.Disaster;
 import com.resqhub.model.EmergencyStatus;
 import com.resqhub.model.Gender;
 import com.resqhub.model.RoleType;
-import com.resqhub.model.ShelterStatus;
 import com.resqhub.model.Victim;
 import com.resqhub.service.SessionManager;
 

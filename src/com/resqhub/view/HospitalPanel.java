@@ -184,11 +184,8 @@ public class HospitalPanel extends JPanel implements Refreshable {
         JTextField occIn = new JTextField(6);
         JComboBox<HospitalStatus> statusIn =
                 new JComboBox<>(HospitalStatus.values());
-        JComboBox<HospitalFacility> facilityIn =
-                new JComboBox<>(HospitalFacility.values());
         JComboBox<String> disasterIn = buildDisasterCombo();
 
-        Set<HospitalFacility> selected = new LinkedHashSet<>();
         JCheckBox[] facilityChecks = new JCheckBox[HospitalFacility.values().length];
         JPanel facilitiesPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         HospitalFacility[] facilities = HospitalFacility.values();
@@ -792,7 +789,6 @@ public class HospitalPanel extends JPanel implements Refreshable {
         notesIn.setLineWrap(true);
         JComboBox<String> disasterCombo = buildDisasterCombo();
 
-        Set<HospitalFacility> required = new LinkedHashSet<>();
         JCheckBox[] reqChecks = new JCheckBox[HospitalFacility.values().length];
         JPanel reqPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         HospitalFacility[] facVals = HospitalFacility.values();

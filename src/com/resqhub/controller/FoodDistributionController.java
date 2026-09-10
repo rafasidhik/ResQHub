@@ -177,7 +177,7 @@ public class FoodDistributionController {
             int served = servedText == null || servedText.trim().isEmpty()
                     ? 0 : InputParser.parseInt(servedText,
                             "Beneficiaries served");
-            FoodDistribution d = foodService.recordDistribution(id,
+            foodService.recordDistribution(id,
                     resourceId, quantity, served, location, note);
             return ActionResult.success("Distributed " + quantity + " units "
                     + "against request #" + id + " at " + location);

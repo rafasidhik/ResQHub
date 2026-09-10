@@ -372,7 +372,6 @@ public class FoodDistributionService {
                     "No inventory resource with id " + resourceId);
         }
 
-        int bef = food.getAvailableQuantity();
         resourceService.stockOut(resourceId, quantity, location, note,
                 r.getDisasterId());
 

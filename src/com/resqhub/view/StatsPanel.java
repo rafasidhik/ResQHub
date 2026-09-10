@@ -20,7 +20,6 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 
 import com.resqhub.controller.ActionResult;
-import com.resqhub.controller.AccountDeletionRequestController;
 import com.resqhub.controller.StatsController;
 import com.resqhub.model.RoleType;
 import com.resqhub.service.SessionManager;
@@ -35,7 +34,6 @@ public class StatsPanel extends JPanel implements Refreshable {
             DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
 
     private final StatsController controller = new StatsController();
-    private final java.util.function.Consumer<String> moduleOpener;
 
     private final JPanel cardsRowTop = new JPanel(
             new FlowLayout(FlowLayout.LEFT, 16, 8));
@@ -47,8 +45,6 @@ public class StatsPanel extends JPanel implements Refreshable {
     private final JLabel statusLabel = new JLabel();
 
     public StatsPanel(java.util.function.Consumer<String> moduleOpener) {
-        this.moduleOpener = moduleOpener;
-
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
 

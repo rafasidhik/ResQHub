@@ -39,9 +39,6 @@ public class BloodDonorController {
     private final HospitalDAO hospitalDAO = new HospitalDAO();
     private final VictimDAO victimDAO = new VictimDAO();
 
-    private static final DateTimeFormatter DATE =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
     // ---- donor registration / profile --------------------------------
 
     public ActionResult registerDonor(String nameText, BloodGroup group,

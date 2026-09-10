@@ -13,7 +13,6 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -240,7 +239,6 @@ public class ResourcePanel extends JPanel implements Refreshable {
         north.add(filters);
         detail.setBorder(null);
 
-        JTabbedPane t = new JTabbedPane();
         JPanel tab = new JPanel(new BorderLayout(6, 6));
         tab.add(north, BorderLayout.NORTH);
         tab.add(new JScrollPane(table), BorderLayout.CENTER);

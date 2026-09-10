@@ -401,17 +401,15 @@ public class RescueTeamService {
             }
         }
 
-        try {
-            suitable.sort((a, b) -> {
-                try {
-                    int countA = assignmentDAO.countByTeam(a.getId());
-                    int countB = assignmentDAO.countByTeam(b.getId());
-                    return Integer.compare(countA, countB);
-                } catch (DataAccessException e) {
-                    return 0;
-                }
-            });
-        } catch (Exception ignored) { }
+        suitable.sort((a, b) -> {
+            try {
+                int countA = assignmentDAO.countByTeam(a.getId());
+                int countB = assignmentDAO.countByTeam(b.getId());
+                return Integer.compare(countA, countB);
+            } catch (DataAccessException e) {
+                return 0;
+            }
+        });
 
         return suitable;
     }

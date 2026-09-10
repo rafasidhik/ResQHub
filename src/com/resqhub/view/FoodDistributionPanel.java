@@ -17,7 +17,6 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
@@ -689,7 +688,6 @@ public class FoodDistributionPanel extends JPanel implements Refreshable {
 
     private void fillDisasters(JComboBox<Disaster> combo)
             throws DataAccessException {
-        Disaster selected = (Disaster) combo.getSelectedItem();
         combo.removeAllItems();
         combo.addItem(null);
         for (Disaster d : controller.getDisasters()) {
@@ -716,8 +714,6 @@ public class FoodDistributionPanel extends JPanel implements Refreshable {
     private void fillRequests() {
         try {
             List<FoodDistributionRequest> open = controller.findOpen();
-            Object selAlloc = allocRequest.getSelectedItem();
-            Object selDist = distRequest.getSelectedItem();
             allocRequest.removeAllItems();
             distRequest.removeAllItems();
             for (FoodDistributionRequest r : open) {
@@ -757,7 +753,6 @@ public class FoodDistributionPanel extends JPanel implements Refreshable {
 
     private void fillFoodResources(JComboBox<Resource> combo)
             throws DataAccessException {
-        Resource selected = (Resource) combo.getSelectedItem();
         combo.removeAllItems();
         for (Resource r : controller.getFoodResources()) {
             combo.addItem(r);
