@@ -155,6 +155,10 @@ public class MainDashboard extends JFrame {
                     openModule("resources", new ResourcePanel())));
             modulesMenu.add(item("Food Distribution", () ->
                     openModule("food", new FoodDistributionPanel())));
+            modulesMenu.add(item("Hospitals", () ->
+                    openModule("hospitals", new HospitalPanel())));
+            modulesMenu.add(item("Blood Donors", () ->
+                    openModule("blood", new BloodDonationPanel())));
             modulesMenu.add(item("Notifications", () ->
                     openModule("notifications", new NotificationPanel())));
             modulesMenu.add(item("Reports & Analytics", () ->
@@ -174,6 +178,8 @@ public class MainDashboard extends JFrame {
                     openModule("resources", new ResourcePanel())));
             modulesMenu.add(item("Food Distribution", () ->
                     openModule("food", new FoodDistributionPanel())));
+            modulesMenu.add(item("Hospitals", () ->
+                    openModule("hospitals", new HospitalPanel())));
             modulesMenu.add(item("Rescue Requests", () ->
                     openModule("requests", new RescueRequestPanel(true))));
             modulesMenu.add(item("Reports & Analytics", () ->
@@ -192,6 +198,14 @@ public class MainDashboard extends JFrame {
             // submission-only view of rescue requests
             modulesMenu.add(item("Report Emergency", () ->
                     openModule("requests", new RescueRequestPanel(false))));
+            if (has(RoleType.MEDICAL_OFFICER, RoleType.BLOOD_COORDINATOR)) {
+                modulesMenu.add(item("Blood Donors", () ->
+                        openModule("blood", new BloodDonationPanel())));
+            }
+            if (has(RoleType.MEDICAL_OFFICER)) {
+                modulesMenu.add(item("Hospitals", () ->
+                        openModule("hospitals", new HospitalPanel())));
+            }
             modulesMenu.add(item("Reports & Analytics", () ->
                     openModule("reports", new ReportPanel())));
             modulesMenu.add(item("Notifications", () ->

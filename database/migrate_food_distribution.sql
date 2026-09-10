@@ -4,8 +4,10 @@
 USE resqhub;
 
 -- The Food module adds a FOOD notification type to the notifications enum.
+-- NOTE: BLOOD is included to avoid dropping it if this migration runs after
+-- migrate_blood.sql. On fresh installs the canonical schema already has BLOOD.
 ALTER TABLE notifications
-    MODIFY type ENUM('CRITICAL_RESCUE','LOW_STOCK','ASSIGNMENT','FOOD','SYSTEM')
+    MODIFY type ENUM('CRITICAL_RESCUE','LOW_STOCK','ASSIGNMENT','FOOD','BLOOD','SYSTEM')
     NOT NULL;
 
 CREATE TABLE IF NOT EXISTS food_requests (

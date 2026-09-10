@@ -7,6 +7,7 @@ public enum NotificationType {
     ASSIGNMENT("Assignment"),
     FOOD("Food Distribution"),
     HOSPITAL("Hospital"),
+    BLOOD("Blood Donors"),
     SYSTEM("System");
 
     private final String label;

@@ -12,6 +12,18 @@
 --   * Every table      : created_at / updated_at audit columns
 --   * Engine           : InnoDB (transactions + FK enforcement)
 --   * Charset          : utf8mb4
+--
+-- MIGRATION RUN ORDER (FK dependencies):
+--   1. resqhub_schema.sql          (base schema — must run first)
+--   2. migrate_shelter.sql         (shelters, facilities, allocations)
+--   3. migrate_smart_allocation.sql (widens allocation status enum)
+--   4. migrate_resources.sql       (resources, stock movements, distributions)
+--   5. migrate_food_distribution.sql (food requests, distributions)
+--   6. migrate_hospital.sql        (hospitals, referrals, capacity logs)
+--   7. migrate_blood.sql           (blood donors, requests, matches, donations)
+--
+-- For fresh installs: run resqhub_schema.sql ONLY (it contains all tables).
+-- For incremental upgrades: run migrate_*.sql files in the order above.
 -- =====================================================================
 
 DROP DATABASE IF EXISTS resqhub;
@@ -550,7 +562,7 @@ CREATE TABLE account_deletion_requests (
 CREATE TABLE notifications (
     id               BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
     recipient_user_id BIGINT UNSIGNED NOT NULL,
-    type             ENUM('CRITICAL_RESCUE','LOW_STOCK','ASSIGNMENT','FOOD','SYSTEM')
+    type             ENUM('CRITICAL_RESCUE','LOW_STOCK','ASSIGNMENT','FOOD','BLOOD','SYSTEM')
                      NOT NULL,
     priority         ENUM('CRITICAL','WARNING','INFO') NOT NULL DEFAULT 'INFO',
     status           ENUM('UNREAD','READ','ARCHIVED')  NOT NULL DEFAULT 'UNREAD',
@@ -626,6 +638,8 @@ CREATE TABLE shelters (
     KEY idx_shelter_avail (available_capacity),
     INDEX idx_shelter_victims_link (disaster_id),
     INDEX idx_shelter_created_by (created_by),
+    CONSTRAINT fk_shelter_disaster FOREIGN KEY (disaster_id)
+        REFERENCES disasters (id) ON DELETE SET NULL,
     CONSTRAINT fk_shelter_created_by FOREIGN KEY (created_by)
         REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE = InnoDB;
@@ -957,3 +971,300 @@ INSERT INTO food_distributions (request_id, resource_id, quantity,
  'First batch handed out.'),
 (3, 1, 800, 400, 'Chundale community', 'Chundale community', NOW(), 1,
  'Community meal drive complete.');
+
+-- ---------------------------------------------------------------------
+-- Hospital Management (hospitals, hospital_referrals, hospital_capacity_logs)
+-- ---------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS hospitals (
+    id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name             VARCHAR(150)    NOT NULL,
+    hospital_id      VARCHAR(30)     NOT NULL,
+    district         VARCHAR(80)     NOT NULL,
+    city             VARCHAR(80)     NULL,
+    area             VARCHAR(80)     NULL,
+    address          VARCHAR(200)    NULL,
+    phone            VARCHAR(20)     NULL,
+    emergency_contact VARCHAR(20)    NULL,
+    email            VARCHAR(120)    NULL,
+    total_beds       INT UNSIGNED    NOT NULL,
+    occupied_beds    INT UNSIGNED    NOT NULL DEFAULT 0,
+    facilities       VARCHAR(500)    NULL,
+    status           ENUM('AVAILABLE','LIMITED_CAPACITY','FULL','INACTIVE',
+                          'EMERGENCY_ONLY') NOT NULL DEFAULT 'AVAILABLE',
+    disaster_id      BIGINT UNSIGNED NULL,
+    created_by       BIGINT UNSIGNED NULL,
+    created_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                     ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_hospital_id (hospital_id),
+    KEY idx_hospital_status (status),
+    KEY idx_hospital_district (district),
+    KEY idx_hospital_disaster (disaster_id),
+    KEY idx_hospital_created_by (created_by),
+    CONSTRAINT fk_hospital_disaster FOREIGN KEY (disaster_id)
+        REFERENCES disasters (id) ON DELETE SET NULL,
+    CONSTRAINT fk_hospital_created_by FOREIGN KEY (created_by)
+        REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS hospital_referrals (
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    hospital_id         BIGINT UNSIGNED NOT NULL,
+    victim_id           BIGINT UNSIGNED NULL,
+    victim_name         VARCHAR(150)    NULL,
+    reason              VARCHAR(300)    NOT NULL,
+    beds_required       INT UNSIGNED    NOT NULL DEFAULT 1,
+    required_facilities VARCHAR(500)    NULL,
+    status              ENUM('PENDING','ACCEPTED','ADMITTED','DISCHARGED',
+                             'REJECTED','CANCELLED') NOT NULL DEFAULT 'PENDING',
+    beds_applied        TINYINT(1)      NOT NULL DEFAULT 0,
+    referred_by         BIGINT UNSIGNED NULL,
+    referred_at         DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    closed_at           DATETIME        NULL,
+    notes               VARCHAR(500)    NULL,
+    disaster_id         BIGINT UNSIGNED NULL,
+    created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                        ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_referral_hospital (hospital_id, status),
+    KEY idx_referral_victim (victim_id),
+    KEY idx_referral_status (status),
+    KEY idx_referral_disaster (disaster_id),
+    KEY idx_referral_referred_by (referred_by),
+    CONSTRAINT fk_referral_hospital FOREIGN KEY (hospital_id)
+        REFERENCES hospitals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_referral_victim FOREIGN KEY (victim_id)
+        REFERENCES victims (id) ON DELETE SET NULL,
+    CONSTRAINT fk_referral_disaster FOREIGN KEY (disaster_id)
+        REFERENCES disasters (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS hospital_capacity_logs (
+    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    hospital_id       BIGINT UNSIGNED NOT NULL,
+    previous_occupied INT UNSIGNED    NOT NULL DEFAULT 0,
+    updated_occupied  INT UNSIGNED    NOT NULL DEFAULT 0,
+    available_beds    INT UNSIGNED    NOT NULL DEFAULT 0,
+    reason            VARCHAR(400)    NULL,
+    changed_by        BIGINT UNSIGNED NULL,
+    changed_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                      ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_caplog_hospital (hospital_id, changed_at),
+    CONSTRAINT fk_caplog_hospital FOREIGN KEY (hospital_id)
+        REFERENCES hospitals (id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- Blood Donor Management (blood_donors, blood_requests, blood_matches,
+-- blood_donations)
+-- ---------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS blood_donors (
+    id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    full_name          VARCHAR(150)    NOT NULL,
+    blood_group        ENUM('A_POSITIVE','A_NEGATIVE','B_POSITIVE',
+                            'B_NEGATIVE','AB_POSITIVE','AB_NEGATIVE',
+                            'O_POSITIVE','O_NEGATIVE') NOT NULL,
+    location           VARCHAR(150)    NOT NULL,
+    phone              VARCHAR(20)     NULL,
+    email              VARCHAR(120)    NULL,
+    availability       ENUM('AVAILABLE','UNAVAILABLE','DEFERRED','PENDING') NOT NULL DEFAULT 'AVAILABLE',
+    last_donation_date DATE            NULL,
+    eligibility        ENUM('ELIGIBLE','TEMPORARY_DEFERRED','PERMANENTLY_INELIGIBLE','MEDICAL_HOLD')
+                           NOT NULL DEFAULT 'ELIGIBLE',
+    notes              VARCHAR(500)    NULL,
+    registered_by      BIGINT UNSIGNED NULL,
+    created_at         DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at         DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                       ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_donor_phone (phone),
+    KEY idx_donor_blood_group (blood_group, availability, eligibility),
+    KEY idx_donor_location (location),
+    KEY idx_donor_registered_by (registered_by),
+    CONSTRAINT fk_donor_registered_by FOREIGN KEY (registered_by)
+        REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS blood_requests (
+    id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    request_code          VARCHAR(30)     NOT NULL,
+    blood_group           ENUM('A_POSITIVE','A_NEGATIVE','B_POSITIVE',
+                               'B_NEGATIVE','AB_POSITIVE','AB_NEGATIVE',
+                               'O_POSITIVE','O_NEGATIVE') NOT NULL,
+    units_required        INT UNSIGNED    NOT NULL DEFAULT 1,
+    location              VARCHAR(150)    NOT NULL,
+    priority              ENUM('CRITICAL','HIGH','MEDIUM','LOW')
+                              NOT NULL DEFAULT 'MEDIUM',
+    status                ENUM('PENDING','MATCHING_DONORS','DONOR_FOUND',
+                               'BLOOD_COLLECTED','FULFILLED','CANCELLED')
+                              NOT NULL DEFAULT 'PENDING',
+    emergency_details     VARCHAR(500)    NULL,
+    hospital_id           BIGINT UNSIGNED NULL,
+    victim_id             BIGINT UNSIGNED NULL,
+    disaster_id           BIGINT UNSIGNED NULL,
+    created_by            BIGINT UNSIGNED NULL,
+    request_date          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    required_date         DATETIME        NULL,
+    fulfilled_by_match_id BIGINT UNSIGNED NULL,
+    created_at            DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at            DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                          ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_request_code (request_code),
+    KEY idx_request_status (status, priority),
+    KEY idx_request_blood_group (blood_group),
+    KEY idx_request_hospital (hospital_id),
+    KEY idx_request_victim (victim_id),
+    KEY idx_request_disaster (disaster_id),
+    KEY idx_request_created_by (created_by),
+    CONSTRAINT fk_request_victim FOREIGN KEY (victim_id)
+        REFERENCES victims (id)  ON DELETE SET NULL,
+    CONSTRAINT fk_request_disaster FOREIGN KEY (disaster_id)
+        REFERENCES disasters (id) ON DELETE SET NULL,
+    CONSTRAINT fk_request_created_by FOREIGN KEY (created_by)
+        REFERENCES users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_request_hospital FOREIGN KEY (hospital_id)
+        REFERENCES hospitals (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS blood_matches (
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    request_id          BIGINT UNSIGNED NOT NULL,
+    donor_id            BIGINT UNSIGNED NOT NULL,
+    status              ENUM('SUGGESTED','CONTACTED','CONFIRMED','COLLECTED',
+                             'DECLINED','CANCELLED') NOT NULL DEFAULT 'SUGGESTED',
+    units_matched       INT UNSIGNED    NOT NULL DEFAULT 1,
+    location_matched    TINYINT(1)      NOT NULL DEFAULT 0,
+    donor_distance_rank INT UNSIGNED    NOT NULL DEFAULT 0,
+    notes               VARCHAR(500)    NULL,
+    matched_by          BIGINT UNSIGNED NULL,
+    matched_at          DATETIME        NULL,
+    confirmed_at        DATETIME        NULL,
+    collected_at        DATETIME        NULL,
+    created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                        ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_match_request_donor (request_id, donor_id),
+    KEY idx_match_donor (donor_id),
+    KEY idx_match_status (status),
+    KEY idx_match_matched_by (matched_by),
+    CONSTRAINT fk_match_request FOREIGN KEY (request_id)
+        REFERENCES blood_requests (id) ON DELETE CASCADE,
+    CONSTRAINT fk_match_donor FOREIGN KEY (donor_id)
+        REFERENCES blood_donors  (id) ON DELETE CASCADE,
+    CONSTRAINT fk_match_matched_by FOREIGN KEY (matched_by)
+        REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS blood_donations (
+    id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    donor_id         BIGINT UNSIGNED NULL,
+    blood_group      ENUM('A_POSITIVE','A_NEGATIVE','B_POSITIVE','B_NEGATIVE',
+                          'AB_POSITIVE','AB_NEGATIVE','O_POSITIVE',
+                          'O_NEGATIVE') NOT NULL,
+    donation_date    DATE            NOT NULL,
+    request_id       BIGINT UNSIGNED NULL,
+    units_donated    INT UNSIGNED    NOT NULL DEFAULT 1,
+    donation_status  VARCHAR(40)     NOT NULL DEFAULT 'COLLECTED',
+    notes            VARCHAR(500)    NULL,
+    recorded_by      BIGINT UNSIGNED NULL,
+    recorded_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                     ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_donation_donor (donor_id, donation_date),
+    KEY idx_donation_request (request_id),
+    KEY idx_donation_date (donation_date),
+    KEY idx_donation_recorded_by (recorded_by),
+    CONSTRAINT fk_donation_donor FOREIGN KEY (donor_id)
+        REFERENCES blood_donors (id) ON DELETE SET NULL,
+    CONSTRAINT fk_donation_request FOREIGN KEY (request_id)
+        REFERENCES blood_requests (id) ON DELETE SET NULL,
+    CONSTRAINT fk_donation_recorded_by FOREIGN KEY (recorded_by)
+        REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+ALTER TABLE blood_requests
+    ADD CONSTRAINT fk_request_fulfilled_match FOREIGN KEY (fulfilled_by_match_id)
+        REFERENCES blood_matches (id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS blood_request_history (
+    id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    request_id   BIGINT UNSIGNED NULL,
+    event        VARCHAR(120)    NOT NULL,
+    details      VARCHAR(500)    NULL,
+    performed_by BIGINT UNSIGNED NULL,
+    performed_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                 ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_history_request (request_id, performed_at),
+    KEY idx_history_performed_by (performed_by),
+    CONSTRAINT fk_history_request FOREIGN KEY (request_id)
+        REFERENCES blood_requests (id) ON DELETE CASCADE,
+    CONSTRAINT fk_history_performed_by FOREIGN KEY (performed_by)
+        REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB;
+
+-- Seed blood donors (registered_by admin=1 / officer1=2).
+INSERT INTO blood_donors
+    (full_name, blood_group, location, phone, email, availability,
+     last_donation_date, eligibility, notes, registered_by)
+VALUES
+    ('Raju Varma',      'O_NEGATIVE', 'Wayanad district, Kerala',
+     '9847001001', 'raju@resqhub.org', 'AVAILABLE', NULL,
+     'ELIGIBLE', 'Universal donor; rapid responder', 1),
+    ('Kavya Nair',      'O_POSITIVE', 'Chundale relief point',
+     '9847001002', 'kavya@resqhub.org', 'AVAILABLE',
+     DATE_SUB(CURDATE(), INTERVAL 95 DAY), 'ELIGIBLE',
+     'Regular donor', 2),
+    ('Manoj Pillai',    'A_POSITIVE', 'Kalpetta, Wayanad',
+     '9847001003', 'manoj@resqhub.org', 'AVAILABLE',
+     DATE_SUB(CURDATE(), INTERVAL 30 DAY), 'ELIGIBLE', NULL, 1),
+    ('Aiswarya Das',    'B_POSITIVE', 'Wayandad district, Kerala',
+     '9847001004', 'aiswarya@resqhub.org', 'UNAVAILABLE',
+     DATE_SUB(CURDATE(), INTERVAL 10 DAY), 'ELIGIBLE',
+     'Recently donated; 90-day window', 2),
+    ('Thomas Kurian',   'AB_POSITIVE', 'Chundale relief point',
+'9847001005', 'thomas@resqhub.org', 'AVAILABLE', NULL,
+     'TEMPORARY_DEFERRED', 'Medical review pending', 1);
+
+-- Seed blood requests for the Wayanad flood (disaster #1).
+INSERT INTO blood_requests
+    (request_code, blood_group, units_required, location, priority, status,
+     emergency_details, hospital_id, victim_id, disaster_id, created_by)
+VALUES
+    ('BR-RQ-0001', 'O_NEGATIVE', 2, 'Chundale relief point', 'CRITICAL',
+     'MATCHING_DONORS', 'Trauma victim with severe bleeding; universal donor needed',
+     1, 1, 1, 2),
+    ('BR-RQ-0002', 'A_POSITIVE', 1, 'Kalpetta, Wayanad', 'HIGH',
+     'PENDING', 'Surgery requirement', 1, 2, 1, 1),
+    ('BR-RQ-0003', 'B_POSITIVE', 1, 'Chundale relief point', 'MEDIUM',
+     'PENDING', 'Stock replenishment for clinic', NULL, 3, 1, 1);
+
+-- Seed one confirmed match for the critical request.
+INSERT INTO blood_matches
+    (request_id, donor_id, status, units_matched, location_matched,
+     donor_distance_rank, notes, matched_by, matched_at)
+SELECT r.id, d.id, 'CONFIRMED', 1, 1, 1, 'Nearest universal donor on site',
+       2, NOW()
+FROM blood_requests r
+JOIN blood_donors d ON d.blood_group = 'O_NEGATIVE'
+WHERE r.request_code = 'BR-RQ-0001'
+  AND d.full_name = 'Raju Varma'
+LIMIT 1;
+
+UPDATE blood_requests r
+JOIN blood_matches m ON m.request_id = r.id AND m.status = 'CONFIRMED'
+SET r.status = 'DONOR_FOUND'
+WHERE r.request_code = 'BR-RQ-0001';

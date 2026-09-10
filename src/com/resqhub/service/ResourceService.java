@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.resqhub.dao.DisasterDAO;
 import com.resqhub.dao.NotificationDAO;
 import com.resqhub.dao.ResourceDAO;
 import com.resqhub.dao.ResourceDistributionDAO;
@@ -133,6 +134,11 @@ public class ResourceService {
             throw new InvalidResourceDataException(
                     "stock-in quantity must be greater than zero");
         }
+        if (disasterId != null && new DisasterDAO()
+                .findById(disasterId) == null) {
+            throw new InvalidResourceDataException(
+                    "disaster #" + disasterId + " not found");
+        }
         Resource r = requireExisting(resourceId);
         int previous = r.getAvailableQuantity();
         r.setAvailableQuantity(previous + quantity);
@@ -167,6 +173,11 @@ public class ResourceService {
         if (!ValidationUtil.isPositive(quantity)) {
             throw new InvalidResourceDataException(
                     "stock-out quantity must be greater than zero");
+        }
+        if (disasterId != null && new DisasterDAO()
+                .findById(disasterId) == null) {
+            throw new InvalidResourceDataException(
+                    "disaster #" + disasterId + " not found");
         }
         Resource r = requireExisting(resourceId);
         requireEnoughStock(r, quantity);
@@ -206,6 +217,11 @@ public class ResourceService {
         if (destination == null) {
             throw new InvalidResourceDataException(
                     "a distribution destination must be selected");
+        }
+        if (disasterId != null && new DisasterDAO()
+                .findById(disasterId) == null) {
+            throw new InvalidResourceDataException(
+                    "disaster #" + disasterId + " not found");
         }
         if (!ValidationUtil.requireNonBlank(distributedTo)) {
             throw new InvalidResourceDataException(
