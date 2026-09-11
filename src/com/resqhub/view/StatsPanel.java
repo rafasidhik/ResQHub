@@ -2,6 +2,7 @@ package com.resqhub.view;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
@@ -16,6 +17,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
 import com.resqhub.controller.ActionResult;
@@ -37,7 +39,7 @@ public class StatsPanel extends JPanel implements Refreshable {
     private final JPanel cardGrid = new JPanel(
             new GridLayout(0, 4, 12, 12));
     private final JTextArea attentionArea = new JTextArea(6, 30);
-    private final JPanel actionsPanel = new JPanel(new GridLayout(0, 1, 6, 6));
+    private final JPanel actionsPanel = new JPanel();
     private final JLabel updatedLabel = new JLabel();
     private final JLabel statusLabel = new JLabel();
     private final JLabel greetingLabel = new JLabel();
@@ -64,22 +66,29 @@ public class StatsPanel extends JPanel implements Refreshable {
         JPanel header = new JPanel(new BorderLayout());
         header.add(greetingStack, BorderLayout.WEST);
         header.add(updatedLabel, BorderLayout.EAST);
+        header.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0,
+                        new Color(215, 215, 215)),
+                BorderFactory.createEmptyBorder(0, 0, 10, 0)));
 
         JPanel cardArea = new JPanel(new BorderLayout());
         cardArea.add(cardGrid, BorderLayout.NORTH);
 
         attentionArea.setEditable(false);
         attentionArea.setFont(attentionArea.getFont().deriveFont(13f));
+        attentionArea.setLineWrap(true);
+        attentionArea.setWrapStyleWord(true);
         attentionArea.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         JPanel attention = new JPanel(new BorderLayout());
         attention.setBorder(BorderFactory.createTitledBorder(
                 "ATTENTION REQUIRED"));
-        attention.add(attentionArea, BorderLayout.CENTER);
+        attention.add(new JScrollPane(attentionArea), BorderLayout.CENTER);
 
+        actionsPanel.setLayout(new BoxLayout(actionsPanel, BoxLayout.Y_AXIS));
         buildQuickActions(moduleOpener);
         JPanel actions = new JPanel(new BorderLayout());
         actions.setBorder(BorderFactory.createTitledBorder("QUICK ACTIONS"));
-        actions.add(actionsPanel, BorderLayout.NORTH);
+        actions.add(actionsPanel, BorderLayout.CENTER);
 
         JPanel lower = new JPanel(new GridLayout(1, 2, 12, 0));
         lower.add(attention);
@@ -236,14 +245,14 @@ public class StatsPanel extends JPanel implements Refreshable {
                             boolean alarm) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setPreferredSize(new Dimension(230, 120));
+        card.setPreferredSize(new Dimension(220, 100));
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder(title),
                 BorderFactory.createEmptyBorder(6, 12, 6, 12)));
 
         JLabel valueLabel = new JLabel(value);
         valueLabel.setAlignmentX(CENTER_ALIGNMENT);
-        valueLabel.setFont(valueLabel.getFont().deriveFont(Font.BOLD, 32f));
+        valueLabel.setFont(valueLabel.getFont().deriveFont(Font.BOLD, 30f));
         valueLabel.setForeground(alarm && !"0".equals(value)
                 ? new Color(190, 30, 30) : new Color(20, 70, 120));
         JLabel subLabel = new JLabel(subtitle);
@@ -262,6 +271,7 @@ public class StatsPanel extends JPanel implements Refreshable {
     /** Role-appropriate shortcuts into the modules behind the overview. */
     private void buildQuickActions(java.util.function.Consumer<String> opener) {
         List<String[]> actions = new ArrayList<>();
+        actionsPanel.add(Box.createVerticalGlue());
         SessionManager session = SessionManager.getInstance();
         if (session.hasRole(RoleType.ADMIN, RoleType.RESCUE_OFFICER)) {
             actions.add(new String[]{"Report Emergency", "requests"});
@@ -283,8 +293,12 @@ public class StatsPanel extends JPanel implements Refreshable {
         }
         for (String[] action : actions) {
             JButton button = new JButton(action[0]);
+            button.setAlignmentX(Component.LEFT_ALIGNMENT);
+            button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
             button.addActionListener(e -> opener.accept(action[1]));
             actionsPanel.add(button);
+            actionsPanel.add(Box.createVerticalStrut(4));
         }
+        actionsPanel.add(Box.createVerticalGlue());
     }
 }
