@@ -79,14 +79,58 @@ public class MainDashboard extends JFrame {
 
     /** Quick-action buttons on the overview jump straight to modules. */
     private void openQuickAction(String moduleName) {
-        if ("victims".equals(moduleName)) {
-            openModule("victims", new VictimPanel(true));
-        } else if ("teams".equals(moduleName)) {
-            openModule("teams", new RescueTeamPanel());
-        } else if ("users".equals(moduleName)) {
-            openModule("users", new UserPanel());
-        } else {
-            openModule("requests", new RescueRequestPanel(true));
+        switch (moduleName) {
+            case "overview":
+                openModule("overview", new StatsPanel(this::openQuickAction));
+                break;
+            case "victims":
+                openModule("victims", new VictimPanel(true));
+                break;
+            case "teams":
+                openModule("teams", new RescueTeamPanel());
+                break;
+            case "users":
+                openModule("users", new UserPanel());
+                break;
+            case "requests":
+                openModule("requests", new RescueRequestPanel(true));
+                break;
+            case "disasters":
+                openModule("disasters", new DisasterPanel());
+                break;
+            case "shelters":
+                openModule("shelters", new ShelterPanel());
+                break;
+            case "smartalloc":
+                openModule("smartalloc", new SmartAllocationPanel());
+                break;
+            case "volunteers":
+                openModule("volunteers", new VolunteerPanel());
+                break;
+            case "donations":
+                openModule("donations", new DonationPanel());
+                break;
+            case "resources":
+                openModule("resources", new ResourcePanel());
+                break;
+            case "food":
+                openModule("food", new FoodDistributionPanel());
+                break;
+            case "hospitals":
+                openModule("hospitals", new HospitalPanel());
+                break;
+            case "blood":
+                openModule("blood", new BloodDonationPanel());
+                break;
+            case "notifications":
+                openModule("notifications", new NotificationPanel());
+                break;
+            case "reports":
+                openModule("reports", new ReportPanel());
+                break;
+            default:
+                openModule("requests", new RescueRequestPanel(true));
+                break;
         }
     }
 
