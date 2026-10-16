@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Shelter & Logistics Operations — ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="fw-bold mb-0 text-success">Shelter & Logistics Command</h2>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                    <i class="bi bi-houses me-1"></i> Camp Management Console
+                </span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">
+                Refugee intake, bed occupancy monitoring, rations management, and relief supply logistics.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/shelters/smart-allocate}" class="btn btn-outline-success btn-sm shadow-sm">
+                <i class="bi bi-arrow-left-right me-1"></i> Smart Shelter Routing
+            </a>
+            <a th:href="@{/resources/food-distributions/new}" class="btn btn-success btn-sm shadow-sm">
+                <i class="bi bi-cup-hot me-1"></i> Record Food Distribution
+            </a>
+            <a th:href="@{/inventory}" class="btn btn-dark btn-sm shadow-sm">
+                <i class="bi bi-boxes me-1"></i> Inventory Stock
+            </a>
+        </div>
+    </div>
+
+    <!-- Admin Perspective Preview Banner -->
+    <div class="card border-0 shadow-sm mb-4 border-start border-4 border-primary bg-light" sec:authorize="hasRole('ADMIN')">
+        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary text-white"><i class="bi bi-eye-fill me-1"></i> Preview Mode</span>
+                <span class="small text-muted">
+                    Viewing <strong>Shelter & Logistics Console</strong>. Switch perspectives or return:
+                </span>
+            </div>
+            <div class="btn-group btn-group-sm" role="group">
+                <a th:href="@{/dashboard/admin}" class="btn btn-primary fw-semibold">
+                    <i class="bi bi-arrow-left-circle me-1"></i> Return to Admin Command
+                </a>
+                <a th:href="@{/dashboard/rescue-officer}" class="btn btn-outline-dark">Rescue Officer</a>
+                <a th:href="@{/dashboard/camp-manager}" class="btn btn-outline-dark active">Camp Manager</a>
+                <a th:href="@{/dashboard/volunteer}" class="btn btn-outline-dark">Volunteer</a>
+                <a th:href="@{/dashboard/citizen}" class="btn btn-outline-dark">Citizen</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Primary KPI Metric Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted text-uppercase fw-semibold small">Total Occupancy</span>
+                            <h3 class="fw-bold my-1 text-success" th:text="${stats.occupancyPercentage} + '%'">0%</h3>
+                            <span class="small text-muted">
+                                <strong th:text="${stats.currentOccupancy}">0</strong> /
+                                <span th:text="${stats.totalCapacity}">0</span> beds across <span th:text="${stats.totalSheltersCount}">0</span> camps
+                            </span>
+                        </div>
+                        <div class="bg-success-subtle text-success p-3 rounded-circle">
+                            <i class="bi bi-house-door fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted text-uppercase fw-semibold small">Meals / Rations Served</span>
+                            <h3 class="fw-bold my-1 text-primary" th:text="${stats.totalRecipientsServed}">0</h3>
+                            <span class="small text-muted">Total relief beneficiaries served</span>
+                        </div>
+                        <div class="bg-primary-subtle text-primary p-3 rounded-circle">
+                            <i class="bi bi-cup-straw fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-4"
+                 th:classappend="${stats.lowStockItemsCount > 0 ? 'border-danger' : 'border-secondary'}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted text-uppercase fw-semibold small">Low Stock Alerts</span>
+                            <h3 class="fw-bold my-1" th:classappend="${stats.lowStockItemsCount > 0 ? 'text-danger' : 'text-secondary'}"
+                                th:text="${stats.lowStockItemsCount}">0</h3>
+                            <span class="small text-muted">Critical inventory supplies</span>
+                        </div>
+                        <div class="p-3 rounded-circle"
+                             th:classappend="${stats.lowStockItemsCount > 0 ? 'bg-danger-subtle text-danger' : 'bg-secondary-subtle text-secondary'}">
+                            <i class="bi bi-exclamation-triangle fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted text-uppercase fw-semibold small">Today's Meal Batches</span>
+                            <h3 class="fw-bold my-1 text-info" th:text="${stats.todayDistributionsCount}">0</h3>
+                            <span class="small text-muted">Distributions logged today</span>
+                        </div>
+                        <div class="bg-info-subtle text-info p-3 rounded-circle">
+                            <i class="bi bi-calendar2-check fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shelter Status Overview & Low Stock Warnings -->
+    <div class="row g-4 mb-4">
+        <!-- Shelter Capacity Roster -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center pt-3 pb-2">
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-building me-1 text-success"></i> Camp Occupancy Overview
+                    </h6>
+                    <a th:href="@{/shelters}" class="btn btn-outline-success btn-sm">All Shelters</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Shelter</th>
+                                <th>Location</th>
+                                <th>Capacity</th>
+                                <th>Occupancy</th>
+                                <th class="text-end">Manage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="s : ${stats.sheltersList}">
+                                <td>
+                                    <strong class="text-dark" th:text="${s.name}">Shelter Alpha</strong>
+                                    <div class="small text-muted font-monospace" th:text="${s.shelterIdentifier}">SHL-001</div>
+                                </td>
+                                <td>
+                                    <div class="small text-truncate" style="max-width: 160px;" th:text="${s.address}">Address</div>
+                                </td>
+                                <td>
+                                    <span class="small" th:text="${s.currentOccupancy} + ' / ' + ${s.totalCapacity}">0 / 100</span>
+                                </td>
+                                <td style="min-width: 120px;">
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar"
+                                             role="progressbar"
+                                             th:style="'width: ' + (${s.totalCapacity} > 0 ? (${s.currentOccupancy} * 100 / ${s.totalCapacity}) : 0) + '%;'"
+                                             th:classappend="(${s.totalCapacity} > 0 && (${s.currentOccupancy} * 100 / ${s.totalCapacity}) > 85) ? 'bg-danger' : 'bg-success'">
+                                        </div>
+                                    </div>
+                                    <span class="small text-muted" th:text="(${s.totalCapacity} > 0 ? (${s.currentOccupancy} * 100 / ${s.totalCapacity}) : 0) + '%'">0%</span>
+                                </td>
+                                <td class="text-end">
+                                    <a th:href="@{'/shelters/' + ${s.id}}" class="btn btn-outline-secondary btn-sm py-0 px-2">
+                                        <i class="bi bi-box-arrow-in-right"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(stats.sheltersList)}">
+                                <td colspan="5" class="text-center text-muted py-3">No shelters registered.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock Items Warning Card -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center pt-3 pb-2">
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-box-seam me-1 text-danger"></i> Low Supply Alerts
+                    </h6>
+                    <a th:href="@{/inventory}" class="btn btn-outline-danger btn-sm">Inventory</a>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        <li th:each="item : ${stats.lowStockItems}" class="list-group-item px-3 py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong class="small text-dark" th:text="${item.itemName}">Rice 25kg</strong>
+                                    <div class="small text-muted">
+                                        Category: <span th:text="${item.category}">FOOD</span> |
+                                        Threshold: <strong th:text="${item.minStockThreshold}">20</strong>
+                                    </div>
+                                </div>
+                                <span class="badge bg-danger fs-6" th:text="${item.quantity} + ' ' + ${item.unit}">5 PACKETS</span>
+                            </div>
+                        </li>
+                        <li th:if="${#lists.isEmpty(stats.lowStockItems)}" class="list-group-item text-center text-success py-3">
+                            <i class="bi bi-check-circle me-1"></i> All supply levels are sufficient!
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

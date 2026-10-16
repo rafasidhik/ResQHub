@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Victim Rescue Roster & Triage Report — ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+
+    <!-- Screen Toolbar (hidden in print) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none flex-wrap gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="fw-bold mb-0 text-dark">Victim Rescue Roster</h2>
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                    <i class="bi bi-people me-1"></i> Official Triage Registry
+                </span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">
+                Filterable victim medical triage, emergency evacuation tracking, and export facility.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/reports}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i> Reports Hub
+            </a>
+            <button onclick="window.print()" class="btn btn-dark btn-sm shadow-sm">
+                <i class="bi bi-printer me-1"></i> Print Roster
+            </button>
+            <a th:href="@{/reports/victims/csv(disasterId=${selectedDisasterId}, status=${selectedStatus}, priority=${selectedPriority})}"
+               class="btn btn-success btn-sm shadow-sm">
+                <i class="bi bi-download me-1"></i> Download CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Card (hidden in print) -->
+    <div class="card border-0 shadow-sm mb-4 bg-light d-print-none">
+        <div class="card-body py-3 px-3">
+            <form th:action="@{/reports/victims}" method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1">Disaster Zone</label>
+                    <select name="disasterId" class="form-select form-select-sm">
+                        <option value="">-- All Disasters --</option>
+                        <option th:each="d : ${disasters}"
+                                th:value="${d.id}"
+                                th:text="${d.name}"
+                                th:selected="${d.id == selectedDisasterId}">Disaster</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1">Rescue Status</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">-- All Statuses --</option>
+                        <option value="REPORTED" th:selected="${selectedStatus == 'REPORTED'}">Reported</option>
+                        <option value="AWAITING_RESCUE" th:selected="${selectedStatus == 'AWAITING_RESCUE'}">Awaiting Rescue</option>
+                        <option value="IN_RESCUE" th:selected="${selectedStatus == 'IN_RESCUE'}">In Rescue</option>
+                        <option value="RESCUED" th:selected="${selectedStatus == 'RESCUED'}">Rescued</option>
+                        <option value="DECEASED" th:selected="${selectedStatus == 'DECEASED'}">Deceased</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1">Priority Triage</label>
+                    <select name="priority" class="form-select form-select-sm">
+                        <option value="">-- All Priorities --</option>
+                        <option value="CRITICAL" th:selected="${selectedPriority == 'CRITICAL'}">Critical</option>
+                        <option value="HIGH" th:selected="${selectedPriority == 'HIGH'}">High</option>
+                        <option value="MEDIUM" th:selected="${selectedPriority == 'MEDIUM'}">Medium</option>
+                        <option value="LOW" th:selected="${selectedPriority == 'LOW'}">Low</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm flex-grow-1 shadow-sm">
+                        <i class="bi bi-filter me-1"></i> Filter
+                    </button>
+                    <a th:href="@{/reports/victims}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Print-Visible Header Letterhead -->
+    <div class="d-none d-print-block mb-3 border-bottom pb-2">
+        <h4 class="fw-bold mb-0">ResQHub — Victim Rescue & Triage Roster</h4>
+        <small class="text-muted">Certified Operational Disaster Response Record</small>
+    </div>
+
+    <!-- Roster Data Table -->
+    <div class="card border-0 shadow-sm bg-white">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center pt-3 pb-2">
+            <span class="small text-muted">
+                Showing <strong class="text-dark" th:text="${#lists.size(victims)}">0</strong> victim records
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Ref #</th>
+                        <th>Victim Name</th>
+                        <th>Age</th>
+                        <th>Disaster</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Location</th>
+                        <th>Contact</th>
+                        <th>Accessibility Needs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="v : ${victims}">
+                        <td>
+                            <strong class="font-monospace small text-primary" th:text="${v.referenceNumber}">VIC-001</strong>
+                        </td>
+                        <td>
+                            <strong class="text-dark" th:text="${v.fullName}">Full Name</strong>
+                        </td>
+                        <td class="small" th:text="${v.age != null ? v.age : 'N/A'}">25</td>
+                        <td class="small" th:text="${v.disasterName}">Disaster</td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${v.priority?.name() == 'CRITICAL' ? 'bg-danger' : (v.priority?.name() == 'HIGH' ? 'bg-warning text-dark' : 'bg-secondary')}"
+                                  th:text="${v.priority}">HIGH</span>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${v.rescueStatus?.name() == 'RESCUED' ? 'bg-success' : (v.rescueStatus?.name() == 'AWAITING_RESCUE' ? 'bg-danger' : 'bg-primary')}"
+                                  th:text="${v.rescueStatus}">RESCUED</span>
+                        </td>
+                        <td>
+                            <div class="small text-truncate" style="max-width: 180px;" th:text="${v.location}">Location</div>
+                        </td>
+                        <td class="small font-monospace" th:text="${v.contactNumber ?: 'N/A'}">+91 0000</td>
+                        <td class="small text-muted" th:text="${v.accessibilityNeeds ?: 'None'}">Notes</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(victims)}">
+                        <td colspan="9" class="text-center text-muted py-4">No victims matching the selected filter criteria.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

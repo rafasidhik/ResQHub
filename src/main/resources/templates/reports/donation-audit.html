@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Humanitarian Donations Audit Report — ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+
+    <!-- Screen Toolbar (hidden in print) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none flex-wrap gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="fw-bold mb-0 text-dark">Humanitarian Donations Audit</h2>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                    <i class="bi bi-currency-dollar me-1"></i> Financial Integrity
+                </span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">
+                Verified financial contributions, relief supply donations, and certificate audit log.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/reports}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i> Reports Hub
+            </a>
+            <button onclick="window.print()" class="btn btn-dark btn-sm shadow-sm">
+                <i class="bi bi-printer me-1"></i> Print Audit Report
+            </button>
+            <a th:href="@{/reports/donations/csv(status=${selectedStatus}, type=${selectedType})}"
+               class="btn btn-success btn-sm shadow-sm">
+                <i class="bi bi-download me-1"></i> Download CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Bar (hidden in print) -->
+    <div class="card border-0 shadow-sm mb-4 bg-light d-print-none">
+        <div class="card-body py-3 px-3">
+            <form th:action="@{/reports/donations}" method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted mb-1">Donation Status</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">-- All Statuses --</option>
+                        <option th:each="s : ${statuses}"
+                                th:value="${s.name()}"
+                                th:text="${s.displayName}"
+                                th:selected="${s.name() == selectedStatus}">Verified</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small text-muted mb-1">Donation Type</label>
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">-- All Types --</option>
+                        <option th:each="t : ${types}"
+                                th:value="${t.name()}"
+                                th:text="${t.displayName}"
+                                th:selected="${t.name() == selectedType}">Monetary</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm flex-grow-1 shadow-sm">
+                        <i class="bi bi-filter me-1"></i> Filter
+                    </button>
+                    <a th:href="@{/reports/donations}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Print-Visible Header Letterhead -->
+    <div class="d-none d-print-block mb-3 border-bottom pb-2">
+        <h4 class="fw-bold mb-0">ResQHub — Donations & Relief Funds Audit</h4>
+        <small class="text-muted">Certified Financial & Supply Ledger</small>
+    </div>
+
+    <!-- Donations Table -->
+    <div class="card border-0 shadow-sm bg-white">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center pt-3 pb-2">
+            <span class="small text-muted">
+                Showing <strong class="text-dark" th:text="${#lists.size(donations)}">0</strong> contribution records
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Ref #</th>
+                        <th>Donor</th>
+                        <th>Type</th>
+                        <th>Value / Items</th>
+                        <th>Status</th>
+                        <th>Receipt #</th>
+                        <th>Submitted At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${donations}">
+                        <td>
+                            <strong class="font-monospace small text-primary" th:text="${d.donationReference}">DON-001</strong>
+                        </td>
+                        <td>
+                            <strong class="text-dark" th:text="${d.donorName}">Donor Name</strong>
+                            <div class="small text-muted" th:text="${d.donorEmail}">email@domain.com</div>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${d.donationType?.name() == 'MONETARY' ? 'bg-success' : 'bg-primary'}"
+                                  th:text="${d.donationType}">MONETARY</span>
+                        </td>
+                        <td>
+                            <span th:if="${d.donationType?.name() == 'MONETARY'}" class="fw-bold text-success"
+                                  th:text="'$' + ${d.amount}">$500</span>
+                            <span th:if="${d.donationType?.name() != 'MONETARY'}" class="fw-bold text-primary"
+                                  th:text="${d.itemQuantity} + ' ' + ${d.itemUnit}">100 KITS</span>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${d.status?.name() == 'VERIFIED' ? 'bg-success' : (d.status?.name() == 'RECEIVED_AT_CAMP' ? 'bg-info text-dark' : (d.status?.name() == 'SUBMITTED' ? 'bg-warning text-dark' : 'bg-secondary'))}"
+                                  th:text="${d.status}">VERIFIED</span>
+                        </td>
+                        <td class="small font-monospace text-muted" th:text="${d.donationReference}">RCP-001</td>
+                        <td class="small text-muted" th:text="${#temporals.format(d.createdAt, 'dd MMM yyyy HH:mm')}">Date</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(donations)}">
+                        <td colspan="7" class="text-center text-muted py-4">No donation records matching the selected filter.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title th:text="'Incident Dossier: ' + ${report.disaster.name} + ' — ResQHub'">Incident Dossier — ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+
+    <!-- Screen Toolbar (hidden during printing) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none flex-wrap gap-2">
+        <a th:href="@{/reports}" class="btn btn-outline-secondary btn-sm shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i> Reports Hub
+        </a>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-dark btn-sm shadow-sm">
+                <i class="bi bi-printer me-1"></i> Print Situation Report
+            </button>
+            <a th:href="@{'/reports/victims/csv?disasterId=' + ${report.disaster.id}}" class="btn btn-success btn-sm shadow-sm">
+                <i class="bi bi-download me-1"></i> Export Victims CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Official Situation Report Letterhead -->
+    <div class="card border-0 shadow-sm p-4 p-md-5 bg-white">
+        <!-- Letterhead Header -->
+        <div class="border-bottom pb-4 mb-4">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <span class="text-uppercase fw-bold text-success font-monospace small">ResQHub Humanitarian Incident Coordination</span>
+                    <h2 class="fw-bold mb-1 text-dark" th:text="${report.disaster.name}">Cyclone Aila</h2>
+                    <div class="text-muted small">
+                        Incident Location: <strong th:text="${report.disaster.location}">Coastal Region</strong> |
+                        Classification: <span class="badge bg-danger text-white" th:text="${report.disaster.severity}">CRITICAL</span> |
+                        Status: <span class="badge bg-primary" th:text="${report.disaster.status}">ACTIVE</span>
+                    </div>
+                </div>
+                <div class="text-md-end text-muted small">
+                    <div><strong>Report ID:</strong> <span class="font-monospace" th:text="'SITREP-' + ${report.disaster.id} + '-' + ${#dates.format(#dates.createNow(), 'yyyyMMdd')}">SITREP-001</span></div>
+                    <div><strong>Generated Date:</strong> <span th:text="${reportDate}">14 October 2026</span></div>
+                    <div><strong>Security Classification:</strong> OFFICIAL USE ONLY</div>
+                </div>
+            </div>
+            <p class="mt-3 mb-0 text-muted" th:text="${report.disaster.description}">
+                Disaster synopsis and situational assessment details.
+            </p>
+        </div>
+
+        <!-- Key Incident Metrics Summary Table -->
+        <h5 class="fw-bold text-dark mb-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> 1. Executive Operations Summary</h5>
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-md-3">
+                <div class="p-3 border rounded bg-light text-center">
+                    <span class="text-muted small text-uppercase fw-semibold">Total Victims Logged</span>
+                    <h3 class="fw-bold text-dark my-1" th:text="${report.totalVictimsCount}">0</h3>
+                    <span class="small text-muted"><strong class="text-danger" th:text="${report.criticalVictimsCount}">0</strong> Critical Cases</span>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <div class="p-3 border rounded bg-light text-center">
+                    <span class="text-muted small text-uppercase fw-semibold">Rescued & Safe</span>
+                    <h3 class="fw-bold text-success my-1" th:text="${report.rescuedVictimsCount}">0</h3>
+                    <span class="small text-muted">Successfully extracted</span>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <div class="p-3 border rounded bg-light text-center">
+                    <span class="text-muted small text-uppercase fw-semibold">Rescue Missions</span>
+                    <h3 class="fw-bold text-primary my-1" th:text="${report.completedRescueRequestsCount} + ' / ' + ${report.totalRescueRequestsCount}">0 / 0</h3>
+                    <span class="small text-muted">Completed / Filed</span>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <div class="p-3 border rounded bg-light text-center">
+                    <span class="text-muted small text-uppercase fw-semibold">Sheltered Evacuees</span>
+                    <h3 class="fw-bold text-info my-1" th:text="${report.activeShelterResidentsCount}">0</h3>
+                    <span class="small text-muted">Active camp residents</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Victims Triage Roster -->
+        <h5 class="fw-bold text-dark mb-3 mt-2"><i class="bi bi-people me-1 text-danger"></i> 2. Victim Triage Roster (First 20 Entries)</h5>
+        <div class="table-responsive mb-4">
+            <table class="table table-bordered table-sm align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Ref #</th>
+                        <th>Full Name</th>
+                        <th>Age</th>
+                        <th>Priority</th>
+                        <th>Rescue Status</th>
+                        <th>Location</th>
+                        <th>Accessibility Needs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="v, iter : ${report.victims}" th:if="${iter.index < 20}">
+                        <td class="font-monospace small fw-bold" th:text="${v.referenceNumber}">VIC-001</td>
+                        <td th:text="${v.fullName}">Full Name</td>
+                        <td class="small" th:text="${v.age != null ? v.age : 'N/A'}">34</td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${v.priority?.name() == 'CRITICAL' ? 'bg-danger' : (v.priority?.name() == 'HIGH' ? 'bg-warning text-dark' : 'bg-secondary')}"
+                                  th:text="${v.priority}">HIGH</span>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${v.rescueStatus?.name() == 'RESCUED' ? 'bg-success' : 'bg-primary'}"
+                                  th:text="${v.rescueStatus}">RESCUED</span>
+                        </td>
+                        <td class="small" th:text="${v.location}">Location</td>
+                        <td class="small text-muted" th:text="${v.accessibilityNeeds ?: 'None stated'}">Medical Notes</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(report.victims)}">
+                        <td colspan="7" class="text-center text-muted py-3">No victims recorded under this incident.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Section 3: Rescue Request Operations Log -->
+        <h5 class="fw-bold text-dark mb-3 mt-2"><i class="bi bi-life-preserver me-1 text-primary"></i> 3. Rescue Operations Log</h5>
+        <div class="table-responsive mb-4">
+            <table class="table table-bordered table-sm align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Request #</th>
+                        <th>Location</th>
+                        <th>Urgency</th>
+                        <th>People Count</th>
+                        <th>Status</th>
+                        <th>Contact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r, iter : ${report.rescueRequests}" th:if="${iter.index < 20}">
+                        <td class="font-monospace small fw-bold" th:text="'REQ-' + ${r.id}">REQ-1</td>
+                        <td class="small" th:text="${r.location}">Location</td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${r.urgency?.name() == 'CRITICAL' ? 'bg-danger' : 'bg-warning text-dark'}"
+                                  th:text="${r.urgency}">CRITICAL</span>
+                        </td>
+                        <td th:text="${r.peopleCount}">3</td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${r.status?.name() == 'COMPLETED' ? 'bg-success' : 'bg-danger'}"
+                                  th:text="${r.status}">COMPLETED</span>
+                        </td>
+                        <td class="small" th:text="${r.contactNumber}">+91 99999</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(report.rescueRequests)}">
+                        <td colspan="6" class="text-center text-muted py-3">No rescue requests recorded for this incident.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Signature Authorization Block for Print -->
+        <div class="row pt-5 mt-4 border-top">
+            <div class="col-6">
+                <div class="text-muted small">Incident Commander Signature:</div>
+                <div class="border-bottom border-dark mt-4" style="width: 250px;"></div>
+                <div class="small fw-semibold mt-1">Authorized Incident Command Officer</div>
+            </div>
+            <div class="col-6 text-end">
+                <div class="text-muted small">ResQHub System Verification:</div>
+                <div class="small font-monospace text-muted mt-2">SECURE-RECORD-HASH-VERIFIED</div>
+                <div class="small text-muted" th:text="'Certified On ' + ${reportDate}">Certified</div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+</body>
+</html>

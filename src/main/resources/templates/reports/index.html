@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Reports & Operational Analytics — ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="fw-bold mb-0 text-success-emphasis">Operational Reports & Analytics</h2>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                    <i class="bi bi-file-earmark-bar-graph me-1"></i> Audit & Intelligence
+                </span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">
+                Official situation reports, triage rosters, inventory reconciliations, and RFC-4180 CSV exports.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/dashboard}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Reports Hub Grid -->
+    <div class="row g-4 mb-4">
+
+        <!-- 1. Incident Dossier Card -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <span class="badge bg-danger-subtle text-danger px-3 py-2 fs-6">
+                                <i class="bi bi-shield-exclamation me-1"></i> Incident Dossier
+                            </span>
+                            <span class="badge bg-light text-dark border">Print-Ready View</span>
+                        </div>
+                        <h4 class="fw-bold text-dark">Disaster Incident Summary</h4>
+                        <p class="text-muted small mb-3">
+                            Generates a comprehensive printable situation report including casualty figures, victim rescue status, active shelter occupancy, and rescue team dispatches for a specific disaster.
+                        </p>
+                    </div>
+                    <div>
+                        <form th:action="@{/reports/incident/}" method="get" id="incidentReportForm"
+                              th:attr="data-base=@{/reports/incident/}" class="row g-2 align-items-center">
+                            <div class="col-8">
+                                <select id="disasterSelect" class="form-select form-select-sm" aria-label="Select disaster" required>
+                                    <option value="" disabled selected>-- Select Active Disaster --</option>
+                                    <option th:each="d : ${disasters}" th:value="${d.id}" th:text="${d.name} + ' (' + ${d.location} + ')'">Cyclone Aila</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <button type="submit" class="btn btn-danger btn-sm w-100 shadow-sm">
+                                    <i class="bi bi-file-earmark-text me-1"></i> View Dossier
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Victim Roster Card -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <span class="badge bg-warning-subtle text-warning-emphasis px-3 py-2 fs-6">
+                                <i class="bi bi-people me-1"></i> Victim Triage
+                            </span>
+                            <span class="badge bg-light text-dark border">CSV & Print</span>
+                        </div>
+                        <h4 class="fw-bold text-dark">Victim Rescue Roster</h4>
+                        <p class="text-muted small mb-3">
+                            Real-time registry of all reported victims, categorized by medical urgency triage, current rescue operation status, evacuation site, and special assistance requirements.
+                        </p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/reports/victims}" class="btn btn-outline-dark btn-sm flex-grow-1">
+                            <i class="bi bi-table me-1"></i> Interactive Report
+                        </a>
+                        <a th:href="@{/reports/victims/csv}" class="btn btn-success btn-sm">
+                            <i class="bi bi-download me-1"></i> Export CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Relief Inventory Card -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <span class="badge bg-primary-subtle text-primary px-3 py-2 fs-6">
+                                <i class="bi bi-boxes me-1"></i> Supply Logistics
+                            </span>
+                            <span class="badge bg-light text-dark border">CSV & Print</span>
+                        </div>
+                        <h4 class="fw-bold text-dark">Inventory & Supplies Roster</h4>
+                        <p class="text-muted small mb-3">
+                            Detailed stock reconciliation report across medical, ration, water, and shelter materials. Flags critical low-stock items requiring urgent procurement or re-allocation.
+                        </p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/reports/inventory}" class="btn btn-outline-dark btn-sm flex-grow-1">
+                            <i class="bi bi-table me-1"></i> Stock Ledger
+                        </a>
+                        <a th:href="@{/reports/inventory/csv}" class="btn btn-success btn-sm">
+                            <i class="bi bi-download me-1"></i> Export CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Donation & Relief Funds Card -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <span class="badge bg-success-subtle text-success px-3 py-2 fs-6">
+                                <i class="bi bi-currency-dollar me-1"></i> Financial Audit
+                            </span>
+                            <span class="badge bg-light text-dark border">CSV & Print</span>
+                        </div>
+                        <h4 class="fw-bold text-dark">Donations & Relief Audit</h4>
+                        <p class="text-muted small mb-3">
+                            Financial integrity and material donation ledger. Summarizes verified bank transfers, physical goods accepted into camp inventory, and donor transaction certificates.
+                        </p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/reports/donations}" class="btn btn-outline-dark btn-sm flex-grow-1">
+                            <i class="bi bi-table me-1"></i> Audit Ledger
+                        </a>
+                        <a th:href="@{/reports/donations/csv}" class="btn btn-success btn-sm">
+                            <i class="bi bi-download me-1"></i> Export CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var form = document.getElementById('incidentReportForm');
+            var select = document.getElementById('disasterSelect');
+            if (form && select) {
+                form.addEventListener('submit', function () {
+                    form.action = form.getAttribute('data-base') + select.value;
+                });
+            }
+        });
+    </script>
+
+</div>
+</body>
+</html>

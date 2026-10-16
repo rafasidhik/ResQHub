@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Citizen Emergency Portal — ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="fw-bold mb-0 text-danger">Citizen Emergency Portal</h2>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                    <i class="bi bi-person-heart me-1"></i> Public Safety Console
+                </span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">
+                Report emergencies, request rescue, locate shelters, and access relief resources.
+            </p>
+        </div>
+    </div>
+
+    <!-- Admin Perspective Preview Banner -->
+    <div class="card border-0 shadow-sm mb-4 border-start border-4 border-primary bg-light" sec:authorize="hasRole('ADMIN')">
+        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary text-white"><i class="bi bi-eye-fill me-1"></i> Preview Mode</span>
+                <span class="small text-muted">
+                    Viewing <strong>Citizen Emergency Portal</strong> as Administrator.
+                </span>
+            </div>
+            <div class="btn-group btn-group-sm" role="group">
+                <a th:href="@{/dashboard/admin}" class="btn btn-primary fw-semibold">
+                    <i class="bi bi-arrow-left-circle me-1"></i> Return to Admin Command
+                </a>
+                <a th:href="@{/dashboard/rescue-officer}" class="btn btn-outline-dark">Rescue Officer</a>
+                <a th:href="@{/dashboard/camp-manager}" class="btn btn-outline-dark">Camp Manager</a>
+                <a th:href="@{/dashboard/volunteer}" class="btn btn-outline-dark">Volunteer</a>
+                <a th:href="@{/dashboard/citizen}" class="btn btn-outline-dark active">Citizen</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency SOS Alert Banner -->
+    <div class="card border-0 shadow-sm bg-danger text-white mb-4">
+        <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <span class="badge bg-white text-danger fw-bold mb-2 px-2 py-1">
+                    <i class="bi bi-exclamation-octagon-fill me-1"></i> EMERGENCY ASSISTANCE
+                </span>
+                <h3 class="fw-bold mb-1">Are you or family members stranded in a disaster zone?</h3>
+                <p class="mb-0 text-white opacity-75">
+                    Submit an immediate rescue alert to dispatch first responders and rescue squads to your exact location.
+                </p>
+            </div>
+            <div>
+                <a th:href="@{/rescue-requests/new}" class="btn btn-light btn-lg text-danger fw-bold shadow">
+                    <i class="bi bi-life-preserver me-2"></i> Request Immediate Rescue
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Disasters Quick Warning Alert -->
+    <div th:if="${not #lists.isEmpty(stats.activeDisasters)}" class="alert alert-warning border-warning shadow-sm mb-4">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-exclamation-triangle-fill fs-5 text-warning-emphasis"></i>
+            <strong>Active Disaster Advisories In Effect:</strong>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <span th:each="d : ${stats.activeDisasters}" class="badge bg-danger px-3 py-2">
+                <span th:text="${d.name}">Cyclone Aila</span> (<span th:text="${d.location}">Coast</span>) - <span th:text="${d.severity}">CRITICAL</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- My Rescue Requests Tracker -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center pt-3 pb-2">
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-list-check me-1 text-primary"></i> My Rescue Requests Tracker
+                    </h6>
+                    <a th:href="@{/rescue-requests/my-requests}" class="btn btn-outline-primary btn-sm">All My Requests</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ref #</th>
+                                <th>Location</th>
+                                <th>People</th>
+                                <th>Status</th>
+                                <th class="text-end">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="req : ${stats.myRequests}">
+                                <td>
+                                    <strong class="text-primary font-monospace small" th:text="'REQ-' + ${req.id}">REQ-1</strong>
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold text-truncate" style="max-width: 200px;" th:text="${req.location}">Location</div>
+                                </td>
+                                <td th:text="${req.peopleCount}">1</td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${req.status?.name() == 'PENDING' ? 'bg-danger' : (req.status?.name() == 'ASSIGNED' ? 'bg-primary' : (req.status?.name() == 'IN_PROGRESS' ? 'bg-warning text-dark' : 'bg-success'))}"
+                                          th:text="${req.status}">PENDING</span>
+                                </td>
+                                <td class="text-end">
+                                    <a th:href="@{'/rescue-requests/' + ${req.id}}" class="btn btn-outline-secondary btn-sm py-0 px-2">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(stats.myRequests)}">
+                                <td colspan="5" class="text-center text-muted py-3">
+                                    You have no active rescue requests filed.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Open Emergency Shelters -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center pt-3 pb-2">
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-house-door me-1 text-success"></i> Open Emergency Shelters
+                    </h6>
+                    <a th:href="@{/shelters}" class="btn btn-outline-success btn-sm">Find Nearby</a>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        <li th:each="s : ${stats.openShelters}" class="list-group-item px-3 py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong class="small text-dark" th:text="${s.name}">Shelter Alpha</strong>
+                                    <div class="small text-muted" th:text="${s.address} + ' — Contact: ' + ${s.contactNumber}">City</div>
+                                </div>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                    <span th:text="${s.totalCapacity - s.currentOccupancy}">50</span> beds free
+                                </span>
+                            </div>
+                        </li>
+                        <li th:if="${#lists.isEmpty(stats.openShelters)}" class="list-group-item text-center text-muted py-3">
+                            No open shelters registered yet.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Citizen Community Action Grid -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 text-center p-3">
+                <div class="card-body">
+                    <i class="bi bi-heart-fill fs-1 text-danger mb-2"></i>
+                    <h5 class="fw-bold">Contribute Relief</h5>
+                    <p class="small text-muted">Donate monetary funds or relief supplies directly to active camps.</p>
+                    <a th:href="@{/donations/new}" class="btn btn-outline-danger btn-sm">Donate Now</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 text-center p-3">
+                <div class="card-body">
+                    <i class="bi bi-person-heart fs-1 text-primary mb-2"></i>
+                    <h5 class="fw-bold">Join as Volunteer</h5>
+                    <p class="small text-muted">Register your skills and support field rescue and logistics squads.</p>
+                    <a th:href="@{/volunteers/register}" class="btn btn-outline-primary btn-sm">Sign Up as Volunteer</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 text-center p-3">
+                <div class="card-body">
+                    <i class="bi bi-telephone-inbound-fill fs-1 text-success mb-2"></i>
+                    <h5 class="fw-bold">Emergency Helplines</h5>
+                    <p class="small text-muted">Disaster Management Toll-Free: <strong>1070</strong> | Police: <strong>100</strong></p>
+                    <span class="badge bg-success-subtle text-success">24/7 Operations</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

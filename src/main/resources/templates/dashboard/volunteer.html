@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Volunteer Mission Board — ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="fw-bold mb-0 text-primary">Volunteer Mission Console</h2>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                    <i class="bi bi-person-heart me-1"></i> Field Volunteer Portal
+                </span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">
+                Personal assignment tracker, active task status, and humanitarian relief mission board.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/volunteers/assignments}" class="btn btn-outline-primary btn-sm shadow-sm">
+                <i class="bi bi-list-task me-1"></i> All Assignments
+            </a>
+            <div th:if="${stats.volunteer != null}">
+                <form th:action="@{'/volunteers/' + ${stats.volunteer.id} + '/availability'}" method="post" class="d-inline">
+                    <input type="hidden" name="status" th:value="${stats.availability?.name() == 'AVAILABLE' ? 'UNAVAILABLE' : 'AVAILABLE'}">
+                    <button type="submit" class="btn btn-sm shadow-sm"
+                            th:classappend="${stats.availability?.name() == 'AVAILABLE' ? 'btn-outline-danger' : 'btn-success'}">
+                        <i class="bi" th:classappend="${stats.availability?.name() == 'AVAILABLE' ? 'bi-toggle-on' : 'bi-toggle-off'}"></i>
+                        <span th:text="${stats.availability?.name() == 'AVAILABLE' ? 'Go Off-Duty' : 'Go On-Duty'}">Toggle Status</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Perspective Preview Banner -->
+    <div class="card border-0 shadow-sm mb-4 border-start border-4 border-primary bg-light" sec:authorize="hasRole('ADMIN')">
+        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary text-white"><i class="bi bi-eye-fill me-1"></i> Preview Mode</span>
+                <span class="small text-muted">
+                    Viewing <strong>Volunteer Mission Console</strong> as Administrator.
+                </span>
+            </div>
+            <div class="btn-group btn-group-sm" role="group">
+                <a th:href="@{/dashboard/admin}" class="btn btn-primary fw-semibold">
+                    <i class="bi bi-arrow-left-circle me-1"></i> Return to Admin Command
+                </a>
+                <a th:href="@{/dashboard/rescue-officer}" class="btn btn-outline-dark">Rescue Officer</a>
+                <a th:href="@{/dashboard/camp-manager}" class="btn btn-outline-dark">Camp Manager</a>
+                <a th:href="@{/dashboard/volunteer}" class="btn btn-outline-dark active">Volunteer</a>
+                <a th:href="@{/dashboard/citizen}" class="btn btn-outline-dark">Citizen</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Banner for Unapproved / Pending Volunteers -->
+    <div th:if="${stats.approvalStatus?.name() == 'PENDING'}" class="alert alert-warning border-warning shadow-sm mb-4">
+        <i class="bi bi-hourglass-split me-2 fs-5"></i>
+        <strong>Account Under Review:</strong> Your volunteer registration is currently pending administrative verification. Once approved by relief officers, missions will be assigned to you.
+    </div>
+
+    <!-- Volunteer Profile & Status Strip -->
+    <div class="card border-0 shadow-sm mb-4 bg-light" th:if="${stats.volunteer != null}">
+        <div class="card-body py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <span class="small text-muted font-monospace" th:text="${stats.volunteer.volunteerIdentifier}">VOL-0001</span>
+                <h5 class="fw-bold mb-0 text-dark" th:text="${stats.volunteer.skills}">Medical Aid, Logistics</h5>
+                <span class="small text-muted">Primary Location: <strong th:text="${stats.volunteer.operatingArea}">City</strong></span>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge px-3 py-2"
+                      th:classappend="${stats.approvalStatus?.name() == 'APPROVED' ? 'bg-success' : 'bg-warning text-dark'}"
+                      th:text="'Status: ' + ${stats.approvalStatus}">APPROVED</span>
+                <span class="badge px-3 py-2"
+                      th:classappend="${stats.availability?.name() == 'AVAILABLE' ? 'bg-primary' : 'bg-secondary'}"
+                      th:text="'Availability: ' + ${stats.availability}">AVAILABLE</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Metric Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-4">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted text-uppercase fw-semibold small">Assigned Tasks</span>
+                            <h3 class="fw-bold my-1 text-warning-emphasis" th:text="${stats.assignedTasksCount}">0</h3>
+                            <span class="small text-muted">Pending commencement</span>
+                        </div>
+                        <div class="bg-warning-subtle text-warning-emphasis p-3 rounded-circle">
+                            <i class="bi bi-clock-history fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-4">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted text-uppercase fw-semibold small">In-Progress Tasks</span>
+                            <h3 class="fw-bold my-1 text-primary" th:text="${stats.inProgressTasksCount}">0</h3>
+                            <span class="small text-muted">Currently underway</span>
+                        </div>
+                        <div class="bg-primary-subtle text-primary p-3 rounded-circle">
+                            <i class="bi bi-arrow-repeat fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-4">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted text-uppercase fw-semibold small">Completed Missions</span>
+                            <h3 class="fw-bold my-1 text-success" th:text="${stats.completedTasksCount}">0</h3>
+                            <span class="small text-muted">Successfully executed</span>
+                        </div>
+                        <div class="bg-success-subtle text-success p-3 rounded-circle">
+                            <i class="bi bi-check2-circle fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Assignments Roster -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center pt-3 pb-2">
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-card-checklist me-1 text-primary"></i> My Task Assignments
+                    </h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Task Title</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Assigned Date</th>
+                                <th>Notes / Instructions</th>
+                                <th class="text-end">Update Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="task : ${stats.myAssignments}">
+                                <td>
+                                    <strong class="text-dark" th:text="${task.taskTitle}">Ration Distribution</strong>
+                                </td>
+                                <td>
+                                    <span th:if="${task.priority?.name() == 'URGENT'}" class="badge bg-danger">URGENT</span>
+                                    <span th:if="${task.priority?.name() == 'HIGH'}" class="badge bg-warning text-dark">HIGH</span>
+                                    <span th:if="${task.priority?.name() == 'MEDIUM'}" class="badge bg-info text-dark">MEDIUM</span>
+                                    <span th:if="${task.priority?.name() == 'LOW'}" class="badge bg-secondary">LOW</span>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${task.status?.name() == 'COMPLETED' ? 'bg-success' : (task.status?.name() == 'IN_PROGRESS' ? 'bg-primary' : 'bg-warning text-dark')}"
+                                          th:text="${task.status}">ASSIGNED</span>
+                                </td>
+                                <td class="small text-muted" th:text="${#temporals.format(task.assignedAt, 'dd MMM yyyy HH:mm')}">Date</td>
+                                <td>
+                                    <span class="small text-muted text-truncate d-inline-block" style="max-width: 250px;" th:text="${task.progressNotes ?: 'Standard operational task'}">Notes</span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <form th:if="${task.status?.name() == 'OFFERED' || task.status?.name() == 'PENDING'}" th:action="@{'/volunteers/assignments/' + ${task.id} + '/accept'}" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-primary btn-sm py-0">Accept</button>
+                                        </form>
+                                        <form th:if="${task.status?.name() == 'ACCEPTED'}" th:action="@{'/volunteers/assignments/' + ${task.id} + '/start'}" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm py-0">Start</button>
+                                        </form>
+                                        <form th:if="${task.status?.name() == 'IN_PROGRESS'}" th:action="@{'/volunteers/assignments/' + ${task.id} + '/complete'}" method="post" class="d-inline ms-1">
+                                            <button type="submit" class="btn btn-success btn-sm py-0">Complete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(stats.myAssignments)}">
+                                <td colspan="6" class="text-center text-muted py-3">You currently have no tasks assigned. Check back soon!</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

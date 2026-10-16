@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>System Activity Logs &mdash; ResQHub Admin</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">System Activity Logs</h2>
+            <p class="text-muted small mb-0">Immutable operational audit trail of disaster coordination events</p>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card card-resq mb-4 p-3 border-0 shadow-sm">
+        <form th:action="@{/admin/activity-logs}" method="get" class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" th:value="${search}" class="form-control"
+                           placeholder="Search action, description, or username...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="module" class="form-select">
+                    <option value="ALL" th:selected="${selectedModule == 'ALL'}">All Modules</option>
+                    <option value="AUTH" th:selected="${selectedModule == 'AUTH'}">Authentication</option>
+                    <option value="USER_MGMT" th:selected="${selectedModule == 'USER_MGMT'}">User Management</option>
+                    <option value="DISASTER" th:selected="${selectedModule == 'DISASTER'}">Disasters</option>
+                    <option value="RESCUE" th:selected="${selectedModule == 'RESCUE'}">Rescue Operations</option>
+                    <option value="SHELTER" th:selected="${selectedModule == 'SHELTER'}">Shelters & Camps</option>
+                    <option value="VOLUNTEER" th:selected="${selectedModule == 'VOLUNTEER'}">Volunteers</option>
+                    <option value="INVENTORY" th:selected="${selectedModule == 'INVENTORY'}">Inventory</option>
+                    <option value="DONATION" th:selected="${selectedModule == 'DONATION'}">Donations</option>
+                    <option value="PROFILE" th:selected="${selectedModule == 'PROFILE'}">User Profile</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-secondary flex-grow-1">
+                    <i class="bi bi-filter me-1"></i> Filter
+                </button>
+                <a th:href="@{/admin/activity-logs}" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="card card-resq shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-resq align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Actor</th>
+                            <th>Module</th>
+                            <th>Action</th>
+                            <th>Record Ref</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(logs)}">
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <i class="bi bi-journal-x fs-2 d-block mb-2"></i>
+                                No activity logs found matching the filter criteria.
+                            </td>
+                        </tr>
+                        <tr th:each="log : ${logs}">
+                            <td class="small text-muted text-nowrap" th:text="${log.created_at}">2026-10-14 12:00:00</td>
+                            <td>
+                                <strong th:text="${log.username ?: 'System'}">admin</strong>
+                                <div class="small text-muted" th:text="${log.role ?: ''}">ADMIN</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border" th:text="${log.module}">MODULE</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary" th:text="${log.action}">ACTION</span>
+                            </td>
+                            <td class="small font-monospace text-muted" th:text="${log.affected_record_id ?: '—'}">ID</td>
+                            <td th:text="${log.description}">Description of the event</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination Footer -->
+        <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-3" th:if="${totalPages > 1}">
+            <div class="small text-muted">
+                Showing page <strong th:text="${currentPage + 1}">1</strong> of <strong th:text="${totalPages}">1</strong>
+                (Total <span th:text="${totalLogs}">10</span> log entries)
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                        <a class="page-link" th:href="@{/admin/activity-logs(page=${currentPage - 1}, module=${selectedModule}, search=${search})}">&laquo; Prev</a>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                        th:classappend="${currentPage == i} ? 'active' : ''">
+                        <a class="page-link" th:href="@{/admin/activity-logs(page=${i}, module=${selectedModule}, search=${search})}" th:text="${i + 1}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled' : ''">
+                        <a class="page-link" th:href="@{/admin/activity-logs(page=${currentPage + 1}, module=${selectedModule}, search=${search})}">Next &raquo;</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+</body>
+</html>

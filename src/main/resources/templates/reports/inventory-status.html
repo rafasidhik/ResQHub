@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Relief Inventory & Supply Roster — ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+
+    <!-- Screen Toolbar (hidden in print) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none flex-wrap gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="fw-bold mb-0 text-dark">Relief Inventory & Supplies Roster</h2>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                    <i class="bi bi-boxes me-1"></i> Supply Logistics
+                </span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">
+                Stock reconciliation, threshold monitoring, and supply dispatch tracking.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/reports}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i> Reports Hub
+            </a>
+            <button onclick="window.print()" class="btn btn-dark btn-sm shadow-sm">
+                <i class="bi bi-printer me-1"></i> Print Report
+            </button>
+            <a th:href="@{/reports/inventory/csv(category=${selectedCategory}, lowStockOnly=${lowStockOnly})}"
+               class="btn btn-success btn-sm shadow-sm">
+                <i class="bi bi-download me-1"></i> Download CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Bar (hidden in print) -->
+    <div class="card border-0 shadow-sm mb-4 bg-light d-print-none">
+        <div class="card-body py-3 px-3">
+            <form th:action="@{/reports/inventory}" method="get" class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label small text-muted mb-1">Item Category</label>
+                    <select name="category" class="form-select form-select-sm">
+                        <option value="">-- All Categories --</option>
+                        <option th:each="c : ${categories}"
+                                th:value="${c.name()}"
+                                th:text="${c.name()}"
+                                th:selected="${c.name() == selectedCategory}">FOOD</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check pt-3">
+                        <input class="form-check-input" type="checkbox" name="lowStockOnly" id="lowStockCheck" value="true" th:checked="${lowStockOnly}">
+                        <label class="form-check-label small fw-semibold text-danger" for="lowStockCheck">
+                            Show Low Stock Alerts Only
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm flex-grow-1 shadow-sm">
+                        <i class="bi bi-filter me-1"></i> Filter
+                    </button>
+                    <a th:href="@{/reports/inventory}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Print-Visible Header Letterhead -->
+    <div class="d-none d-print-block mb-3 border-bottom pb-2">
+        <h4 class="fw-bold mb-0">ResQHub — Relief Supplies & Inventory Ledger</h4>
+        <small class="text-muted">Official Warehouse & Camp Distribution Record</small>
+    </div>
+
+    <!-- Inventory Data Table -->
+    <div class="card border-0 shadow-sm bg-white">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center pt-3 pb-2">
+            <span class="small text-muted">
+                Showing <strong class="text-dark" th:text="${#lists.size(items)}">0</strong> inventory items
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Code</th>
+                        <th>Item Name</th>
+                        <th>Category</th>
+                        <th>Available Stock</th>
+                        <th>Min Threshold</th>
+                        <th>Status</th>
+                        <th>Storage Location</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="item : ${items}">
+                        <td>
+                            <strong class="font-monospace small text-primary" th:text="'ITM-' + ${item.id}">ITM-1</strong>
+                        </td>
+                        <td>
+                            <strong class="text-dark" th:text="${item.itemName}">Rice 25kg</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border" th:text="${item.category}">FOOD</span>
+                        </td>
+                        <td>
+                            <strong class="fs-6" th:text="${item.quantityAvailable} + ' ' + ${item.unit}">50 PACKETS</strong>
+                        </td>
+                        <td class="small text-muted" th:text="${item.minimumStockLevel} + ' ' + ${item.unit}">20</td>
+                        <td>
+                            <span th:if="${item.quantityAvailable <= item.minimumStockLevel}" class="badge bg-danger">
+                                <i class="bi bi-exclamation-triangle me-1"></i> LOW STOCK
+                            </span>
+                            <span th:if="${item.quantityAvailable > item.minimumStockLevel}" class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i> SUFFICIENT
+                            </span>
+                        </td>
+                        <td class="small" th:text="${item.storageLocation}">Warehouse Bay 1</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(items)}">
+                        <td colspan="7" class="text-center text-muted py-4">No inventory items matching the selected filter.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
