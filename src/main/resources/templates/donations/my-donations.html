@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>My Donations &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                <i class="bi bi-heart me-2"></i>My Humanitarian Contributions
+            </h2>
+            <p class="text-muted small mb-0">Record of your personal monetary relief pledges and material supply donations</p>
+        </div>
+        <div>
+            <a th:href="@{/donations/new}" class="btn btn-resq-primary">
+                <i class="bi bi-plus-circle me-1"></i> Make a Donation
+            </a>
+        </div>
+    </div>
+
+    <div class="card card-resq shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-resq align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Reference</th>
+                        <th>Donation Date</th>
+                        <th>Donation Type</th>
+                        <th>Contribution</th>
+                        <th>Status</th>
+                        <th class="text-end pe-3">Receipt</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${donations.empty}">
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-heart display-6 d-block mb-2 text-muted"></i>
+                            You have not recorded any contributions with this account email yet.
+                            <div class="mt-2">
+                                <a th:href="@{/donations/new}" class="btn btn-sm btn-outline-success">
+                                    Support Disaster Relief Today
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:each="d : ${donations}">
+                        <td>
+                            <a th:href="@{/donations/receipt/{ref}(ref=${d.donationReference})}"
+                               class="font-monospace fw-bold text-decoration-none" style="color: var(--resq-green-dark);"
+                               th:text="${d.donationReference}">DON-2026-0001</a>
+                        </td>
+                        <td>
+                            <span class="small text-muted" th:text="${#temporals.format(d.donationDate, 'dd MMM yyyy')}">Date</span>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${d.donationType.name() == 'MONETARY' ? 'bg-success' : 'bg-primary'}"
+                                  th:text="${d.donationType.displayName}">MONETARY</span>
+                        </td>
+                        <td>
+                            <div th:if="${d.donationType.name() == 'MONETARY'}">
+                                <span class="fw-bold fs-6 text-success"
+                                      th:text="${'$' + #numbers.formatDecimal(d.amount, 1, 'COMMA', 2, 'POINT')}">$50.00</span>
+                            </div>
+                            <div th:if="${d.donationType.name() == 'MATERIAL'}">
+                                <span class="fw-bold fs-6 text-dark" th:text="${d.itemQuantity + ' unit(s)'}">50 units</span>
+                                <small class="text-muted d-block text-truncate" style="max-width: 200px;" th:text="${d.itemName}">Item</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${d.status.name() == 'RECEIVED' or d.status.name() == 'ALLOCATED' ? 'bg-success' : (d.status.name() == 'VERIFIED' ? 'bg-primary' : 'bg-warning text-dark')}"
+                                  th:text="${d.status.displayName}">SUBMITTED</span>
+                        </td>
+                        <td class="text-end pe-3">
+                            <a th:href="@{/donations/receipt/{ref}(ref=${d.donationReference})}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-printer me-1"></i> Receipt
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

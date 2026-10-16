@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title th:text="${'Donation Receipt ' + donation.donationReference + ' — ResQHub'}">Donation Receipt</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+                <a th:href="@{/donations/new}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Make Another Contribution
+                </a>
+                <button type="button" class="btn btn-outline-primary" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i> Print Receipt / Certificate
+                </button>
+            </div>
+
+            <!-- Printable Certificate Card -->
+            <div class="card card-resq shadow-sm border p-4 p-md-5 bg-white">
+                <div class="d-flex justify-content-between align-items-start border-bottom pb-4 mb-4">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="fs-4 fw-bold" style="color: var(--resq-green-dark);">ResQHub</span>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Official Receipt</span>
+                        </div>
+                        <div class="small text-muted font-monospace" th:text="${'Reference: ' + donation.donationReference}">DON-2026-0001</div>
+                        <div class="small fst-italic text-secondary">Help. Hope. Humanity.</div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge px-3 py-2 fs-6"
+                              th:classappend="${donation.status.name() == 'RECEIVED' or donation.status.name() == 'ALLOCATED' ? 'bg-success' : (donation.status.name() == 'VERIFIED' ? 'bg-primary' : 'bg-warning text-dark')}"
+                              th:text="${donation.status.displayName}">VERIFIED</span>
+                        <div class="small text-muted mt-1" th:text="${#temporals.format(donation.donationDate, 'dd MMMM yyyy')}">Date</div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h5 class="fw-bold mb-3" style="color: var(--resq-green-dark);">Humanitarian Contribution Certificate</h5>
+                    <p class="text-secondary">This document certifies with deep gratitude the generous contribution received on behalf of the disaster relief and emergency response efforts managed by ResQHub.</p>
+                </div>
+
+                <div class="row g-3 mb-4 bg-light rounded p-3">
+                    <div class="col-md-6">
+                        <label class="small text-muted fw-semibold">Donor / Contributor Name</label>
+                        <div class="h5 fw-bold text-dark mb-0" th:text="${donation.donorName}">Donor Name</div>
+                        <small class="text-muted" th:text="${donation.donorEmail}">email@domain.com</small>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <label class="small text-muted fw-semibold">Contribution Value</label>
+                        <div th:if="${donation.donationType.name() == 'MONETARY'}">
+                            <div class="display-6 fw-bold text-success mb-0"
+                                 th:text="${'$' + #numbers.formatDecimal(donation.amount, 1, 'COMMA', 2, 'POINT')}">$50.00</div>
+                            <small class="text-muted">Unrestricted Disaster Relief Fund</small>
+                        </div>
+                        <div th:if="${donation.donationType.name() == 'MATERIAL'}">
+                            <div class="h4 fw-bold text-primary mb-0"
+                                 th:text="${donation.itemQuantity + ' unit(s)'}">50 units</div>
+                            <small class="text-muted" th:text="${donation.itemName}">Emergency Relief Supplies</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4" th:if="${donation.notes != null and !donation.notes.empty}">
+                    <label class="small text-muted fw-semibold">Dedication Message</label>
+                    <div class="p-3 bg-light rounded fst-italic small text-dark" th:text="${'“' + donation.notes + '”'}">Message</div>
+                </div>
+
+                <div class="pt-4 border-top text-center text-muted small">
+                    <p class="mb-1">ResQHub Integrated Disaster Response System &bull; Open Coordination Network</p>
+                    <p class="mb-0 text-secondary" style="font-size: 0.8rem;">Every contribution directly strengthens emergency squad readiness, relief camp sustenance, and victim welfare.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

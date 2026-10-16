@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Donations Management &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                <i class="bi bi-cash-stack me-2"></i>Donations Management &amp; Aid Ledger
+            </h2>
+            <p class="text-muted small mb-0">Financial aid contributions, physical supply donations, verification workflows, and warehouse deposit ledger</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/inventory}" class="btn btn-outline-secondary">
+                <i class="bi bi-boxes me-1"></i> Warehouse Inventory
+            </a>
+            <a th:href="@{/donations/new}" class="btn btn-resq-primary">
+                <i class="bi bi-plus-circle me-1"></i> Record New Donation
+            </a>
+        </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Total Aid Pledges</div>
+                <div class="h3 fw-bold text-dark mb-0" th:text="${totalCount}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-receipt me-1"></i>Logged donor contributions</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Verified Relief Funds</div>
+                <div class="h3 fw-bold text-success mb-0" th:text="${'$' + #numbers.formatDecimal(totalFunds, 1, 'COMMA', 2, 'POINT')}">$0.00</div>
+                <div class="small text-muted mt-1"><i class="bi bi-wallet2 me-1"></i>Verified monetary funding</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Physical Supplies Received</div>
+                <div class="h3 fw-bold mb-0" style="color: var(--resq-green-dark);" th:text="${totalMaterialUnits}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-box-seam me-1"></i>Deposited units into inventory</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card card-resq mb-4 p-3 border-0 shadow-sm">
+        <form th:action="@{/donations}" method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted mb-1">Filter by Status</label>
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="ALL" th:selected="${selectedStatus == 'ALL'}">All Statuses</option>
+                    <option th:each="s : ${statuses}" th:value="${s.name()}" th:text="${s.displayName}"
+                            th:selected="${selectedStatus == s.name()}">Status</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted mb-1">Filter by Donation Type</label>
+                <select name="type" class="form-select" onchange="this.form.submit()">
+                    <option value="ALL" th:selected="${selectedType == 'ALL'}">All Donation Types</option>
+                    <option th:each="t : ${types}" th:value="${t.name()}" th:text="${t.displayName}"
+                            th:selected="${selectedType == t.name()}">Type</option>
+                </select>
+            </div>
+            <div class="col-md-4 text-md-end pt-md-4">
+                <a th:href="@{/donations}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Reset Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Donations Table -->
+    <div class="card card-resq shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-resq align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Reference &amp; Date</th>
+                        <th>Donor Details</th>
+                        <th>Type</th>
+                        <th>Contribution Value</th>
+                        <th>Status</th>
+                        <th>Inventory Deposit</th>
+                        <th class="text-end pe-3" sec:authorize="hasRole('ADMIN')">Workflow Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${donations.empty}">
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-heart display-6 d-block mb-2 text-muted"></i>
+                            No donation records found for the selected criteria.
+                        </td>
+                    </tr>
+                    <tr th:each="d : ${donations}">
+                        <td>
+                            <a th:href="@{/donations/receipt/{ref}(ref=${d.donationReference})}" class="font-monospace fw-bold text-decoration-none"
+                               style="color: var(--resq-green-dark);" th:text="${d.donationReference}">DON-2026-0001</a>
+                            <small class="text-muted d-block" th:text="${#temporals.format(d.donationDate, 'dd MMM yyyy')}">Date</small>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark" th:text="${d.donorName}">Donor Name</div>
+                            <small class="text-muted"><i class="bi bi-envelope me-1"></i><span th:text="${d.donorEmail}">email</span></small>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${d.donationType.name() == 'MONETARY' ? 'bg-success' : 'bg-primary'}"
+                                  th:text="${d.donationType.displayName}">MONETARY</span>
+                        </td>
+                        <td>
+                            <div th:if="${d.donationType.name() == 'MONETARY'}">
+                                <span class="fw-bold fs-6 text-success" th:text="${'$' + #numbers.formatDecimal(d.amount, 1, 'COMMA', 2, 'POINT')}">$100.00</span>
+                            </div>
+                            <div th:if="${d.donationType.name() == 'MATERIAL'}">
+                                <span class="fw-bold fs-6 text-dark" th:text="${d.itemQuantity + ' unit(s)'}">50 units</span>
+                                <small class="text-muted d-block text-truncate" style="max-width: 180px;" th:text="${d.itemName}">Item Name</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${d.status.name() == 'RECEIVED' or d.status.name() == 'ALLOCATED' ? 'bg-success' : (d.status.name() == 'VERIFIED' ? 'bg-primary' : (d.status.name() == 'SUBMITTED' ? 'bg-warning text-dark' : 'bg-secondary'))}"
+                                  th:text="${d.status.displayName}">SUBMITTED</span>
+                        </td>
+                        <td>
+                            <span th:if="${d.donationType.name() == 'MATERIAL'}">
+                                <span th:if="${d.inventoryAdded}" class="badge bg-light text-success border border-success">
+                                    <i class="bi bi-check2-circle me-1"></i> Deposited
+                                </span>
+                                <span th:if="${!d.inventoryAdded}" class="badge bg-light text-muted border">
+                                    Pending Intake
+                                </span>
+                            </span>
+                            <span th:if="${d.donationType.name() == 'MONETARY'}" class="text-muted small">Financial Reserve</span>
+                        </td>
+                        <td class="text-end pe-3" sec:authorize="hasRole('ADMIN')">
+                            <div class="d-inline-flex gap-1">
+                                <a th:href="@{/donations/receipt/{ref}(ref=${d.donationReference})}" class="btn btn-sm btn-outline-secondary" title="View Receipt">
+                                    <i class="bi bi-receipt"></i>
+                                </a>
+
+                                <!-- Verify action -->
+                                <form th:if="${d.status.name() == 'SUBMITTED'}"
+                                      th:action="@{/donations/{id}/verify(id=${d.id})}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Verify Donation">
+                                        <i class="bi bi-check-lg"></i> Verify
+                                    </button>
+                                </form>
+
+                                <!-- Receive Material to Inventory action -->
+                                <form th:if="${d.donationType.name() == 'MATERIAL' and !d.inventoryAdded and (d.status.name() == 'SUBMITTED' or d.status.name() == 'VERIFIED')}"
+                                      th:action="@{/donations/{id}/receive(id=${d.id})}" method="post" class="d-inline"
+                                      th:data-confirm="'Deposit donated supplies into warehouse inventory?'">
+                                    <button type="submit" class="btn btn-sm btn-primary" title="Deposit to Inventory">
+                                        <i class="bi bi-box-arrow-in-down me-1"></i> Deposit
+                                    </button>
+                                </form>
+
+                                <!-- Cancel action -->
+                                <form th:if="${d.status.name() != 'CANCELLED'}"
+                                      th:action="@{/donations/{id}/cancel(id=${d.id})}" method="post" class="d-inline"
+                                      th:data-confirm="'Cancel this donation record?'">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

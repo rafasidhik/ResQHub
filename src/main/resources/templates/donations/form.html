@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Make a Relief Donation &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-4">
+                <span class="badge px-3 py-2 rounded-pill mb-2" style="background-color: var(--resq-sand); color: var(--resq-green-dark); font-weight: 600;">
+                    <i class="bi bi-heart-fill text-danger me-1"></i> Help. Hope. Humanity.
+                </span>
+                <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                    Support Emergency Disaster Relief
+                </h2>
+                <p class="text-muted small">Your contributions directly fund rescue squads, provide life-saving meals, and equip displaced families in relief shelters.</p>
+            </div>
+
+            <div class="card card-resq shadow-sm border-0">
+                <div class="card-body p-4">
+                    <form th:action="@{/donations/new}" th:object="${donationDto}" method="post" id="donationForm">
+
+                        <!-- Step 1: Donor Information -->
+                        <h5 class="fw-bold mb-3" style="color: var(--resq-green-dark);">
+                            <i class="bi bi-person me-2"></i>Donor Information
+                        </h5>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Donor / Organization Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{donorName}"
+                                   th:classappend="${#fields.hasErrors('donorName')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. John Smith or Apex Community Foundation" required>
+                            <div class="invalid-feedback" th:errors="*{donorName}">Donor name is required</div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" th:field="*{donorEmail}"
+                                       th:classappend="${#fields.hasErrors('donorEmail')} ? 'is-invalid' : ''"
+                                       placeholder="john@example.com" required>
+                                <small class="text-muted">A digital receipt and tax reference will be emailed here.</small>
+                                <div class="invalid-feedback" th:errors="*{donorEmail}">Valid email is required</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Phone Number</label>
+                                <input type="text" class="form-control" th:field="*{donorPhone}"
+                                       placeholder="+1 555-0199">
+                            </div>
+                        </div>
+
+                        <hr class="my-4 text-muted">
+
+                        <!-- Step 2: Donation Type -->
+                        <h5 class="fw-bold mb-3" style="color: var(--resq-green-dark);">
+                            <i class="bi bi-gift me-2"></i>Choose Contribution Type
+                        </h5>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="border rounded p-3 text-center cursor-pointer type-card" id="cardMonetary"
+                                     onclick="selectType('MONETARY')">
+                                    <div class="form-check form-check-inline m-0">
+                                        <input class="form-check-input" type="radio" th:field="*{donationType}"
+                                               id="typeMonetary" value="MONETARY" onchange="toggleDonationFields()">
+                                        <label class="form-check-label fw-bold ms-1" for="typeMonetary">
+                                            <i class="bi bi-wallet2 text-success me-1"></i> Monetary Contribution
+                                        </label>
+                                    </div>
+                                    <div class="small text-muted mt-1">Funds deployed for immediate rescue &amp; food logistics</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="border rounded p-3 text-center cursor-pointer type-card" id="cardMaterial"
+                                     onclick="selectType('MATERIAL')">
+                                    <div class="form-check form-check-inline m-0">
+                                        <input class="form-check-input" type="radio" th:field="*{donationType}"
+                                               id="typeMaterial" value="MATERIAL" onchange="toggleDonationFields()">
+                                        <label class="form-check-label fw-bold ms-1" for="typeMaterial">
+                                            <i class="bi bi-box-seam text-primary me-1"></i> Physical Relief Supplies
+                                        </label>
+                                    </div>
+                                    <div class="small text-muted mt-1">Food packs, water crates, blankets, hygiene kits</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Monetary Section -->
+                        <div id="monetaryFields" class="mb-4">
+                            <label class="form-label fw-semibold">Donation Amount ($ USD) <span class="text-danger">*</span></label>
+                            <div class="d-flex gap-2 mb-2">
+                                <button type="button" class="btn btn-outline-success btn-sm flex-grow-1" onclick="setAmount(25)">$25</button>
+                                <button type="button" class="btn btn-outline-success btn-sm flex-grow-1" onclick="setAmount(50)">$50</button>
+                                <button type="button" class="btn btn-outline-success btn-sm flex-grow-1" onclick="setAmount(100)">$100</button>
+                                <button type="button" class="btn btn-outline-success btn-sm flex-grow-1" onclick="setAmount(250)">$250</button>
+                                <button type="button" class="btn btn-outline-success btn-sm flex-grow-1" onclick="setAmount(500)">$500</button>
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" min="1.00" class="form-control form-control-lg"
+                                       id="amountInput" th:field="*{amount}" placeholder="50.00">
+                            </div>
+                        </div>
+
+                        <!-- Material Section -->
+                        <div id="materialFields" class="mb-4" style="display: none;">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label fw-semibold">Select Relief Supply Line <span class="text-danger">*</span></label>
+                                    <select class="form-select" th:field="*{itemId}">
+                                        <option value="">Choose item from relief catalog...</option>
+                                        <option th:each="i : ${inventoryItems}" th:value="${i.id}"
+                                                th:text="${i.itemName + ' (' + i.unit.displayName + ')'}">Item</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Quantity Donated <span class="text-danger">*</span></label>
+                                    <input type="number" min="1" class="form-control" th:field="*{itemQuantity}" placeholder="10">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Personal Dedication / Message of Hope</label>
+                            <textarea class="form-control" th:field="*{notes}" rows="2"
+                                      placeholder="Leave a message for field workers or affected community members..."></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                            <a th:href="@{/dashboard}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-resq-primary btn-lg px-4">
+                                <i class="bi bi-heart-fill me-1"></i> Confirm &amp; Submit Contribution
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    function selectType(type) {
+        if (type === 'MONETARY') {
+            document.getElementById('typeMonetary').checked = true;
+        } else {
+            document.getElementById('typeMaterial').checked = true;
+        }
+        toggleDonationFields();
+    }
+
+    function toggleDonationFields() {
+        const isMonetary = document.getElementById('typeMonetary').checked;
+        document.getElementById('monetaryFields').style.display = isMonetary ? 'block' : 'none';
+        document.getElementById('materialFields').style.display = isMonetary ? 'none' : 'block';
+    }
+
+    function setAmount(val) {
+        document.getElementById('amountInput').value = val;
+    }
+
+    document.addEventListener('DOMContentLoaded', toggleDonationFields);
+</script>
+</div>
+</body>
+</html>
