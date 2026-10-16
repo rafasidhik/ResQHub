@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Smart Shelter Allocation &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                <i class="bi bi-diagram-3 me-2"></i>Smart Shelter Allocation Engine
+            </h2>
+            <p class="text-muted small mb-0">Deterministic, rule-based matching of displaced populations to available relief shelters by capacity buffer, status, and geographic affinity</p>
+        </div>
+        <a th:href="@{/shelters}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to Shelters
+        </a>
+    </div>
+
+    <!-- Rule-Based Transparency Notice -->
+    <div class="alert alert-info border-info-subtle shadow-sm mb-4 small">
+        <i class="bi bi-info-circle-fill text-info me-2"></i>
+        <strong>Allocation Logic:</strong> Shelter suitability scores are calculated using deterministic weighted business rules based on current available bed capacity (40%), facility operational status (30%), and disaster location affinity (30%). This system does not use AI or black-box models. Camp managers and officers retain complete discretion to assign and relocate evacuees.
+    </div>
+
+    <!-- Flash messages are rendered globally by layout/base.html -->
+
+    <!-- Evaluation Criteria Form -->
+    <div class="card card-resq shadow-sm border-0 mb-4 p-3">
+        <form th:action="@{/shelters/smart-allocate}" method="get" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label fw-semibold text-muted small">Select Active Disaster Event <span class="text-danger">*</span></label>
+                <select name="disasterId" class="form-select" required>
+                    <option value="" disabled th:selected="${selectedDisasterId == null}">Choose disaster to evaluate...</option>
+                    <option th:each="d : ${disasters}" th:value="${d.id}"
+                            th:text="${d.name + ' (' + d.location + ') — ' + d.severity.displayName}"
+                            th:selected="${selectedDisasterId != null and selectedDisasterId == d.id}">Disaster</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold text-muted small">Evacuee / Group Count (Persons) <span class="text-danger">*</span></label>
+                <input type="number" name="peopleCount" th:value="${peopleCount}" min="1" max="1000" class="form-control" required>
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-resq-primary flex-grow-1">
+                    <i class="bi bi-cpu me-1"></i> Calculate Shelter Matches
+                </button>
+                <a th:href="@{/shelters/smart-allocate}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Recommendations Result Section -->
+    <div th:if="${selectedDisasterId != null}">
+        <div class="mb-4">
+            <h4 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                <i class="bi bi-award me-2"></i>Ranked Shelter Recommendations
+            </h4>
+            <p class="text-muted small mb-3" th:text="${'Recommended shelters with sufficient capacity for ' + peopleCount + ' person(s)'}">Results</p>
+
+            <div th:if="${recommendations == null or recommendations.empty}" class="card card-resq p-5 text-center border-0 shadow-sm text-muted">
+                <i class="bi bi-exclamation-octagon display-5 text-warning mb-2"></i>
+                <h5 class="fw-bold">No Shelters Can Accommodate This Group</h5>
+                <p class="small mb-0">No active shelters currently have at least <strong th:text="${peopleCount}">5</strong> available bed spaces. Please register a new relief center or split the evacuee group.</p>
+            </div>
+
+            <div class="row g-3" th:if="${recommendations != null and !recommendations.empty}">
+                <div class="col-lg-6" th:each="rec, iter : ${recommendations}">
+                    <div class="card card-resq shadow-sm border-0 h-100 p-3"
+                         th:classappend="${iter.index == 0} ? 'border border-2 border-success' : ''">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge bg-light text-secondary border font-monospace me-1" th:text="${rec.shelter.shelterIdentifier}">SHT-0001</span>
+                                <span th:if="${iter.index == 0}" class="badge bg-success text-white">
+                                    <i class="bi bi-star-fill me-1"></i> Top Match
+                                </span>
+                                <h5 class="fw-bold mt-1 mb-0" style="color: var(--resq-green-dark);" th:text="${rec.shelter.name}">Shelter Name</h5>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge px-2 py-1 fs-6"
+                                      th:classappend="${rec.score >= 85 ? 'bg-success' : (rec.score >= 60 ? 'bg-primary' : 'bg-secondary')}"
+                                      th:text="${rec.score + '/100'}">95/100</span>
+                                <div class="small text-muted mt-1">Suitability Score</div>
+                            </div>
+                        </div>
+
+                        <div class="text-muted small mb-2">
+                            <i class="bi bi-geo-alt me-1"></i><span th:text="${rec.shelter.address}">Address</span>
+                        </div>
+
+                        <div class="bg-light rounded p-2 mb-3">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span class="text-muted">Current Occupancy:</span>
+                                <span class="fw-bold" th:text="${rec.shelter.currentOccupancy + ' / ' + rec.shelter.totalCapacity}">10 / 50</span>
+                            </div>
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span class="text-muted">Available Spots Now:</span>
+                                <span class="fw-bold text-success" th:text="${rec.availableCapacity}">40</span>
+                            </div>
+                            <div class="d-flex justify-content-between small">
+                                <span class="text-muted">Projected Occupancy (post-allocation):</span>
+                                <span class="fw-bold"
+                                      th:classappend="${rec.projectedOccupancyPercentage >= 95 ? 'text-danger' : (rec.projectedOccupancyPercentage >= 80 ? 'text-warning' : 'text-success')}"
+                                      th:text="${rec.projectedOccupancyPercentage + '%'}">45%</span>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-secondary py-2 small mb-3 border-0">
+                            <strong><i class="bi bi-lightbulb me-1"></i> Match Justification:</strong>
+                            <div class="mt-1" th:text="${rec.matchReason}">Reasoning text</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-auto pt-2 border-top">
+                            <div class="small text-muted">
+                                <i class="bi bi-telephone me-1"></i><span th:text="${rec.shelter.contactPerson + ' (' + rec.shelter.contactNumber + ')'}">Contact</span>
+                            </div>
+                            <form th:action="@{/shelters/allocations/create}" method="post">
+                                <input type="hidden" name="disasterId" th:value="${selectedDisasterId}"/>
+                                <input type="hidden" name="shelterId" th:value="${rec.shelter.id}"/>
+                                <input type="hidden" name="peopleCount" th:value="${peopleCount}"/>
+                                <input type="hidden" name="reason" th:value="${rec.matchReason}"/>
+                                <button type="submit" class="btn btn-sm btn-resq-primary">
+                                    <i class="bi bi-check2-circle me-1"></i> Recommend &amp; Record
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shelter Allocations Audit Table -->
+        <div class="card card-resq shadow-sm border-0 mb-4" th:if="${allocations != null and !allocations.empty}">
+            <div class="card-header bg-white py-3 border-0">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-clock-history me-2" style="color: var(--resq-green-dark);"></i>Allocation Recommendations for this Disaster
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-resq align-middle mb-0">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Shelter</th>
+                            <th>Allocated Count</th>
+                            <th>Status</th>
+                            <th>Reasoning</th>
+                            <th>Recommended At</th>
+                            <th class="text-end pe-3" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="a : ${allocations}">
+                            <td>
+                                <strong th:text="${a.shelterName}">Shelter Name</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border" th:text="${a.requestedPeopleCount + ' people'}">5 people</span>
+                            </td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${a.status.name() == 'CONFIRMED' ? 'bg-success' : (a.status.name() == 'RECOMMENDED' ? 'bg-info text-dark' : (a.status.name() == 'REJECTED' ? 'bg-danger' : 'bg-secondary'))}"
+                                      th:text="${a.status.displayName}">RECOMMENDED</span>
+                            </td>
+                            <td>
+                                <small class="text-muted" th:text="${a.recommendationReason}">Reason</small>
+                            </td>
+                            <td>
+                                <small class="text-muted" th:text="${a.createdAt != null ? #temporals.format(a.createdAt, 'dd MMM HH:mm') : '—'}">Date</small>
+                            </td>
+                            <td class="text-end pe-3" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                                <div class="d-inline-flex gap-1" th:if="${a.status.name() == 'RECOMMENDED'}">
+                                    <form th:action="@{/shelters/allocations/{id}/confirm(id=${a.id})}" method="post" class="d-inline">
+                                        <input type="hidden" name="disasterId" th:value="${selectedDisasterId}"/>
+                                        <button type="submit" class="btn btn-sm btn-outline-success">Confirm</button>
+                                    </form>
+                                    <form th:action="@{/shelters/allocations/{id}/reject(id=${a.id})}" method="post" class="d-inline">
+                                        <input type="hidden" name="disasterId" th:value="${selectedDisasterId}"/>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                                    </form>
+                                </div>
+                                <span th:if="${a.status.name() != 'RECOMMENDED'}" class="text-muted small" th:text="${a.status.displayName}">Status</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

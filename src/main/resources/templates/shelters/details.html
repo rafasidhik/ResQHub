@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title th:text="${shelter.name + ' — ResQHub'}">Shelter Details</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Breadcrumb & Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a th:href="@{/shelters}" class="text-decoration-none text-muted small">
+                    <i class="bi bi-arrow-left me-1"></i> Shelters
+                </a>
+                <span class="text-muted small">&bull;</span>
+                <span class="badge bg-light text-secondary border font-monospace" th:text="${shelter.shelterIdentifier}">SHT-0001</span>
+            </div>
+            <h2 class="fw-bold mb-0" style="color: var(--resq-green-dark);" th:text="${shelter.name}">Shelter Name</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/shelters/{id}/residents(id=${shelter.id})}" class="btn btn-outline-secondary">
+                <i class="bi bi-clock-history me-1"></i> Full Resident Roster
+            </a>
+            <a th:href="@{/shelters/{id}/edit(id=${shelter.id})}" class="btn btn-outline-primary"
+               sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                <i class="bi bi-pencil me-1"></i> Edit Shelter
+            </a>
+            <button type="button" class="btn btn-resq-primary" data-bs-toggle="modal" data-bs-target="#checkInModal"
+                    sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')"
+                    th:disabled="${shelter.remainingCapacity <= 0 || shelter.status.name() == 'TEMPORARILY_CLOSED'}">
+                <i class="bi bi-person-plus me-1"></i> Check In Resident
+            </button>
+        </div>
+    </div>
+
+    <!-- Flash messages are rendered globally by layout/base.html -->
+
+    <div class="row g-4">
+        <!-- Left: Shelter Information & Capacity -->
+        <div class="col-lg-5">
+            <!-- Capacity Card -->
+            <div class="card card-resq shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-pie-chart me-2" style="color: var(--resq-green-dark);"></i>Capacity &amp; Availability
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted fw-semibold">Occupancy Rate:</span>
+                        <span class="h4 fw-bold mb-0"
+                              th:classappend="${shelter.occupancyPercentage >= 95 ? 'text-danger' : (shelter.occupancyPercentage >= 80 ? 'text-warning' : 'text-success')}"
+                              th:text="${shelter.occupancyPercentage + '%'}">0%</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 12px; border-radius: 6px;">
+                        <div class="progress-bar"
+                             th:classappend="${shelter.occupancyPercentage >= 95 ? 'bg-danger' : (shelter.occupancyPercentage >= 80 ? 'bg-warning' : 'bg-success')}"
+                             role="progressbar"
+                             th:style="'width: ' + ${shelter.occupancyPercentage} + '%'"></div>
+                    </div>
+
+                    <div class="row g-2 text-center pt-2">
+                        <div class="col-4">
+                            <div class="border rounded p-2 bg-light">
+                                <div class="small text-muted">Current</div>
+                                <div class="h5 fw-bold mb-0 text-primary" th:text="${shelter.currentOccupancy}">0</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2 bg-light">
+                                <div class="small text-muted">Available</div>
+                                <div class="h5 fw-bold mb-0 text-success" th:text="${shelter.remainingCapacity}">0</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2 bg-light">
+                                <div class="small text-muted">Total Max</div>
+                                <div class="h5 fw-bold mb-0 text-dark" th:text="${shelter.totalCapacity}">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
+                        <span class="text-muted small">Current Operational Status:</span>
+                        <span class="badge"
+                              th:classappend="${shelter.status.name() == 'AVAILABLE' ? 'bg-success' : (shelter.status.name() == 'NEARLY_FULL' ? 'bg-warning text-dark' : (shelter.status.name() == 'FULL' ? 'bg-danger' : 'bg-secondary'))}"
+                              th:text="${shelter.status.displayName}">AVAILABLE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shelter Details Card -->
+            <div class="card card-resq shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-geo-alt me-2" style="color: var(--resq-green-dark);"></i>Facility &amp; Location
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="small text-muted fw-semibold">Physical Address</label>
+                        <div class="fw-medium text-dark" th:text="${shelter.address}">Address</div>
+                    </div>
+                    <div class="mb-3" th:if="${shelter.locationDescription != null and !shelter.locationDescription.empty}">
+                        <label class="small text-muted fw-semibold">Landmarks &amp; Access Notes</label>
+                        <div class="text-secondary small" th:text="${shelter.locationDescription}">Location Notes</div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="small text-muted fw-semibold">Contact Person</label>
+                            <div class="fw-medium text-dark" th:text="${shelter.contactPerson}">Contact Name</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted fw-semibold">Emergency Phone</label>
+                            <div>
+                                <a th:href="'tel:' + ${shelter.contactNumber}" class="text-decoration-none fw-medium text-primary">
+                                    <i class="bi bi-telephone me-1"></i><span th:text="${shelter.contactNumber}">12345</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-top text-muted small" th:if="${shelter.createdAt != null}">
+                        <i class="bi bi-calendar3 me-1"></i> Registered on <span th:text="${#temporals.format(shelter.createdAt, 'dd MMM yyyy, HH:mm')}">Date</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Delete Action -->
+            <div class="card border-danger border-opacity-25 shadow-sm bg-danger bg-opacity-10 mb-4" sec:authorize="hasRole('ADMIN')">
+                <div class="card-body">
+                    <h6 class="fw-bold text-danger mb-1"><i class="bi bi-exclamation-triangle me-1"></i> Danger Zone</h6>
+                    <p class="small text-muted mb-2">Deleting a shelter requires all occupants to be checked out first.</p>
+                    <form th:action="@{/shelters/{id}/delete(id=${shelter.id})}" method="post"
+                          onsubmit="return confirm('Are you sure you want to permanently delete this shelter?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash me-1"></i> Delete Shelter
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Current Active Residents -->
+        <div class="col-lg-7">
+            <div class="card card-resq shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-people me-2" style="color: var(--resq-green-dark);"></i>Active Residents
+                        </h5>
+                        <small class="text-muted" th:text="${activeResidents.size() + ' family group(s) currently sheltered'}">0 resident groups</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-resq-primary" data-bs-toggle="modal" data-bs-target="#checkInModal"
+                            sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')"
+                            th:disabled="${shelter.remainingCapacity <= 0 || shelter.status.name() == 'TEMPORARILY_CLOSED'}">
+                        <i class="bi bi-person-plus me-1"></i> Check In
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-resq align-middle mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Resident Name</th>
+                                <th>Family Size</th>
+                                <th>Disaster Sector</th>
+                                <th>Check-in Time</th>
+                                <th class="text-end pe-3" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')">Action</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${activeResidents.empty}">
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="bi bi-people display-6 d-block mb-2 text-muted"></i>
+                                    No active residents checked in at this shelter.
+                                </td>
+                            </tr>
+                            <tr th:each="r : ${activeResidents}">
+                                <td>
+                                    <div class="fw-bold" th:text="${r.residentName}">Resident Name</div>
+                                    <small class="text-muted font-monospace" th:if="${r.victimReferenceNumber != null}">
+                                        Victim Ref: <span th:text="${r.victimReferenceNumber}">VIC-2026-0001</span>
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">
+                                        <i class="bi bi-people me-1"></i><span th:text="${r.familySize + ' person(s)'}">1 person</span>
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="small fw-semibold text-secondary" th:text="${r.disasterName != null ? r.disasterName : 'General'}">Disaster</span>
+                                </td>
+                                <td>
+                                    <small class="text-muted" th:text="${r.checkInTime != null ? #temporals.format(r.checkInTime, 'dd MMM HH:mm') : 'N/A'}">Time</small>
+                                </td>
+                                <td class="text-end pe-3" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')">
+                                    <form th:action="@{/shelters/residents/{residentId}/check-out(residentId=${r.id}, shelterId=${shelter.id})}" method="post"
+                                          onsubmit="return confirm('Check out this resident and release bed capacity?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning text-dark" title="Check Out">
+                                            <i class="bi bi-box-arrow-right me-1"></i> Check Out
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Check-In Modal -->
+    <div class="modal fade" id="checkInModal" tabindex="-1" aria-labelledby="checkInModalLabel" aria-hidden="true"
+         sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form th:action="@{/shelters/{id}/check-in(id=${shelter.id})}" th:object="${checkInDto}" method="post">
+                    <input type="hidden" th:field="*{shelterId}" th:value="${shelter.id}"/>
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="checkInModalLabel" style="color: var(--resq-green-dark);">
+                            <i class="bi bi-person-plus me-2"></i>Check In Resident / Family
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info py-2 small mb-3">
+                            <i class="bi bi-info-circle me-1"></i> Available capacity in <strong><span th:text="${shelter.name}">Shelter</span></strong>:
+                            <span class="badge bg-success ms-1" th:text="${shelter.remainingCapacity + ' beds'}">50 beds</span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Disaster Event <span class="text-danger">*</span></label>
+                            <select class="form-select" th:field="*{disasterId}" required>
+                                <option value="" disabled selected>Select active disaster...</option>
+                                <option th:each="d : ${allDisasters}" th:value="${d.id}" th:text="${d.name + ' (' + d.location + ')'}">Disaster</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Resident / Family Head Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{residentName}" placeholder="e.g. John Doe" required>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Total Family Size <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" th:field="*{familySize}" min="1"
+                                       th:max="${shelter.remainingCapacity}" value="1" required>
+                                <small class="text-muted">Including head of family</small>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Linked Victim Record</label>
+                                <select class="form-select" th:field="*{victimId}">
+                                    <option value="">None (Walk-in)</option>
+                                    <option th:each="v : ${allVictims}" th:value="${v.id}" th:text="${v.referenceNumber + ' - ' + v.name}">Victim</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-resq-primary">
+                            <i class="bi bi-check2-circle me-1"></i> Complete Check-In
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Shelters & Relief Camps &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                <i class="bi bi-houses me-2"></i>Emergency Shelters &amp; Relief Camps
+            </h2>
+            <p class="text-muted small mb-0">Safe havens, emergency relief centers, capacity tracking, and resident coordination</p>
+        </div>
+        <div class="d-flex gap-2" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')">
+            <a th:href="@{/shelters/smart-allocate}" class="btn btn-outline-success">
+                <i class="bi bi-diagram-3 me-1"></i> Smart Shelter Allocation
+            </a>
+            <a th:href="@{/shelters/new}" class="btn btn-resq-primary" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                <i class="bi bi-plus-circle me-1"></i> Register Shelter
+            </a>
+        </div>
+    </div>
+
+    <!-- Flash messages are rendered globally by layout/base.html -->
+
+    <!-- Metrics KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Total Shelters</div>
+                <div class="h3 fw-bold text-dark mb-0" th:text="${totalShelters}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-building me-1"></i>Across disaster sectors</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Total Capacity</div>
+                <div class="h3 fw-bold mb-0" style="color: var(--resq-green-dark);" th:text="${totalCapacity}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-people me-1"></i>Total safe bed spaces</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Current Occupants</div>
+                <div class="h3 fw-bold text-primary mb-0" th:text="${currentOccupancy}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-person-check me-1"></i>Active registered residents</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">System Occupancy Rate</div>
+                <div class="h3 fw-bold mb-1"
+                     th:classappend="${overallOccupancyPercentage >= 90 ? 'text-danger' : (overallOccupancyPercentage >= 70 ? 'text-warning' : 'text-success')}"
+                     th:text="${overallOccupancyPercentage + '%'}">0%</div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar"
+                         th:classappend="${overallOccupancyPercentage >= 90 ? 'bg-danger' : (overallOccupancyPercentage >= 70 ? 'bg-warning' : 'bg-success')}"
+                         role="progressbar"
+                         th:style="'width: ' + ${overallOccupancyPercentage} + '%'"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card card-resq mb-4 p-3 border-0 shadow-sm">
+        <form th:action="@{/shelters}" method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted mb-1">Filter by Status</label>
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="ALL" th:selected="${selectedStatus == 'ALL'}">All Shelters (No Filter)</option>
+                    <option value="AVAILABLE" th:selected="${selectedStatus == 'AVAILABLE'}">Available Only</option>
+                    <option value="NEARLY_FULL" th:selected="${selectedStatus == 'NEARLY_FULL'}">Nearly Full</option>
+                    <option value="FULL" th:selected="${selectedStatus == 'FULL'}">Full / Maximum Capacity</option>
+                    <option value="TEMPORARILY_CLOSED" th:selected="${selectedStatus == 'TEMPORARILY_CLOSED'}">Temporarily Closed</option>
+                </select>
+            </div>
+            <div class="col-md-8 text-md-end pt-md-4">
+                <a th:href="@{/shelters}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Reset Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Shelters Table Card -->
+    <div class="card card-resq shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-resq align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Identifier &amp; Name</th>
+                        <th>Address / Location</th>
+                        <th>Capacity &amp; Occupancy</th>
+                        <th>Status</th>
+                        <th>Contact Point</th>
+                        <th class="text-end pe-3">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${shelters.empty}">
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-house-x display-6 d-block mb-2 text-muted"></i>
+                            No shelters matching the criteria.
+                        </td>
+                    </tr>
+                    <tr th:each="s : ${shelters}">
+                        <td>
+                            <div class="fw-bold" style="color: var(--resq-green-dark);" th:text="${s.name}">Shelter Name</div>
+                            <small class="badge bg-light text-secondary border font-monospace" th:text="${s.shelterIdentifier}">SHT-0001</small>
+                        </td>
+                        <td>
+                            <div class="text-truncate" style="max-width: 260px;" th:text="${s.address}">Address</div>
+                            <small class="text-muted d-block text-truncate" style="max-width: 260px;"
+                                   th:if="${s.locationDescription != null}" th:text="${s.locationDescription}"></small>
+                        </td>
+                        <td style="min-width: 180px;">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span class="fw-semibold" th:text="${s.currentOccupancy + ' / ' + s.totalCapacity + ' occupants'}">0 / 50</span>
+                                <span class="text-muted" th:text="${s.occupancyPercentage + '%'}">0%</span>
+                            </div>
+                            <div class="progress" style="height: 7px;">
+                                <div class="progress-bar"
+                                     th:classappend="${s.occupancyPercentage >= 95 ? 'bg-danger' : (s.occupancyPercentage >= 80 ? 'bg-warning' : 'bg-success')}"
+                                     role="progressbar"
+                                     th:style="'width: ' + ${s.occupancyPercentage} + '%'"></div>
+                            </div>
+                            <small class="text-muted" th:text="${s.remainingCapacity + ' spot(s) remaining'}">50 spots remaining</small>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${s.status.name() == 'AVAILABLE' ? 'bg-success' : (s.status.name() == 'NEARLY_FULL' ? 'bg-warning text-dark' : (s.status.name() == 'FULL' ? 'bg-danger' : 'bg-secondary'))}"
+                                  th:text="${s.status.displayName}">AVAILABLE</span>
+                        </td>
+                        <td>
+                            <div class="fw-semibold small" th:text="${s.contactPerson}">Contact Person</div>
+                            <small class="text-muted"><i class="bi bi-telephone me-1"></i><span th:text="${s.contactNumber}">1234567890</span></small>
+                        </td>
+                        <td class="text-end pe-3">
+                            <div class="btn-group btn-group-sm">
+                                <a th:href="@{/shelters/{id}(id=${s.id})}" class="btn btn-outline-primary" title="View Details & Residents">
+                                    <i class="bi bi-eye"></i> Details
+                                </a>
+                                <a th:href="@{/shelters/{id}/edit(id=${s.id})}" class="btn btn-outline-secondary" title="Edit Shelter"
+                                   sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
