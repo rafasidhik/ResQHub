@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head></head>
+
+<body>
+    <div th:fragment="navbar" class="resq-header">
+
+        <nav class="navbar navbar-expand-lg navbar-dark navbar-resq"
+            th:with="uri=${currentUri != null ? currentUri : ''}">
+            <div class="container-fluid px-3 position-relative">
+
+                <!-- Brand -->
+                <a class="navbar-brand" th:href="@{/}">
+                    <img th:src="@{/images/logo.svg}" alt="ResQHub logo" class="brand-logo" height="42" width="42">
+                    <span class="brand-text">ResQHub</span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                    aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <ul class="navbar-nav mx-auto mb-2 mb-lg-0 justify-content-center nav-center">
+                        <li class="nav-item" sec:authorize="isAuthenticated()">
+                            <a class="nav-link" th:href="@{/dashboard}"
+                                th:classappend="${uri != null and #strings.startsWith(uri, '/dashboard')} ? 'active' : ''"
+                                th:attr="aria-current=${uri != null and #strings.startsWith(uri, '/dashboard')} ? 'page' : null">
+                                <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/disasters}"
+                                th:classappend="${uri != null and #strings.startsWith(uri, '/disasters')} ? 'active' : ''"
+                                th:attr="aria-current=${uri != null and #strings.startsWith(uri, '/disasters')} ? 'page' : null">
+                                <i class="bi bi-exclamation-triangle me-1"></i> Disasters
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/shelters}"
+                                th:classappend="${uri != null and #strings.startsWith(uri, '/shelters')} ? 'active' : ''"
+                                th:attr="aria-current=${uri != null and #strings.startsWith(uri, '/shelters')} ? 'page' : null">
+                                <i class="bi bi-house-door me-1"></i> Shelters
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/donations/new}"
+                                th:classappend="${uri != null and #strings.startsWith(uri, '/donations')} ? 'active' : ''"
+                                th:attr="aria-current=${uri != null and #strings.startsWith(uri, '/donations')} ? 'page' : null">
+                                <i class="bi bi-heart me-1"></i> Donate
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Authenticated User Menu -->
+                    <ul class="navbar-nav ms-auto align-items-center" sec:authorize="isAuthenticated()">
+                        <!-- Notification Bell -->
+                        <li class="nav-item me-2">
+                            <a class="nav-link nav-icon position-relative" th:href="@{/notifications}"
+                                title="Notifications" aria-label="Notifications">
+                                <i class="bi bi-bell fs-5"></i>
+                                <span class="notif-badge"
+                                    th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}"
+                                    th:text="${unreadNotificationCount}">
+                                    3
+                                </span>
+                            </a>
+                        </li>
+
+                        <!-- User Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#"
+                                id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="user-avatar">
+                                    <i class="bi bi-person-fill"></i>
+                                </span>
+                                <span class="user-meta d-none d-sm-flex flex-column">
+                                    <span class="user-name" sec:authentication="name">Username</span>
+                                    <span class="user-role"
+                                        th:text="${#authentication.principal.authorities[0].authority.replace('ROLE_', '').replace('_', ' ')}">
+                                        ROLE
+                                    </span>
+                                </span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown">
+                                <li>
+                                    <a class="dropdown-item" th:href="@{/profile}">
+                                        <i class="bi bi-person me-2"></i> Profile &amp; Activity
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" th:href="@{/notifications}">
+                                        <i class="bi bi-bell me-2"></i> Notifications
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <form th:action="@{/logout}" method="post" class="d-inline">
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <!-- Anonymous Menu -->
+                    <ul class="navbar-nav ms-auto align-items-center" sec:authorize="isAnonymous()">
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/login}">
+                                <i class="bi bi-box-arrow-in-right me-1"></i> Login
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-cta" th:href="@{/register}">
+                                <i class="bi bi-person-plus me-1"></i> Register
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </div>
+</body>
+
+</html>
+

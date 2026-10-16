@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head></head>
+
+<body>
+    <aside th:fragment="sidebar" class="sidebar-resq">
+        <!-- Sidebar Brand & Mobile Close / Desktop Collapse Header -->
+        <div class="sidebar-brand-wrapper d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+            <a th:href="@{${dashboardUrl != null ? dashboardUrl : '/dashboard'}}"
+                class="d-flex align-items-center gap-2 text-decoration-none min-w-0" title="ResQHub Emergency Command">
+                <img th:src="@{/images/logo.svg}" alt="ResQHub logo" class="brand-logo flex-shrink-0" width="34"
+                    height="34">
+                <div class="d-flex flex-column sidebar-brand-text min-w-0">
+                    <span class="fw-bold fs-6 text-dark lh-1 text-truncate">ResQHub</span>
+                </div>
+            </a>
+            <div class="d-flex align-items-center">
+                <button id="sidebarToggle" class="sidebar-toggle d-none d-lg-flex" type="button"
+                    aria-label="Toggle sidebar" title="Toggle sidebar">
+                    <i class="bi bi-layout-sidebar-inset fs-5"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-light sidebar-close d-lg-none" aria-label="Close menu">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Scrollable Menu Content -->
+        <div class="sidebar-menu">
+            <!-- Perspective Preview Indicator in Sidebar -->
+            <div th:if="${activePerspective != null}"
+                class="sidebar-preview-badge p-2 mb-3 rounded-3 bg-primary-subtle text-primary border border-primary-subtle shadow-sm">
+                <div class="d-flex align-items-center justify-content-between gap-1">
+                    <span class="small fw-bold text-truncate" style="font-size: 0.75rem;">
+                        <i class="bi bi-eye-fill me-1"></i>
+                        <span
+                            th:text="${activePerspective == 'CITIZEN' ? 'Citizen' : (activePerspective == 'RESCUE_OFFICER' ? 'Rescue Officer' : (activePerspective == 'CAMP_MANAGER' ? 'Camp Manager' : (activePerspective == 'VOLUNTEER' ? 'Volunteer' : activePerspective)))} + ' Preview'">Preview</span>
+                    </span>
+                    <a th:href="@{/dashboard/admin}" class="btn btn-primary btn-sm py-0 px-2 fw-semibold"
+                        style="font-size: 0.72rem;" title="Return to Admin Command">
+                        Exit
+                    </a>
+                </div>
+            </div>
+
+            <!-- Primary Navigation Section -->
+            <div class="sidebar-heading">Navigation</div>
+            <ul class="nav flex-column mb-3">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{${dashboardUrl != null ? dashboardUrl : '/dashboard'}}"
+                        th:classappend="${activeMenu == 'dashboard' ? 'active' : ''}">
+                        <i class="bi bi-grid-1x2"></i>
+                        <span class="nav-label"
+                            th:text="${effectiveRole == 'CITIZEN' ? 'Citizen Portal' : (effectiveRole == 'RESCUE_OFFICER' ? 'Rescue Command' : (effectiveRole == 'CAMP_MANAGER' ? 'Camp Operations' : (effectiveRole == 'VOLUNTEER' ? 'Mission Board' : 'Unified Command')))}">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/disasters}"
+                        th:classappend="${activeMenu == 'disasters' ? 'active' : ''}">
+                        <i class="bi bi-exclamation-triangle"></i> <span class="nav-label">Disasters</span>
+                    </a>
+                </li>
+                <!-- Shelters Directory for Citizen & Volunteer in Navigation -->
+                <li class="nav-item" th:if="${effectiveRole == 'CITIZEN' or effectiveRole == 'VOLUNTEER'}">
+                    <a class="nav-link" th:href="@{/shelters}"
+                        th:classappend="${activeMenu == 'shelters' ? 'active' : ''}">
+                        <i class="bi bi-house-door"></i> <span class="nav-label">Emergency Shelters</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Citizen Services (Shown only to Citizens) -->
+            <div th:if="${showCitizenServices}">
+                <div class="sidebar-heading">Citizen Services</div>
+                <ul class="nav flex-column mb-3">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/rescue-requests/my-requests}"
+                            th:classappend="${activeMenu == 'my-requests' ? 'active' : ''}">
+                            <i class="bi bi-list-check"></i> <span class="nav-label">My Rescue Requests</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/rescue-requests/new}"
+                            th:classappend="${activeMenu == 'new-request' ? 'active' : ''}">
+                            <i class="bi bi-plus-circle"></i> <span class="nav-label">Request Rescue</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/donations/my-donations}"
+                            th:classappend="${activeMenu == 'my-donations' ? 'active' : ''}">
+                            <i class="bi bi-heart"></i> <span class="nav-label">My Donations</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/donations/new}"
+                            th:classappend="${activeMenu == 'new-donation' ? 'active' : ''}">
+                            <i class="bi bi-heart-fill"></i> <span class="nav-label">Make a Donation</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/volunteers/register}"
+                            th:classappend="${activeMenu == 'vol-register' ? 'active' : ''}">
+                            <i class="bi bi-person-badge"></i> <span class="nav-label">Volunteer Sign Up</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Rescue Operations (Admin & Rescue Officer only) -->
+            <div th:if="${showRescueOps}">
+                <div class="sidebar-heading">Rescue Operations</div>
+                <ul class="nav flex-column mb-3">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/rescue-requests}"
+                            th:classappend="${activeMenu == 'rescue-requests' ? 'active' : ''}">
+                            <i class="bi bi-life-preserver"></i> <span class="nav-label">Rescue Requests</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/rescue-requests/smart-allocation}"
+                            th:classappend="${activeMenu == 'smart-rescue' ? 'active' : ''}">
+                            <i class="bi bi-diagram-3"></i> <span class="nav-label">Smart Team Allocation</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/rescue-teams}"
+                            th:classappend="${activeMenu == 'rescue-teams' ? 'active' : ''}">
+                            <i class="bi bi-shield-check"></i> <span class="nav-label">Rescue Teams</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/victims}"
+                            th:classappend="${activeMenu == 'victims' ? 'active' : ''}">
+                            <i class="bi bi-people"></i> <span class="nav-label">Victims Directory</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Shelters & Camps (Admin & Camp Manager only) -->
+            <div th:if="${showShelterOps}">
+                <div class="sidebar-heading">Shelters &amp; Camps</div>
+                <ul class="nav flex-column mb-3">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/shelters}"
+                            th:classappend="${activeMenu == 'shelters' ? 'active' : ''}">
+                            <i class="bi bi-house-door"></i> <span class="nav-label">Shelters Directory</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/shelters/smart-allocate}"
+                            th:classappend="${activeMenu == 'smart-shelter' ? 'active' : ''}">
+                            <i class="bi bi-arrow-left-right"></i> <span class="nav-label">Smart Shelter
+                                Allocation</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Resources & Logistics (Admin & Camp Manager only) -->
+            <div th:if="${showResourceOps}">
+                <div class="sidebar-heading">Resources &amp; Food</div>
+                <ul class="nav flex-column mb-3">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/inventory}"
+                            th:classappend="${activeMenu == 'inventory' ? 'active' : ''}">
+                            <i class="bi bi-boxes"></i> <span class="nav-label">Inventory &amp; Stock</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/resources/allocations}"
+                            th:classappend="${activeMenu == 'allocations' ? 'active' : ''}">
+                            <i class="bi bi-truck"></i> <span class="nav-label">Resource Allocations</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/resources/food-distributions}"
+                            th:classappend="${activeMenu == 'food-distributions' ? 'active' : ''}">
+                            <i class="bi bi-cup-hot"></i> <span class="nav-label">Food Distribution</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Volunteers (Admin, Camp Manager, Volunteer) -->
+            <div th:if="${showVolunteerOps}">
+                <div class="sidebar-heading"
+                    th:text="${effectiveRole == 'VOLUNTEER' ? 'Volunteer Missions' : 'Volunteers'}">Volunteers</div>
+                <ul class="nav flex-column mb-3">
+                    <li class="nav-item" th:if="${showVolunteerRegistry}">
+                        <a class="nav-link" th:href="@{/volunteers}"
+                            th:classappend="${activeMenu == 'volunteers' ? 'active' : ''}">
+                            <i class="bi bi-person-badge"></i> <span class="nav-label">Volunteer Registry</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/volunteers/assignments}"
+                            th:classappend="${activeMenu == 'volunteer-assignments' ? 'active' : ''}">
+                            <i class="bi bi-card-checklist"></i> <span class="nav-label"
+                                th:text="${effectiveRole == 'VOLUNTEER' ? 'My Task Assignments' : 'Task Assignments'}">Task
+                                Assignments</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Donations (Admin Unified Command only) -->
+            <div th:if="${showAdminOps}">
+                <div class="sidebar-heading">Donations</div>
+                <ul class="nav flex-column mb-3">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/donations}"
+                            th:classappend="${activeMenu == 'donations' ? 'active' : ''}">
+                            <i class="bi bi-cash-stack"></i> <span class="nav-label">All Donations</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/donations/new}"
+                            th:classappend="${activeMenu == 'new-donation' ? 'active' : ''}">
+                            <i class="bi bi-heart-fill"></i> <span class="nav-label">Make a Donation</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- System Administration (Admin Unified Command only) -->
+            <div th:if="${showAdminOps}">
+                <div class="sidebar-heading">System Administration</div>
+                <ul class="nav flex-column mb-3">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/admin/users}"
+                            th:classappend="${activeMenu == 'users' ? 'active' : ''}">
+                            <i class="bi bi-person-gear"></i> <span class="nav-label">User Management</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/reports}"
+                            th:classappend="${activeMenu == 'reports' ? 'active' : ''}">
+                            <i class="bi bi-file-earmark-bar-graph"></i> <span class="nav-label">Reports &amp;
+                                Analytics</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/admin/activity-logs}"
+                            th:classappend="${activeMenu == 'activity-logs' ? 'active' : ''}">
+                            <i class="bi bi-clock-history"></i> <span class="nav-label">Activity Logs</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Pinned User Profile & Quick Actions Footer -->
+        <div class="sidebar-user-footer border-top pt-2 mt-auto">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+                <a th:href="@{/profile}"
+                    class="d-flex align-items-center gap-2 text-decoration-none min-w-0 flex-grow-1"
+                    title="View Profile">
+                    <div class="sidebar-avatar">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div class="user-meta d-flex flex-column min-w-0 sidebar-user-info">
+                        <span class="user-name text-dark fw-bold text-truncate" style="font-size: 0.85rem;"
+                            sec:authentication="name">Username</span>
+                        <span class="user-role badge text-bg-light border text-truncate py-0 px-1 text-uppercase"
+                            style="font-size: 0.65rem;"
+                            th:text="${activePerspective != null ? activePerspective.replace('_', ' ') + ' (PREVIEW)' : effectiveRole.replace('_', ' ')}">
+                            ROLE
+                        </span>
+                    </div>
+                </a>
+                <div class="d-flex align-items-center gap-1 sidebar-user-actions">
+                    <a th:href="@{/notifications}" class="btn btn-sm btn-light p-1 position-relative"
+                        title="Notifications">
+                        <i class="bi bi-bell text-secondary"></i>
+                        <span
+                            class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"
+                            th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}">
+                        </span>
+                    </a>
+                    <form th:action="@{/logout}" method="post" class="d-inline m-0">
+                        <button type="submit" class="btn btn-sm btn-light p-1 text-danger" title="Logout">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </aside>
+</body>
+
+</html>
