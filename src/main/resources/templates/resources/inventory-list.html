@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Relief Supplies &amp; Inventory &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                <i class="bi bi-box-seam me-2"></i>Relief Supplies &amp; Inventory
+            </h2>
+            <p class="text-muted small mb-0">Emergency warehouse supplies, stock levels, safety threshold alerts, and real-time inventory ledger</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/resources/allocations}" class="btn btn-outline-secondary">
+                <i class="bi bi-truck me-1"></i> Resource Allocations
+            </a>
+            <a th:href="@{/resources/food-distributions}" class="btn btn-outline-success">
+                <i class="bi bi-cup-hot me-1"></i> Food Distributions
+            </a>
+            <a th:href="@{/inventory/new}" class="btn btn-resq-primary" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                <i class="bi bi-plus-circle me-1"></i> Register Supply
+            </a>
+        </div>
+    </div>
+
+    <!-- Flash messages are rendered globally by layout/base.html -->
+
+    <!-- Metrics KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Cataloged Items</div>
+                <div class="h3 fw-bold text-dark mb-0" th:text="${totalItemCount}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-tag me-1"></i>Active relief inventory lines</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Total Stock Units</div>
+                <div class="h3 fw-bold mb-0" style="color: var(--resq-green-dark);" th:text="${totalQuantity}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-boxes me-1"></i>Units across all storage warehouses</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center"
+                 th:classappend="${lowStockCount > 0} ? 'border border-danger border-opacity-50' : ''">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Low Stock Alerts</div>
+                <div class="h3 fw-bold mb-0" th:classappend="${lowStockCount > 0 ? 'text-danger' : 'text-success'}"
+                     th:text="${lowStockCount}">0</div>
+                <div class="small mt-1" th:classappend="${lowStockCount > 0 ? 'text-danger fw-semibold' : 'text-muted'}">
+                    <i class="bi bi-exclamation-triangle me-1"></i>At or below safety threshold
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card card-resq mb-4 p-3 border-0 shadow-sm">
+        <form th:action="@{/inventory}" method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold text-muted mb-1">Filter by Category</label>
+                <select name="category" class="form-select" onchange="this.form.submit()">
+                    <option value="ALL" th:selected="${selectedCategory == 'ALL'}">All Categories</option>
+                    <option th:each="c : ${categories}" th:value="${c.name()}" th:text="${c.displayName}"
+                            th:selected="${selectedCategory == c.name()}">Category</option>
+                </select>
+            </div>
+            <div class="col-md-4 pt-md-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="lowStockOnly" id="lowStockOnly" value="true"
+                           th:checked="${lowStockOnly}" onchange="this.form.submit()">
+                    <label class="form-check-label fw-semibold text-danger small" for="lowStockOnly">
+                        <i class="bi bi-exclamation-circle me-1"></i> Show Low Stock Items Only
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-3 text-md-end pt-md-4">
+                <a th:href="@{/inventory}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Reset Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Inventory Table -->
+    <div class="card card-resq shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-resq align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Supply Item</th>
+                        <th>Category</th>
+                        <th>Quantity In Stock</th>
+                        <th>Safety Threshold</th>
+                        <th>Warehouse / Location</th>
+                        <th class="text-end pe-3">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${items.empty}">
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-box-seam display-6 d-block mb-2 text-muted"></i>
+                            No inventory items found matching the selected filter.
+                        </td>
+                    </tr>
+                    <tr th:each="item : ${items}">
+                        <td>
+                            <div class="fw-bold" style="color: var(--resq-green-dark);" th:text="${item.itemName}">Item Name</div>
+                            <small class="text-muted d-block" th:if="${item.description != null}" th:text="${item.description}">Description</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border" th:text="${item.category.displayName}">Category</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold fs-6"
+                                      th:classappend="${item.outOfStock ? 'text-danger' : (item.lowStock ? 'text-warning' : 'text-dark')}"
+                                      th:text="${item.quantityAvailable + ' ' + item.unit.name()}">100 PIECES</span>
+                                <span th:if="${item.outOfStock}" class="badge bg-danger">OUT OF STOCK</span>
+                                <span th:if="${item.lowStock and !item.outOfStock}" class="badge bg-warning text-dark">LOW STOCK</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="small text-muted" th:text="${'Min ' + item.minimumStockLevel + ' ' + item.unit.name()}">Min 10</span>
+                        </td>
+                        <td>
+                            <span class="small fw-semibold text-secondary">
+                                <i class="bi bi-geo-alt me-1"></i><span th:text="${item.storageLocation}">Warehouse</span>
+                            </span>
+                        </td>
+                        <td class="text-end pe-3">
+                            <div class="btn-group btn-group-sm">
+                                <a th:href="@{/inventory/{id}(id=${item.id})}" class="btn btn-outline-primary" title="View Ledger & Adjust Stock">
+                                    <i class="bi bi-clock-history"></i> Ledger
+                                </a>
+                                <a th:href="@{/inventory/{id}/edit(id=${item.id})}" class="btn btn-outline-secondary" title="Edit Item"
+                                   sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

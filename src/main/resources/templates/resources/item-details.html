@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title th:text="${item.itemName + ' — Inventory Ledger — ResQHub'}">Item Details &amp; Ledger</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a th:href="@{/inventory}" class="text-decoration-none text-muted small">
+                    <i class="bi bi-arrow-left me-1"></i> Inventory
+                </a>
+                <span class="text-muted small">&bull;</span>
+                <span class="badge bg-light text-secondary border" th:text="${item.category.displayName}">Category</span>
+            </div>
+            <h2 class="fw-bold mb-0" style="color: var(--resq-green-dark);" th:text="${item.itemName}">Item Name</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/inventory/{id}/edit(id=${item.id})}" class="btn btn-outline-secondary"
+               sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                <i class="bi bi-pencil me-1"></i> Edit Item
+            </a>
+            <button type="button" class="btn btn-resq-primary" data-bs-toggle="modal" data-bs-target="#adjustModal"
+                    sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                <i class="bi bi-arrow-left-right me-1"></i> Record Stock Movement
+            </button>
+        </div>
+    </div>
+
+    <!-- Flash messages are rendered globally by layout/base.html -->
+
+    <div class="row g-4">
+        <!-- Left Column: Item Specs & Overview -->
+        <div class="col-lg-4">
+            <!-- Stock Summary Card -->
+            <div class="card card-resq shadow-sm border-0 mb-4 text-center p-3">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Current Available Stock</div>
+                <div class="display-5 fw-bold mb-1"
+                     th:classappend="${item.outOfStock ? 'text-danger' : (item.lowStock ? 'text-warning' : 'text-success')}"
+                     th:text="${item.quantityAvailable}">0</div>
+                <div class="fw-semibold text-muted mb-2" th:text="${item.unit.name()}">PIECES</div>
+                <div>
+                    <span th:if="${item.outOfStock}" class="badge bg-danger fs-6">OUT OF STOCK</span>
+                    <span th:if="${item.lowStock and !item.outOfStock}" class="badge bg-warning text-dark fs-6">
+                        <i class="bi bi-exclamation-triangle me-1"></i> LOW STOCK WARNING
+                    </span>
+                    <span th:if="${!item.lowStock and !item.outOfStock}" class="badge bg-success fs-6">
+                        <i class="bi bi-check-circle me-1"></i> NORMAL STOCK
+                    </span>
+                </div>
+            </div>
+
+            <!-- Details Card -->
+            <div class="card card-resq shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-info-circle me-2" style="color: var(--resq-green-dark);"></i>Supply Specifications
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="small text-muted fw-semibold">Category</label>
+                        <div class="fw-medium text-dark" th:text="${item.category.displayName}">Category</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted fw-semibold">Unit of Measurement</label>
+                        <div class="fw-medium text-dark" th:text="${item.unit.displayName}">Unit</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted fw-semibold">Safety Minimum Stock Level</label>
+                        <div class="fw-medium text-dark" th:text="${item.minimumStockLevel + ' ' + item.unit.name()}">10</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted fw-semibold">Storage Warehouse / Location</label>
+                        <div class="fw-medium text-dark">
+                            <i class="bi bi-geo-alt me-1 text-danger"></i><span th:text="${item.storageLocation}">Warehouse</span>
+                        </div>
+                    </div>
+                    <div class="mb-3" th:if="${item.description != null and !item.description.empty}">
+                        <label class="small text-muted fw-semibold">Description</label>
+                        <div class="text-secondary small" th:text="${item.description}">Description</div>
+                    </div>
+                    <div class="pt-2 border-top text-muted small" th:if="${item.lastUpdatedAt != null}">
+                        <i class="bi bi-clock me-1"></i> Last updated <span th:text="${#temporals.format(item.lastUpdatedAt, 'dd MMM yyyy, HH:mm')}">Date</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Delete Card -->
+            <div class="card border-danger border-opacity-25 shadow-sm bg-danger bg-opacity-10 mb-4" sec:authorize="hasRole('ADMIN')">
+                <div class="card-body">
+                    <h6 class="fw-bold text-danger mb-1"><i class="bi bi-trash me-1"></i> Delete Supply</h6>
+                    <p class="small text-muted mb-2">Item cannot be deleted if active resource allocations exist.</p>
+                    <form th:action="@{/inventory/{id}/delete(id=${item.id})}" method="post"
+                          onsubmit="return confirm('Are you sure you want to permanently delete this inventory item?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash me-1"></i> Delete Item
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Transactions Ledger -->
+        <div class="col-lg-8">
+            <div class="card card-resq shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-journal-text me-2" style="color: var(--resq-green-dark);"></i>Stock Ledger &amp; Movement Audit
+                        </h5>
+                        <small class="text-muted">Chronological inventory receipts, issues, dispatches, and adjustments</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-resq-primary" data-bs-toggle="modal" data-bs-target="#adjustModal"
+                            sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                        <i class="bi bi-plus-circle me-1"></i> Record Movement
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-resq align-middle mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Movement Date</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                                <th>Reason / Reference</th>
+                                <th>Logged By</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${transactions.empty}">
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="bi bi-journal-x display-6 d-block mb-2 text-muted"></i>
+                                    No stock transactions recorded yet for this item.
+                                </td>
+                            </tr>
+                            <tr th:each="t : ${transactions}">
+                                <td>
+                                    <small class="text-muted" th:text="${t.createdAt != null ? #temporals.format(t.createdAt, 'dd MMM yyyy, HH:mm') : '—'}">Date</small>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${t.transactionType.name() == 'RECEIVED' ? 'bg-success' : (t.transactionType.name() == 'ISSUED' ? 'bg-danger' : (t.transactionType.name() == 'ALLOCATED' ? 'bg-info text-dark' : 'bg-secondary'))}"
+                                          th:text="${t.transactionType.displayName}">RECEIVED</span>
+                                </td>
+                                <td>
+                                    <span class="fw-bold"
+                                          th:classappend="${t.transactionType.name() == 'RECEIVED' ? 'text-success' : (t.transactionType.name() == 'ISSUED' ? 'text-danger' : 'text-dark')}"
+                                          th:text="${(t.transactionType.name() == 'RECEIVED' ? '+' : (t.transactionType.name() == 'ISSUED' ? '-' : '')) + t.quantity + ' ' + item.unit.name()}">+10</span>
+                                </td>
+                                <td>
+                                    <span class="small text-dark" th:text="${t.reason}">Reason</span>
+                                </td>
+                                <td>
+                                    <small class="text-muted font-monospace" th:text="${t.performedByUsername != null ? t.performedByUsername : 'system'}">user</small>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Adjustment Modal -->
+    <div class="modal fade" id="adjustModal" tabindex="-1" aria-labelledby="adjustModalLabel" aria-hidden="true"
+         sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form th:action="@{/inventory/{id}/adjust(id=${item.id})}" th:object="${adjustmentDto}" method="post">
+                    <input type="hidden" th:field="*{itemId}" th:value="${item.id}"/>
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="adjustModalLabel" style="color: var(--resq-green-dark);">
+                            <i class="bi bi-arrow-left-right me-2"></i>Record Stock Movement
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info py-2 small mb-3">
+                            Current balance for <strong><span th:text="${item.itemName}">Item</span></strong>:
+                            <span class="fw-bold ms-1" th:text="${item.quantityAvailable + ' ' + item.unit.name()}">100 PIECES</span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Transaction Movement Type <span class="text-danger">*</span></label>
+                            <select class="form-select" th:field="*{transactionType}" required>
+                                <option th:each="type : ${transactionTypes}" th:value="${type.name()}" th:text="${type.displayName}">Type</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" th:field="*{quantity}" min="1" value="1" required>
+                            <small class="text-muted">For RECEIVED/ISSUED: delta amount. For ADJUSTED: exact verified count.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Reason / Movement Justification <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{reason}"
+                                   placeholder="e.g. Shipment receipt from Red Cross, emergency dispatch to Zone 2, audit recount" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-resq-primary">
+                            <i class="bi bi-check2-circle me-1"></i> Apply Stock Movement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>New Resource Allocation &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                        Create Resource Allocation Plan
+                    </h2>
+                    <p class="text-muted small mb-0">Plan supply dispatches to disaster sectors, relief camps, and community distribution nodes</p>
+                </div>
+                <div>
+                    <a th:href="@{/resources/allocations}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Allocations
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash messages are rendered globally by layout/base.html -->
+
+            <div class="card card-resq shadow-sm border-0">
+                <div class="card-body p-4">
+                    <form th:action="@{/resources/allocations/new}" th:object="${allocationDto}" method="post">
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold">Relief Supply Item <span class="text-danger">*</span></label>
+                                <select class="form-select" th:field="*{itemId}"
+                                        th:classappend="${#fields.hasErrors('itemId')} ? 'is-invalid' : ''" required>
+                                    <option value="" disabled selected>Select inventory item...</option>
+                                    <option th:each="i : ${inventoryItems}" th:value="${i.id}"
+                                            th:text="${i.itemName + ' (' + i.quantityAvailable + ' ' + i.unit.name() + ' in stock — ' + i.storageLocation + ')'}">Item</option>
+                                </select>
+                                <div class="invalid-feedback" th:errors="*{itemId}">Please select a supply item</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Quantity to Allocate <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" th:field="*{quantity}" min="1"
+                                       th:classappend="${#fields.hasErrors('quantity')} ? 'is-invalid' : ''"
+                                       placeholder="10" required>
+                                <div class="invalid-feedback" th:errors="*{quantity}">Must be at least 1</div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Target Disaster Event <span class="text-danger">*</span></label>
+                                <select class="form-select" th:field="*{disasterId}"
+                                        th:classappend="${#fields.hasErrors('disasterId')} ? 'is-invalid' : ''" required>
+                                    <option value="" disabled selected>Select active disaster...</option>
+                                    <option th:each="d : ${disasters}" th:value="${d.id}"
+                                            th:text="${d.name + ' (' + d.location + ')'}">Disaster</option>
+                                </select>
+                                <div class="invalid-feedback" th:errors="*{disasterId}">Please select a target disaster</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Destination Relief Shelter (Optional)</label>
+                                <select class="form-select" th:field="*{shelterId}">
+                                    <option value="">None (Direct Field Post / Community Point)</option>
+                                    <option th:each="s : ${shelters}" th:value="${s.id}"
+                                            th:text="${s.name + ' — ' + s.address}">Shelter</option>
+                                </select>
+                                <small class="text-muted">Link directly if supplies are destined for a managed camp.</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Specific Destination Location / Landmark <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{destinationLocation}"
+                                   th:classappend="${#fields.hasErrors('destinationLocation')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. Camp Bravo Logistics Tent, North Levee Relief Point" required>
+                            <div class="invalid-feedback" th:errors="*{destinationLocation}">Destination location is required</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Responsible Custodian / Receiving Officer <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{responsiblePerson}"
+                                       th:classappend="${#fields.hasErrors('responsiblePerson')} ? 'is-invalid' : ''"
+                                       placeholder="Officer / Coordinator Name" required>
+                                <div class="invalid-feedback" th:errors="*{responsiblePerson}">Responsible person is required</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Allocation Purpose <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{purpose}"
+                                       th:classappend="${#fields.hasErrors('purpose')} ? 'is-invalid' : ''"
+                                       placeholder="e.g. Immediate drinking water rationing for flood victims" required>
+                                <div class="invalid-feedback" th:errors="*{purpose}">Purpose is required</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Logistical Remarks &amp; Delivery Notes</label>
+                            <textarea class="form-control" th:field="*{remarks}" rows="2"
+                                      placeholder="Transport truck identifier, priority dispatch instructions..."></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                            <a th:href="@{/resources/allocations}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-resq-primary">
+                                <i class="bi bi-check2-circle me-1"></i> Create Allocation Plan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

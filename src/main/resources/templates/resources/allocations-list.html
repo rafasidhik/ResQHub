@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Resource Allocations &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                <i class="bi bi-truck me-2"></i>Resource Allocations &amp; Logistics
+            </h2>
+            <p class="text-muted small mb-0">Distribution of relief materials to disaster sectors, emergency shelters, and community relief posts</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/inventory}" class="btn btn-outline-secondary">
+                <i class="bi bi-boxes me-1"></i> Inventory Catalog
+            </a>
+            <a th:href="@{/resources/allocations/new}" class="btn btn-resq-primary" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')">
+                <i class="bi bi-plus-circle me-1"></i> New Allocation Plan
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card card-resq mb-4 p-3 border-0 shadow-sm">
+        <form th:action="@{/resources/allocations}" method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold text-muted mb-1">Filter by Disaster</label>
+                <select name="disasterId" class="form-select" onchange="this.form.submit()">
+                    <option value="" th:selected="${selectedDisasterId == null}">All Disasters</option>
+                    <option th:each="d : ${disasters}" th:value="${d.id}" th:text="${d.name + ' (' + d.location + ')'}"
+                            th:selected="${selectedDisasterId != null and selectedDisasterId == d.id}">Disaster</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted mb-1">Filter by Status</label>
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="ALL" th:selected="${selectedStatus == 'ALL'}">All Statuses</option>
+                    <option th:each="s : ${statuses}" th:value="${s.name()}" th:text="${s.displayName}"
+                            th:selected="${selectedStatus == s.name()}">Status</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-md-end pt-md-4">
+                <a th:href="@{/resources/allocations}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Reset Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Allocations Table -->
+    <div class="card card-resq shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-resq align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Supply Item &amp; Qty</th>
+                        <th>Disaster / Destination</th>
+                        <th>Shelter Destination</th>
+                        <th>Responsible Person &amp; Purpose</th>
+                        <th>Status</th>
+                        <th class="text-end pe-3" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')">Workflow Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${allocations.empty}">
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-truck display-6 d-block mb-2 text-muted"></i>
+                            No resource allocations found for the selected criteria.
+                        </td>
+                    </tr>
+                    <tr th:each="a : ${allocations}">
+                        <td>
+                            <div class="fw-bold" style="color: var(--resq-green-dark);" th:text="${a.itemName}">Item Name</div>
+                            <span class="badge bg-light text-dark border">
+                                Quantity: <strong class="ms-1" th:text="${a.quantity}">50</strong>
+                            </span>
+                        </td>
+                        <td>
+                            <div class="fw-semibold small" th:text="${a.disasterName}">Disaster</div>
+                            <small class="text-muted"><i class="bi bi-geo-alt me-1"></i><span th:text="${a.destinationLocation}">Location</span></small>
+                        </td>
+                        <td>
+                            <span th:if="${a.shelterName != null}" class="badge bg-light text-secondary border">
+                                <i class="bi bi-houses me-1"></i><span th:text="${a.shelterName}">Shelter</span>
+                            </span>
+                            <span th:if="${a.shelterName == null}" class="text-muted small">Field Distribution Post</span>
+                        </td>
+                        <td>
+                            <div class="small fw-semibold text-dark" th:text="${a.responsiblePerson}">Person</div>
+                            <small class="text-muted d-block text-truncate" style="max-width: 220px;" th:text="${a.purpose}">Purpose</small>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${a.status.name() == 'DELIVERED' ? 'bg-success' : (a.status.name() == 'DISPATCHED' ? 'bg-primary' : (a.status.name() == 'APPROVED' ? 'bg-info text-dark' : (a.status.name() == 'PLANNED' ? 'bg-warning text-dark' : 'bg-secondary')))}"
+                                  th:text="${a.status.displayName}">PLANNED</span>
+                        </td>
+                        <td class="text-end pe-3" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')">
+                            <!-- PLANNED: Approve or Cancel -->
+                            <div class="d-inline-flex gap-1" th:if="${a.status.name() == 'PLANNED'}">
+                                <form th:action="@{/resources/allocations/{id}/approve(id=${a.id})}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Approve Allocation Plan">
+                                        <i class="bi bi-check-lg me-1"></i> Approve
+                                    </button>
+                                </form>
+                                <form th:action="@{/resources/allocations/{id}/cancel(id=${a.id})}" method="post" class="d-inline"
+                                      th:data-confirm="'Cancel this planned allocation?'">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel Plan">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- APPROVED: Dispatch (deducts stock) or Cancel -->
+                            <div class="d-inline-flex gap-1" th:if="${a.status.name() == 'APPROVED'}">
+                                <form th:action="@{/resources/allocations/{id}/dispatch(id=${a.id})}" method="post" class="d-inline"
+                                      th:data-confirm="'Dispatching will immediately deduct items from warehouse inventory. Proceed?'">
+                                    <button type="submit" class="btn btn-sm btn-primary" title="Dispatch from Warehouse">
+                                        <i class="bi bi-send me-1"></i> Dispatch
+                                    </button>
+                                </form>
+                                <form th:action="@{/resources/allocations/{id}/cancel(id=${a.id})}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- DISPATCHED: Confirm Delivered or Cancel (restocks) -->
+                            <div class="d-inline-flex gap-1" th:if="${a.status.name() == 'DISPATCHED'}">
+                                <form th:action="@{/resources/allocations/{id}/deliver(id=${a.id})}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-success" title="Confirm Delivery at Site">
+                                        <i class="bi bi-check2-all me-1"></i> Delivered
+                                    </button>
+                                </form>
+                                <form th:action="@{/resources/allocations/{id}/cancel(id=${a.id})}" method="post" class="d-inline"
+                                      th:data-confirm="'Cancelling a dispatched shipment will return items to warehouse inventory. Proceed?'">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning text-dark" title="Cancel & Restock">
+                                        Restock
+                                    </button>
+                                </form>
+                            </div>
+
+                            <span th:if="${a.status.name() == 'DELIVERED' or a.status.name() == 'CANCELLED'}" class="text-muted small">
+                                <i class="bi bi-dash-circle me-1"></i>Completed
+                            </span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Food &amp; Water Distributions &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                <i class="bi bi-cup-hot me-2"></i>Food &amp; Water Distributions
+            </h2>
+            <p class="text-muted small mb-0">Rationing logs, daily community meal distributions, and emergency drinking water dispatch records</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/inventory}" class="btn btn-outline-secondary">
+                <i class="bi bi-box-seam me-1"></i> Inventory Catalog
+            </a>
+            <button type="button" class="btn btn-resq-primary" data-bs-toggle="modal" data-bs-target="#newDistributionModal"
+                    sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                <i class="bi bi-plus-circle me-1"></i> Log Distribution Event
+            </button>
+        </div>
+    </div>
+
+    <!-- Flash messages are rendered globally by layout/base.html -->
+
+    <!-- Metrics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Total Recipients Benefited</div>
+                <div class="display-6 fw-bold text-success mb-0" th:text="${totalServed}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-people me-1"></i>Displaced persons &amp; families served</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Distribution Drives</div>
+                <div class="display-6 fw-bold mb-0" style="color: var(--resq-green-dark);" th:text="${distributions.size()}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-calendar-check me-1"></i>Planned &amp; completed distribution events</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Food Distributions Table -->
+    <div class="card card-resq shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-resq align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Relief Location / Shelter</th>
+                        <th>Supply Item &amp; Quantity</th>
+                        <th>Recipients Served</th>
+                        <th>Status</th>
+                        <th class="text-end pe-3" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${distributions.empty}">
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-cup-hot display-6 d-block mb-2 text-muted"></i>
+                            No food or water distribution events recorded yet.
+                        </td>
+                    </tr>
+                    <tr th:each="d : ${distributions}">
+                        <td>
+                            <div class="fw-semibold text-dark" th:text="${#temporals.format(d.distributionDate, 'dd MMM yyyy')}">Date</div>
+                        </td>
+                        <td>
+                            <div class="fw-bold" style="color: var(--resq-green-dark);" th:text="${d.location}">Location</div>
+                            <span th:if="${d.shelterName != null}" class="badge bg-light text-secondary border">
+                                <i class="bi bi-houses me-1"></i><span th:text="${d.shelterName}">Shelter</span>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="fw-bold text-dark" th:text="${d.quantity}">100</span>
+                            <span class="text-muted small" th:text="${'x ' + d.itemName}">Bottled Water</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 fs-6">
+                                <i class="bi bi-people-fill me-1"></i><span th:text="${d.recipientCount + ' persons'}">100 persons</span>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${d.status.name() == 'COMPLETED' ? 'bg-success' : 'bg-warning text-dark'}"
+                                  th:text="${d.status.displayName}">PLANNED</span>
+                        </td>
+                        <td class="text-end pe-3" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                            <form th:if="${d.status.name() == 'PLANNED'}"
+                                  th:action="@{/resources/food-distributions/{id}/complete(id=${d.id})}" method="post"
+                                  onsubmit="return confirm('Completing this distribution will deduct supplies from inventory. Proceed?');">
+                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-check2-circle me-1"></i> Complete
+                                </button>
+                            </form>
+                            <span th:if="${d.status.name() == 'COMPLETED'}" class="text-muted small">
+                                <i class="bi bi-check-all text-success me-1"></i>Distributed
+                            </span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Distribution Modal -->
+    <div class="modal fade" id="newDistributionModal" tabindex="-1" aria-labelledby="newDistributionModalLabel" aria-hidden="true"
+         sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form th:action="@{/resources/food-distributions/new}" th:object="${distributionDto}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="newDistributionModalLabel" style="color: var(--resq-green-dark);">
+                            <i class="bi bi-cup-hot me-2"></i>Log Food / Water Distribution
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Food / Water Item <span class="text-danger">*</span></label>
+                            <select class="form-select" th:field="*{itemId}" required>
+                                <option value="" disabled selected>Select relief food item...</option>
+                                <option th:each="fi : ${foodItems}" th:value="${fi.id}"
+                                        th:text="${fi.itemName + ' (' + fi.quantityAvailable + ' ' + fi.unit.name() + ' available)'}">Item</option>
+                            </select>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" th:field="*{quantity}" min="1" value="10" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Recipients Served <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" th:field="*{recipientCount}" min="1" value="25" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Associated Shelter (Optional)</label>
+                            <select class="form-select" th:field="*{shelterId}">
+                                <option value="">None (Open Community Post)</option>
+                                <option th:each="s : ${shelters}" th:value="${s.id}" th:text="${s.name}">Shelter</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Distribution Location / Street <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{location}" placeholder="e.g. West Gate Food Station" required>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Distribution Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" th:field="*{distributionDate}" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Initial Status</label>
+                                <select class="form-select" th:field="*{status}">
+                                    <option value="PLANNED">PLANNED</option>
+                                    <option value="COMPLETED">COMPLETED (Deduct Stock Now)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-resq-primary">
+                            <i class="bi bi-check2-circle me-1"></i> Save Distribution Event
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

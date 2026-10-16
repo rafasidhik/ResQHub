@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title th:text="${itemDto.id == null ? 'Register Supply Item — ResQHub' : 'Edit Supply Item — ResQHub'}">Supply Item Form</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);"
+                        th:text="${itemDto.id == null ? 'Register New Relief Supply' : 'Edit Supply: ' + itemDto.itemName}">
+                        Register Supply
+                    </h2>
+                    <p class="text-muted small mb-0">Record disaster relief items, safety thresholds, and primary warehouse coordinates</p>
+                </div>
+                <div>
+                    <a th:href="@{/inventory}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Inventory
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash messages are rendered globally by layout/base.html -->
+
+            <div class="card card-resq shadow-sm border-0">
+                <div class="card-body p-4">
+                    <form th:action="${itemDto.id == null ? '/inventory/new' : '/inventory/' + itemDto.id + '/edit'}"
+                          th:object="${itemDto}" method="post">
+
+                        <input type="hidden" th:if="${itemDto.id != null}" th:field="*{id}"/>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Item Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{itemName}"
+                                   th:classappend="${#fields.hasErrors('itemName')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. Bottled Water 1L, Family Emergency Food Pack, Thermal Fleece Blanket">
+                            <div class="invalid-feedback" th:errors="*{itemName}">Item name is required</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Item Category <span class="text-danger">*</span></label>
+                                <select class="form-select" th:field="*{category}">
+                                    <option th:each="cat : ${categories}" th:value="${cat.name()}" th:text="${cat.displayName}">Category</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Unit of Measure <span class="text-danger">*</span></label>
+                                <select class="form-select" th:field="*{unit}">
+                                    <option th:each="u : ${units}" th:value="${u.name()}" th:text="${u.displayName}">Unit</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Description &amp; Specifications</label>
+                            <textarea class="form-control" th:field="*{description}" rows="2"
+                                      placeholder="Package size, contents, expiry details, storage requirements..."></textarea>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6" th:if="${itemDto.id == null}">
+                                <label class="form-label fw-semibold">Initial Stock Quantity <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" th:field="*{quantityAvailable}" min="0"
+                                       th:classappend="${#fields.hasErrors('quantityAvailable')} ? 'is-invalid' : ''"
+                                       placeholder="0">
+                                <small class="text-muted">Initial count received upon onboarding.</small>
+                                <div class="invalid-feedback" th:errors="*{quantityAvailable}">Quantity cannot be negative</div>
+                            </div>
+                            <div th:class="${itemDto.id == null ? 'col-md-6' : 'col-md-12'}">
+                                <label class="form-label fw-semibold">Safety Minimum Stock Level <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" th:field="*{minimumStockLevel}" min="0"
+                                       th:classappend="${#fields.hasErrors('minimumStockLevel')} ? 'is-invalid' : ''"
+                                       placeholder="10">
+                                <small class="text-muted">Triggers low-stock warnings when inventory falls to or below this level.</small>
+                                <div class="invalid-feedback" th:errors="*{minimumStockLevel}">Minimum stock level cannot be negative</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Storage Location / Warehouse Bay <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{storageLocation}"
+                                   th:classappend="${#fields.hasErrors('storageLocation')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. Central Warehouse - Section A, Bay 4">
+                            <div class="invalid-feedback" th:errors="*{storageLocation}">Storage location is required</div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                            <a th:href="@{/inventory}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-resq-primary">
+                                <i class="bi bi-check2-circle me-1"></i>
+                                <span th:text="${itemDto.id == null ? 'Register Supply' : 'Save Changes'}">Submit</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
