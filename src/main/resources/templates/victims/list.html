@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Victims Directory &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">Victims Directory</h2>
+            <p class="text-muted small mb-0">Track affected citizens, emergency triage priorities, and rescue progress across disasters</p>
+        </div>
+        <div>
+            <a th:href="@{/victims/create}" class="btn btn-resq-primary">
+                <i class="bi bi-person-plus-fill me-1"></i> Register Victim
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="card card-resq mb-4 p-3 border-0 shadow-sm">
+        <form th:action="@{/victims}" method="get" class="row g-2 align-items-center">
+            <div class="col-md-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" th:value="${search}" class="form-control"
+                           placeholder="Search name, ref, or area...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="disasterId" class="form-select">
+                    <option value="" th:selected="${selectedDisasterId == null}">All Active Disasters</option>
+                    <option th:each="d : ${disasters}" th:value="${d.id}" th:text="${d.name}"
+                            th:selected="${selectedDisasterId == d.id}">Disaster</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="ALL" th:selected="${selectedStatus == 'ALL'}">All Statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st.name()}" th:text="${st.displayName}"
+                            th:selected="${selectedStatus == st.name()}">Status</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="priority" class="form-select">
+                    <option value="ALL" th:selected="${selectedPriority == 'ALL'}">All Priorities</option>
+                    <option th:each="p : ${priorities}" th:value="${p.name()}" th:text="${p.displayName}"
+                            th:selected="${selectedPriority == p.name()}">Priority</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-secondary flex-grow-1">
+                    <i class="bi bi-filter"></i> Filter
+                </button>
+                <a th:href="@{/victims}" class="btn btn-outline-secondary" title="Reset Filters">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Victims Table -->
+    <div class="card card-resq shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-resq align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Ref Number</th>
+                            <th>Victim Name & Age</th>
+                            <th>Location</th>
+                            <th>Disaster Incident</th>
+                            <th>Family Size</th>
+                            <th>Priority</th>
+                            <th>Rescue Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(victims)}">
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-person-check fs-2 d-block mb-2 text-success"></i>
+                                No victims found matching the specified filter criteria.
+                            </td>
+                        </tr>
+                        <tr th:each="v : ${victims}">
+                            <td>
+                                <a th:href="@{'/victims/' + ${v.id}}" class="fw-bold text-decoration-none font-monospace"
+                                   style="color: var(--resq-green-dark);" th:text="${v.referenceNumber}">
+                                    VIC-2026-0001
+                                </a>
+                            </td>
+                            <td>
+                                <div class="fw-bold" th:text="${v.fullName}">Full Name</div>
+                                <div class="small text-muted" th:text="${v.age != null ? v.age + ' yrs' : 'Age unknown'}">30 yrs</div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <i class="bi bi-geo-alt text-danger me-1"></i>
+                                    <span th:text="${v.location}">Location</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="small badge bg-light text-dark border" th:text="${v.disasterName}">Disaster</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary-subtle text-secondary" th:text="${v.affectedFamilyMembers} + ' members'">
+                                    1 member
+                                </span>
+                            </td>
+                            <td>
+                                <span th:class="'badge rounded-pill ' + 
+                                    (${v.priority.name() == 'CRITICAL'} ? 'bg-danger' : 
+                                    (${v.priority.name() == 'HIGH'} ? 'bg-warning text-dark' : 
+                                    (${v.priority.name() == 'MEDIUM'} ? 'bg-primary' : 'bg-success')))"
+                                      th:text="${v.priority.displayName}">
+                                    Priority
+                                </span>
+                            </td>
+                            <td>
+                                <span th:class="'badge ' + 
+                                    (${v.rescueStatus.name() == 'AWAITING_RESCUE'} ? 'bg-danger-subtle text-danger border border-danger-subtle' : 
+                                    (${v.rescueStatus.name() == 'ASSIGNED'} ? 'bg-primary-subtle text-primary border border-primary-subtle' : 
+                                    (${v.rescueStatus.name() == 'RESCUED'} ? 'bg-success-subtle text-success border border-success-subtle' : 
+                                    (${v.rescueStatus.name() == 'SHELTERED'} ? 'bg-info-subtle text-info border border-info-subtle' : 
+                                    'bg-secondary-subtle text-secondary border border-secondary-subtle'))))"
+                                      th:text="${v.rescueStatus.displayName}">
+                                    Status
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a th:href="@{'/victims/' + ${v.id}}" class="btn btn-outline-secondary" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a th:href="@{'/victims/edit/' + ${v.id}}" class="btn btn-outline-success" title="Edit Victim">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination Footer -->
+        <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-3" th:if="${totalPages > 1}">
+            <div class="small text-muted">
+                Showing page <strong th:text="${currentPage + 1}">1</strong> of <strong th:text="${totalPages}">1</strong>
+                (Total <span th:text="${totalVictims}">0</span> victims)
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                        <a class="page-link" th:href="@{/victims(page=${currentPage - 1}, search=${search}, disasterId=${selectedDisasterId}, status=${selectedStatus}, priority=${selectedPriority})}">&laquo; Prev</a>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                        th:classappend="${currentPage == i} ? 'active' : ''">
+                        <a class="page-link" th:href="@{/victims(page=${i}, search=${search}, disasterId=${selectedDisasterId}, status=${selectedStatus}, priority=${selectedPriority})}" th:text="${i + 1}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled' : ''">
+                        <a class="page-link" th:href="@{/victims(page=${currentPage + 1}, search=${search}, disasterId=${selectedDisasterId}, status=${selectedStatus}, priority=${selectedPriority})}">Next &raquo;</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+</body>
+</html>
