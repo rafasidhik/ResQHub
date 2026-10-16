@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Join Volunteer Force &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-4">
+                <span class="badge px-3 py-2 rounded-pill mb-2" style="background-color: var(--resq-sand); color: var(--resq-green-dark); font-weight: 600;">
+                    <i class="bi bi-heart-fill text-danger me-1"></i> Help. Hope. Humanity.
+                </span>
+                <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                    Join the ResQHub Emergency Volunteer Force
+                </h2>
+                <p class="text-muted small">Mobilize your skills to assist displaced victims, manage relief camps, and support disaster rescue operations.</p>
+            </div>
+
+            <!-- Success Alert -->
+            <div th:if="${param.submitted != null}" class="alert alert-success border-success shadow-sm mb-4">
+                <h5 class="fw-bold"><i class="bi bi-check-circle-fill me-2"></i> Application Submitted Successfully!</h5>
+                <p class="small mb-2" th:text="${param.ref != null ? 'Thank you for stepping forward! Your volunteer registration (' + param.ref[0] + ') has been submitted for administrative review.' : 'Thank you for stepping forward! Your volunteer registration has been logged and is under administrative review.'}"></p>
+                <div class="d-flex gap-2 mt-3">
+                    <a th:href="@{/dashboard}" class="btn btn-sm btn-outline-success">Return to Dashboard</a>
+                    <a th:href="@{/volunteers/my-assignments}" class="btn btn-sm btn-resq-primary">View My Assignment Portal</a>
+                </div>
+            </div>
+
+            <!-- Flash messages are rendered globally by layout/base.html -->
+
+            <div class="card card-resq shadow-sm border-0" th:if="${param.submitted == null}">
+                <div class="card-body p-4">
+                    <form th:action="@{/volunteers/register}" th:object="${volunteerDto}" method="post">
+
+                        <h5 class="fw-bold mb-3" style="color: var(--resq-green-dark);">
+                            <i class="bi bi-person me-2"></i>Personal Information
+                        </h5>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Full Legal Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{fullName}"
+                                   th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. Maria Gonzalez" required>
+                            <div class="invalid-feedback" th:errors="*{fullName}">Full name is required</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" th:field="*{email}"
+                                       th:classappend="${#fields.hasErrors('email')} ? 'is-invalid' : ''"
+                                       placeholder="maria@example.com" required>
+                                <div class="invalid-feedback" th:errors="*{email}">Valid email is required</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Primary Phone Number <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{phone}"
+                                       th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid' : ''"
+                                       placeholder="+1 555-0188" required>
+                                <div class="invalid-feedback" th:errors="*{phone}">Phone number is required</div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4 text-muted">
+
+                        <h5 class="fw-bold mb-3" style="color: var(--resq-green-dark);">
+                            <i class="bi bi-tools me-2"></i>Capabilities &amp; Availability
+                        </h5>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Operating Area / District of Residence <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{operatingArea}"
+                                   th:classappend="${#fields.hasErrors('operatingArea')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. Ernakulam District, Wayanad Highlands, Kuttanad, Alappuzha District" required>
+                            <div class="invalid-feedback" th:errors="*{operatingArea}">Operating area is required</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Skills &amp; Qualifications <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{skills}"
+                                   th:classappend="${#fields.hasErrors('skills')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. CPR & First Aid, Community Cooking, Commercial Driving, HAM Radio, Water Rescue" required>
+                            <small class="text-muted">Separate skills with commas. These are matched with task requirements during emergencies.</small>
+                            <div class="invalid-feedback" th:errors="*{skills}">Skills description is required</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Relevant Experience (Years)</label>
+                                <input type="number" class="form-control" th:field="*{experienceYears}" min="0" max="50"
+                                       th:classappend="${#fields.hasErrors('experienceYears')} ? 'is-invalid' : ''"
+                                       placeholder="0">
+                                <small class="text-muted">In volunteering, emergency services, nursing, etc.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Emergency Contact (Name &amp; Phone) <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{emergencyContact}"
+                                       th:classappend="${#fields.hasErrors('emergencyContact')} ? 'is-invalid' : ''"
+                                       placeholder="e.g. Carlos Gonzalez (+1 555-0199)" required>
+                                <div class="invalid-feedback" th:errors="*{emergencyContact}">Emergency contact is required</div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-light border small text-muted mb-4">
+                            <i class="bi bi-shield-check text-success me-1"></i>
+                            <strong>Vetting Policy:</strong> All volunteer applications are reviewed by authorized disaster coordinators to verify contacts and assign suitable humanitarian tasks.
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                            <a th:href="@{/dashboard}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-resq-primary">
+                                <i class="bi bi-send-fill me-1"></i> Submit Volunteer Application
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

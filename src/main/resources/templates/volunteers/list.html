@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Volunteers Roster &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                <i class="bi bi-person-badge me-2"></i>Volunteer Force &amp; Personnel Registry
+            </h2>
+            <p class="text-muted small mb-0">Community responders, vetting queue, specialized competencies, and humanitarian mission mobilization</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/volunteers/assignments}" class="btn btn-outline-secondary">
+                <i class="bi bi-card-checklist me-1"></i> Task Assignments Board
+            </a>
+            <a th:href="@{/volunteers/assignments/new}" class="btn btn-resq-primary" sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')">
+                <i class="bi bi-plus-circle me-1"></i> Assign New Task
+            </a>
+        </div>
+    </div>
+
+    <!-- Flash messages are rendered globally by layout/base.html -->
+
+    <!-- Metrics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Enlisted Volunteers</div>
+                <div class="h3 fw-bold text-dark mb-0" th:text="${totalCount}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-people me-1"></i>Total registered community force</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center"
+                 th:classappend="${pendingCount > 0} ? 'border border-warning border-opacity-75' : ''">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Pending Vetting</div>
+                <div class="h3 fw-bold text-warning mb-0" th:text="${pendingCount}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-clock-history me-1"></i>Awaiting administrator review</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Ready for Dispatch</div>
+                <div class="h3 fw-bold text-success mb-0" th:text="${availableCount}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-check2-circle me-1"></i>Approved &amp; available now</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-resq p-3 border-0 shadow-sm text-center">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Total Tasks Issued</div>
+                <div class="h3 fw-bold mb-0" style="color: var(--resq-green-dark);" th:text="${totalAssignments}">0</div>
+                <div class="small text-muted mt-1"><i class="bi bi-clipboard2-check me-1"></i>Cumulative assignments logged</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card card-resq mb-4 p-3 border-0 shadow-sm">
+        <form th:action="@{/volunteers}" method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted mb-1">Filter by Vetting Status</label>
+                <select name="approval" class="form-select" onchange="this.form.submit()">
+                    <option value="ALL" th:selected="${selectedApproval == 'ALL'}">All Statuses</option>
+                    <option th:each="st : ${approvalStatuses}" th:value="${st.name()}" th:text="${st.displayName}"
+                            th:selected="${selectedApproval == st.name()}">Status</option>
+                </select>
+            </div>
+            <div class="col-md-4 pt-md-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="availableOnly" id="availableOnly" value="true"
+                           th:checked="${availableOnly}" onchange="this.form.submit()">
+                    <label class="form-check-label fw-semibold text-success small" for="availableOnly">
+                        <i class="bi bi-check-circle me-1"></i> Show Ready &amp; Available Only
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end pt-md-4">
+                <a th:href="@{/volunteers}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Reset Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Volunteers Table -->
+    <div class="card card-resq shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-resq align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Identifier &amp; Full Name</th>
+                        <th>Contact Point</th>
+                        <th>Operating Area</th>
+                        <th>Skills &amp; Experience</th>
+                        <th>Vetting Status</th>
+                        <th>Availability</th>
+                        <th class="text-end pe-3">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${volunteers.empty}">
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-person-badge display-6 d-block mb-2 text-muted"></i>
+                            No volunteer personnel found for the current filter.
+                        </td>
+                    </tr>
+                    <tr th:each="v : ${volunteers}">
+                        <td>
+                            <div class="fw-bold" style="color: var(--resq-green-dark);" th:text="${v.fullName}">Full Name</div>
+                            <small class="badge bg-light text-secondary border font-monospace" th:text="${v.volunteerIdentifier}">VOL-0001</small>
+                        </td>
+                        <td>
+                            <div class="small fw-semibold text-dark"><i class="bi bi-telephone me-1"></i><span th:text="${v.phone}">1234567890</span></div>
+                            <small class="text-muted"><i class="bi bi-envelope me-1"></i><span th:text="${v.email}">email@domain.com</span></small>
+                        </td>
+                        <td>
+                            <span class="small fw-semibold text-secondary">
+                                <i class="bi bi-geo-alt me-1"></i><span th:text="${v.operatingArea}">District</span>
+                            </span>
+                        </td>
+                        <td>
+                            <div class="text-truncate" style="max-width: 220px;" th:text="${v.skills}">Skills</div>
+                            <small class="text-muted" th:text="${v.experienceYears + ' yr(s) experience'}">0 yrs</small>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${v.approvalStatus.name() == 'APPROVED' ? 'bg-success' : (v.approvalStatus.name() == 'PENDING' ? 'bg-warning text-dark' : 'bg-danger')}"
+                                  th:text="${v.approvalStatus.displayName}">PENDING</span>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${v.availabilityStatus.name() == 'AVAILABLE' ? 'bg-success' : (v.availabilityStatus.name() == 'ASSIGNED' ? 'bg-primary' : 'bg-secondary')}"
+                                  th:text="${v.availabilityStatus.displayName}">AVAILABLE</span>
+                        </td>
+                        <td class="text-end pe-3">
+                            <div class="btn-group btn-group-sm">
+                                <a th:href="@{/volunteers/{id}(id=${v.id})}" class="btn btn-outline-primary" title="View Profile">
+                                    <i class="bi bi-person-lines-fill"></i> Profile
+                                </a>
+                                <a th:if="${v.approvalStatus.name() == 'APPROVED' and v.availabilityStatus.name() == 'AVAILABLE'}"
+                                   th:href="@{/volunteers/assignments/new(volunteerId=${v.id})}" class="btn btn-outline-success" title="Assign Task"
+                                   sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')">
+                                    <i class="bi bi-clipboard2-plus"></i> Assign
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

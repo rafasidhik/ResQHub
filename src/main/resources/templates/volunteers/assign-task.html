@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Assign Volunteer Mission &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">
+                        Assign Volunteer Mission
+                    </h2>
+                    <p class="text-muted small mb-0">Dispatch vetted, available volunteers to targeted relief activities and disaster operational zones</p>
+                </div>
+                <div>
+                    <a th:href="@{/volunteers/assignments}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Assignments
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash messages are rendered globally by layout/base.html -->
+
+            <div class="card card-resq shadow-sm border-0">
+                <div class="card-body p-4">
+                    <form th:action="@{/volunteers/assignments/new}" th:object="${assignmentDto}" method="post">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Select Available Volunteer <span class="text-danger">*</span></label>
+                            <select class="form-select" th:field="*{volunteerId}"
+                                    th:classappend="${#fields.hasErrors('volunteerId')} ? 'is-invalid' : ''" required>
+                                <option value="" disabled selected>Select from vetted and available volunteers...</option>
+                                <option th:each="v : ${availableVolunteers}" th:value="${v.id}"
+                                        th:text="${v.fullName + ' (' + v.volunteerIdentifier + ') — Skills: ' + v.skills + ' [' + v.operatingArea + ']'}">Volunteer</option>
+                            </select>
+                            <small class="text-muted">Only approved volunteers who are currently available are listed.</small>
+                            <div class="invalid-feedback" th:errors="*{volunteerId}">Please select an available volunteer</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Associated Disaster Event <span class="text-danger">*</span></label>
+                                <select class="form-select" th:field="*{disasterId}"
+                                        th:classappend="${#fields.hasErrors('disasterId')} ? 'is-invalid' : ''" required>
+                                    <option value="" disabled selected>Select active disaster...</option>
+                                    <option th:each="d : ${disasters}" th:value="${d.id}"
+                                            th:text="${d.name + ' (' + d.location + ')'}">Disaster</option>
+                                </select>
+                                <div class="invalid-feedback" th:errors="*{disasterId}">Please select a disaster</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Mission Priority <span class="text-danger">*</span></label>
+                                <select class="form-select" th:field="*{priority}">
+                                    <option th:each="p : ${priorities}" th:value="${p.name()}" th:text="${p.displayName}">Priority</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Mission Task Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{taskTitle}"
+                                   th:classappend="${#fields.hasErrors('taskTitle')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. Hot Meal Distribution Shift A, First Aid Post Assistance" required>
+                            <div class="invalid-feedback" th:errors="*{taskTitle}">Task title is required</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Task Description &amp; Detailed Instructions <span class="text-danger">*</span></label>
+                            <textarea class="form-control" th:field="*{description}" rows="3"
+                                      th:classappend="${#fields.hasErrors('description')} ? 'is-invalid' : ''"
+                                      placeholder="Specific operational instructions, safety briefing, coordinator in charge, equipment required..." required></textarea>
+                            <div class="invalid-feedback" th:errors="*{description}">Task description is required</div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Mission Reporting Location <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{location}"
+                                       th:classappend="${#fields.hasErrors('location')} ? 'is-invalid' : ''"
+                                       placeholder="e.g. St. Jude Relief Camp Logistics Tent" required>
+                                <div class="invalid-feedback" th:errors="*{location}">Location is required</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Expected Completion Target</label>
+                                <input type="datetime-local" class="form-control" th:field="*{expectedCompletion}">
+                                <small class="text-muted">Target finish time for this shift or task.</small>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                            <a th:href="@{/volunteers/assignments}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-resq-primary">
+                                <i class="bi bi-send-fill me-1"></i> Offer Task to Volunteer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

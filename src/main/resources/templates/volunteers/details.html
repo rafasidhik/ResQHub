@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title th:text="${volunteer.fullName + ' — Volunteer Profile — ResQHub'}">Volunteer Profile</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a th:href="@{/volunteers}" class="text-decoration-none text-muted small">
+                    <i class="bi bi-arrow-left me-1"></i> Volunteers
+                </a>
+                <span class="text-muted small">&bull;</span>
+                <span class="badge bg-light text-secondary border font-monospace" th:text="${volunteer.volunteerIdentifier}">VOL-0001</span>
+            </div>
+            <h2 class="fw-bold mb-0" style="color: var(--resq-green-dark);" th:text="${volunteer.fullName}">Volunteer Name</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <!-- Vetting Actions (Admin only) -->
+            <form th:if="${volunteer.approvalStatus.name() == 'PENDING'}"
+                  th:action="@{/volunteers/{id}/approve(id=${volunteer.id})}" method="post" sec:authorize="hasRole('ADMIN')" class="d-inline">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check2-circle me-1"></i> Approve &amp; Vet
+                </button>
+            </form>
+            <form th:if="${volunteer.approvalStatus.name() == 'PENDING'}"
+                  th:action="@{/volunteers/{id}/reject(id=${volunteer.id})}" method="post" sec:authorize="hasRole('ADMIN')" class="d-inline"
+                  onsubmit="return confirm('Reject this volunteer application?');">
+                <button type="submit" class="btn btn-outline-danger">
+                    <i class="bi bi-x-circle me-1"></i> Reject
+                </button>
+            </form>
+
+            <!-- Assign Task Button -->
+            <a th:if="${volunteer.approvalStatus.name() == 'APPROVED' and volunteer.availabilityStatus.name() == 'AVAILABLE'}"
+               th:href="@{/volunteers/assignments/new(volunteerId=${volunteer.id})}" class="btn btn-resq-primary"
+               sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')">
+                <i class="bi bi-clipboard2-plus me-1"></i> Assign Mission
+            </a>
+        </div>
+    </div>
+
+    <!-- Flash messages are rendered globally by layout/base.html -->
+
+    <div class="row g-4">
+        <!-- Left Column: Profile Card -->
+        <div class="col-lg-4">
+            <!-- Status Card -->
+            <div class="card card-resq shadow-sm border-0 mb-4 p-3 text-center">
+                <div class="avatar-lg bg-light rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" style="width: 72px; height: 72px;">
+                    <i class="bi bi-person-fill display-5" style="color: var(--resq-green-dark);"></i>
+                </div>
+                <h5 class="fw-bold mb-1" th:text="${volunteer.fullName}">Name</h5>
+                <span class="badge bg-light text-secondary border font-monospace mb-3" th:text="${volunteer.volunteerIdentifier}">VOL-0001</span>
+
+                <div class="d-flex justify-content-center gap-2 mb-2">
+                    <span class="badge px-3 py-2"
+                          th:classappend="${volunteer.approvalStatus.name() == 'APPROVED' ? 'bg-success' : (volunteer.approvalStatus.name() == 'PENDING' ? 'bg-warning text-dark' : 'bg-danger')}"
+                          th:text="${volunteer.approvalStatus.displayName}">PENDING</span>
+                    <span class="badge px-3 py-2"
+                          th:classappend="${volunteer.availabilityStatus.name() == 'AVAILABLE' ? 'bg-success' : (volunteer.availabilityStatus.name() == 'ASSIGNED' ? 'bg-primary' : 'bg-secondary')}"
+                          th:text="${volunteer.availabilityStatus.displayName}">AVAILABLE</span>
+                </div>
+
+                <!-- Toggle Availability Form -->
+                <form th:action="@{/volunteers/{id}/availability(id=${volunteer.id})}" method="post" class="mt-3 pt-3 border-top"
+                      sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER')">
+                    <label class="small text-muted fw-semibold mb-1">Update Availability State</label>
+                    <div class="input-group input-group-sm">
+                        <select name="availabilityStatus" class="form-select">
+                            <option th:each="av : ${availabilityStatuses}" th:value="${av.name()}" th:text="${av.displayName}"
+                                    th:selected="${volunteer.availabilityStatus == av}">Availability</option>
+                        </select>
+                        <button type="submit" class="btn btn-outline-secondary">Save</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Contact & Skills Card -->
+            <div class="card card-resq shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-person-lines-fill me-2" style="color: var(--resq-green-dark);"></i>Contact &amp; Capabilities
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="small text-muted fw-semibold">Phone Number</label>
+                        <div>
+                            <a th:href="'tel:' + ${volunteer.phone}" class="fw-medium text-primary text-decoration-none">
+                                <i class="bi bi-telephone me-1"></i><span th:text="${volunteer.phone}">12345</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted fw-semibold">Email Address</label>
+                        <div>
+                            <a th:href="'mailto:' + ${volunteer.email}" class="fw-medium text-primary text-decoration-none">
+                                <i class="bi bi-envelope me-1"></i><span th:text="${volunteer.email}">email</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted fw-semibold">Operating District / Area</label>
+                        <div class="fw-medium text-dark">
+                            <i class="bi bi-geo-alt me-1 text-danger"></i><span th:text="${volunteer.operatingArea}">District</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted fw-semibold">Emergency Contact</label>
+                        <div class="fw-medium text-dark" th:text="${volunteer.emergencyContact}">Contact</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted fw-semibold">Experience &amp; Skills</label>
+                        <div class="small text-secondary mb-1" th:text="${volunteer.experienceYears + ' year(s) active experience'}">0 yrs</div>
+                        <div class="p-2 bg-light rounded small" th:text="${volunteer.skills}">Skills list</div>
+                    </div>
+                    <div class="pt-2 border-top text-muted small" th:if="${volunteer.createdAt != null}">
+                        <i class="bi bi-calendar3 me-1"></i> Registered on <span th:text="${#temporals.format(volunteer.createdAt, 'dd MMM yyyy')}">Date</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Assignments Ledger -->
+        <div class="col-lg-8">
+            <div class="card card-resq shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-card-checklist me-2" style="color: var(--resq-green-dark);"></i>Mission Assignment History
+                        </h5>
+                        <small class="text-muted" th:text="${assignments.size() + ' task(s) dispatched to this volunteer'}">0 tasks</small>
+                    </div>
+                    <a th:if="${volunteer.approvalStatus.name() == 'APPROVED' and volunteer.availabilityStatus.name() == 'AVAILABLE'}"
+                       th:href="@{/volunteers/assignments/new(volunteerId=${volunteer.id})}" class="btn btn-sm btn-resq-primary"
+                       sec:authorize="hasAnyRole('ADMIN', 'CAMP_MANAGER', 'RESCUE_OFFICER')">
+                        <i class="bi bi-plus-circle me-1"></i> Assign Task
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-resq align-middle mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Task Title</th>
+                                <th>Disaster Sector</th>
+                                <th>Location</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Progress Notes</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${assignments.empty}">
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-clipboard2-check display-6 d-block mb-2 text-muted"></i>
+                                    No missions assigned yet to this volunteer.
+                                </td>
+                            </tr>
+                            <tr th:each="a : ${assignments}">
+                                <td>
+                                    <div class="fw-bold" th:text="${a.taskTitle}">Task Title</div>
+                                    <small class="text-muted" th:text="${#temporals.format(a.createdAt, 'dd MMM yyyy, HH:mm')}">Date</small>
+                                </td>
+                                <td>
+                                    <span class="small fw-semibold text-secondary" th:text="${a.disasterName}">Disaster</span>
+                                </td>
+                                <td>
+                                    <small class="text-dark"><i class="bi bi-geo-alt me-1"></i><span th:text="${a.location}">Location</span></small>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${a.priority.name() == 'HIGH' ? 'bg-danger' : (a.priority.name() == 'MEDIUM' ? 'bg-warning text-dark' : 'bg-primary')}"
+                                          th:text="${a.priority.displayName}">MEDIUM</span>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${a.status.name() == 'COMPLETED' ? 'bg-success' : (a.status.name() == 'IN_PROGRESS' ? 'bg-info text-dark' : (a.status.name() == 'ACCEPTED' ? 'bg-primary' : (a.status.name() == 'OFFERED' ? 'bg-warning text-dark' : (a.status.name() == 'DECLINED' ? 'bg-danger' : 'bg-secondary'))))}"
+                                          th:text="${a.status.displayName}">STATUS</span>
+                                </td>
+                                <td>
+                                    <small class="text-muted" th:text="${a.progressNotes != null ? a.progressNotes : '—'}">Notes</small>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
