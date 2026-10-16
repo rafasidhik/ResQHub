@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title th:text="${isCreate} ? 'Create User — ResQHub Admin' : 'Edit User — ResQHub Admin'">User Form</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);"
+                        th:text="${isCreate} ? 'Create System Account' : 'Edit User Account'">
+                        User Account Form
+                    </h2>
+                    <p class="text-muted small mb-0">Configure user credentials, role permissions, and active operational state</p>
+                </div>
+                <a th:href="@{/admin/users}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Users
+                </a>
+            </div>
+
+            <div class="card card-resq shadow-sm p-4 border-0">
+                <form th:action="${isCreate} ? @{/admin/users/create} : @{/admin/users/edit}" 
+                      th:object="${userDto}" method="post">
+                    
+                    <input type="hidden" th:if="${!isCreate}" th:field="*{id}">
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="username" class="form-label fw-semibold">Username <span class="text-danger">*</span></label>
+                            <input type="text" id="username" th:field="*{username}" class="form-control"
+                                   th:readonly="${!isCreate}"
+                                   th:classappend="${#fields.hasErrors('username')} ? 'is-invalid' : ''"
+                                   placeholder="Username">
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></div>
+                            <div class="form-text small" th:if="${!isCreate}">Username cannot be changed after creation.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="fullName" class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" id="fullName" th:field="*{fullName}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid' : ''"
+                                   placeholder="Full Name" required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="email" class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" id="email" th:field="*{email}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('email')} ? 'is-invalid' : ''"
+                                   placeholder="name@domain.com" required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label fw-semibold">Phone Number</label>
+                            <input type="text" id="phone" th:field="*{phone}" class="form-control"
+                                   placeholder="+91 98765 43210">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="role" class="form-label fw-semibold">Assigned Role <span class="text-danger">*</span></label>
+                            <select id="role" th:field="*{role}" class="form-select"
+                                    th:classappend="${#fields.hasErrors('role')} ? 'is-invalid' : ''" required>
+                                <option th:each="r : ${roles}" th:value="${r.name()}" th:text="${r.displayName}">Role</option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('role')}" th:errors="*{role}"></div>
+                            <div class="form-text small">Determines access permissions across the system.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="status" class="form-label fw-semibold">Account Status <span class="text-danger">*</span></label>
+                            <select id="status" th:field="*{status}" class="form-select"
+                                    th:classappend="${#fields.hasErrors('status')} ? 'is-invalid' : ''" required>
+                                <option value="ACTIVE">ACTIVE &mdash; Can log in &amp; operate</option>
+                                <option value="INACTIVE">INACTIVE &mdash; Suspended / Login disabled</option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('status')}" th:errors="*{status}"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="newPassword" class="form-label fw-semibold">
+                            <span th:text="${isCreate} ? 'Initial Password' : 'Reset Password (leave empty to keep current)'">Password</span>
+                            <span class="text-danger" th:if="${isCreate}">*</span>
+                        </label>
+                        <input type="password" id="newPassword" th:field="*{newPassword}" class="form-control"
+                               th:classappend="${#fields.hasErrors('newPassword')} ? 'is-invalid' : ''"
+                               placeholder="Minimum 6 characters">
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('newPassword')}" th:errors="*{newPassword}"></div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a th:href="@{/admin/users}" class="btn btn-outline-secondary px-4">Cancel</a>
+                        <button type="submit" class="btn btn-resq-primary px-4 fw-semibold">
+                            <i class="bi bi-save me-1"></i>
+                            <span th:text="${isCreate} ? 'Create User' : 'Save Changes'">Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
