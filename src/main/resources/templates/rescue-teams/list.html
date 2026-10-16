@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Rescue Teams &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">Rescue Teams</h2>
+            <p class="text-muted small mb-0">Rostered emergency response units, specialized squads, and real-time field deployments</p>
+        </div>
+        <div>
+            <a th:href="@{/rescue-teams/create}" class="btn btn-resq-primary">
+                <i class="bi bi-shield-plus me-1"></i> Register Rescue Team
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="card card-resq mb-4 p-3 border-0 shadow-sm">
+        <form th:action="@{/rescue-teams}" method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" th:value="${search}" class="form-control"
+                           placeholder="Search team name, leader, skills, area...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="availability" class="form-select">
+                    <option value="ALL" th:selected="${selectedAvailability == 'ALL'}">All Availabilities</option>
+                    <option th:each="a : ${availabilities}" th:value="${a.name()}" th:text="${a.displayName}"
+                            th:selected="${selectedAvailability == a.name()}">Availability</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="ALL" th:selected="${selectedStatus == 'ALL'}">All Statuses</option>
+                    <option value="ACTIVE" th:selected="${selectedStatus == 'ACTIVE'}">ACTIVE</option>
+                    <option value="INACTIVE" th:selected="${selectedStatus == 'INACTIVE'}">INACTIVE</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-secondary flex-grow-1">
+                    <i class="bi bi-filter"></i> Filter
+                </button>
+                <a th:href="@{/rescue-teams}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Teams Table -->
+    <div class="card card-resq shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-resq align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Unit ID</th>
+                            <th>Squad Name & Leader</th>
+                            <th>Specialized Skills</th>
+                            <th>Operating Sector</th>
+                            <th>Capacity</th>
+                            <th>Availability</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(teams)}">
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-shield-x fs-2 d-block mb-2 text-warning"></i>
+                                No rescue teams found matching the specified filter criteria.
+                            </td>
+                        </tr>
+                        <tr th:each="t : ${teams}">
+                            <td class="font-monospace fw-bold" th:text="${t.teamIdentifier}">TEAM-001</td>
+                            <td>
+                                <div class="fw-bold" style="color: var(--resq-green-dark);" th:text="${t.name}">Squad Name</div>
+                                <div class="small text-muted">
+                                    Leader: <span th:text="${t.teamLeader}">Commander</span> &bull; 
+                                    <i class="bi bi-telephone text-muted"></i> <span th:text="${t.contactNumber}">Phone</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="small text-secondary" th:text="${t.skills}">Skills</span>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <i class="bi bi-geo-alt text-danger me-1"></i> <span th:text="${t.operatingArea}">Sector</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border" th:text="${t.capacity} + ' evacuees'">10 evacuees</span>
+                            </td>
+                            <td>
+                                <span th:class="'badge ' + 
+                                    (${t.availabilityStatus.name() == 'AVAILABLE'} ? 'bg-success-subtle text-success border border-success-subtle' : 
+                                    (${t.availabilityStatus.name() == 'ASSIGNED'} ? 'bg-warning-subtle text-dark border border-warning-subtle' : 
+                                    (${t.availabilityStatus.name() == 'ON_OPERATION'} ? 'bg-primary text-white' : 
+                                    'bg-secondary-subtle text-secondary border border-secondary-subtle')))"
+                                      th:text="${t.availabilityStatus.displayName}">
+                                    Available
+                                </span>
+                                <div class="small text-muted mt-1" th:if="${t.activeMissionLocation != null}">
+                                    <i class="bi bi-crosshair me-1"></i> <span th:text="${#strings.abbreviate(t.activeMissionLocation, 25)}">Location</span>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1">
+                                    <a th:href="@{'/rescue-teams/' + ${t.id}}" class="btn btn-sm btn-outline-secondary" title="View Team">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a th:href="@{'/rescue-teams/edit/' + ${t.id}}" class="btn btn-sm btn-outline-success" title="Edit Team">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form th:if="${t.availabilityStatus.name() != 'AVAILABLE'}"
+                                          th:action="@{'/rescue-teams/release/' + ${t.id}}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning text-dark" title="Release to Available"
+                                                th:data-confirm="'Release ' + ${t.name} + ' back to AVAILABLE status?'">
+                                            <i class="bi bi-box-arrow-right"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-3" th:if="${totalPages > 1}">
+            <div class="small text-muted">
+                Showing page <strong th:text="${currentPage + 1}">1</strong> of <strong th:text="${totalPages}">1</strong>
+                (Total <span th:text="${totalTeams}">0</span> rescue squads)
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                        <a class="page-link" th:href="@{/rescue-teams(page=${currentPage - 1}, search=${search}, availability=${selectedAvailability}, status=${selectedStatus})}">&laquo; Prev</a>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                        th:classappend="${currentPage == i} ? 'active' : ''">
+                        <a class="page-link" th:href="@{/rescue-teams(page=${i}, search=${search}, availability=${selectedAvailability}, status=${selectedStatus})}" th:text="${i + 1}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled' : ''">
+                        <a class="page-link" th:href="@{/rescue-teams(page=${currentPage + 1}, search=${search}, availability=${selectedAvailability}, status=${selectedStatus})}">Next &raquo;</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+</body>
+</html>

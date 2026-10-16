@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Smart Rescue Team Allocation &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">Smart Rescue Team Allocation</h2>
+            <p class="text-muted small mb-0">Transparent rule-based recommendation matching response squads by availability, capacity, sector, and skills</p>
+        </div>
+        <a th:href="@{/rescue-requests}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to Requests
+        </a>
+    </div>
+
+    <!-- Rule-Based Transparency Notice -->
+    <div class="alert alert-info border-info-subtle shadow-sm mb-4 small">
+        <i class="bi bi-info-circle-fill text-info me-2"></i>
+        <strong>Allocation Logic:</strong> Recommendations are calculated using deterministic weighted business rules based on team status, capacity versus stranded count, geographic proximity, and hazard-specific certifications. This system does not use AI or black-box algorithms. Officers have full authority to confirm or override squad selection.
+    </div>
+
+    <div class="row g-4">
+        <!-- Left: Request Selector -->
+        <div class="col-lg-4">
+            <div class="card card-resq shadow-sm border-0 p-3 mb-4">
+                <h5 class="fw-bold mb-3" style="color: var(--resq-green-dark);">
+                    <i class="bi bi-list-check me-2"></i> Unassigned Requests
+                </h5>
+
+                <div class="list-group" th:if="${not #lists.isEmpty(pendingRequests)}">
+                    <a th:each="r : ${pendingRequests}"
+                       th:href="@{'/rescue-requests/smart-allocation?requestId=' + ${r.id}}"
+                       class="list-group-item list-group-item-action p-3 rounded mb-2 border"
+                       th:classappend="${selectedRequest != null and selectedRequest.id == r.id} ? 'border-success bg-light' : ''">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="font-monospace fw-bold" th:text="${r.requestNumber}">REQ-2026-0001</span>
+                            <span th:class="'badge rounded-pill ' + 
+                                (${r.calculatedPriority.name() == 'CRITICAL'} ? 'bg-danger' : 
+                                (${r.calculatedPriority.name() == 'HIGH'} ? 'bg-warning text-dark' : 'bg-primary'))"
+                                  th:text="${r.calculatedPriority.displayName}">
+                                Critical
+                            </span>
+                        </div>
+                        <div class="small fw-semibold text-truncate">
+                            <i class="bi bi-geo-alt-fill text-danger me-1"></i> <span th:text="${r.location}">Location</span>
+                        </div>
+                        <div class="small text-muted mt-1">
+                            <span><i class="bi bi-people me-1"></i> <span th:text="${r.peopleCount}">1</span> people</span>
+                            &bull;
+                            <span>Urgency: <strong th:text="${r.urgency.displayName}">High</strong></span>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="text-center py-4 text-muted small" th:if="${#lists.isEmpty(pendingRequests)}">
+                    <i class="bi bi-check2-all fs-2 text-success d-block mb-2"></i>
+                    All active rescue requests currently have deployed teams or are completed!
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Team Recommendations -->
+        <div class="col-lg-8" th:if="${selectedRequest != null}">
+            <!-- Selected Request Overview Card -->
+            <div class="card card-resq shadow-sm border-0 p-4 mb-4" style="background-color: #FAFCFA;">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="badge text-uppercase mb-1"
+                              th:classappend="${selectedRequest.calculatedPriority.name() == 'CRITICAL'} ? 'bg-danger' : (${selectedRequest.calculatedPriority.name() == 'HIGH'} ? 'bg-warning text-dark' : 'bg-primary')"
+                              th:text="${selectedRequest.calculatedPriority.displayName} + ' Priority'">Priority</span>
+                        <h4 class="fw-bold mb-1" th:text="${selectedRequest.requestNumber} + ' &mdash; ' + ${selectedRequest.location}">REQ-2026-0001 Location</h4>
+                        <p class="text-muted small mb-0" th:text="${selectedRequest.description}">Description...</p>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-secondary fs-6" th:text="${selectedRequest.peopleCount} + ' People Stranded'">4 People</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendations List -->
+            <h5 class="fw-bold mb-3" style="color: var(--resq-green-dark);">
+                <i class="bi bi-stars me-2 text-warning"></i> Recommended Response Units (Ranked by Compatibility Score)
+            </h5>
+
+            <div class="row g-3">
+                <div class="col-12" th:each="rec, stat : ${recommendations}">
+                    <div class="card card-resq shadow-sm border p-4"
+                         th:classappend="${rec.eligible and stat.index == 0} ? 'border-success border-2 shadow' : ''">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+                            <div>
+                                <span class="badge bg-success me-2" th:if="${rec.eligible and stat.index == 0}">
+                                    <i class="bi bi-trophy-fill me-1"></i> Best Match
+                                </span>
+                                <span class="font-monospace text-muted small me-2" th:text="${rec.team.teamIdentifier}">TEAM-001</span>
+                                <h5 class="d-inline fw-bold mb-0" th:text="${rec.team.name}">Team Name</h5>
+                            </div>
+                            <div class="text-end">
+                                <span th:if="${rec.eligible}" class="badge bg-success-subtle text-success border border-success-subtle me-2">
+                                    <i class="bi bi-check-circle-fill me-1"></i> ELIGIBLE
+                                </span>
+                                <span th:unless="${rec.eligible}" class="badge bg-danger-subtle text-danger border border-danger-subtle me-2">
+                                    <i class="bi bi-x-circle-fill me-1"></i> INELIGIBLE
+                                </span>
+                                <span class="fw-bold fs-5" th:classappend="${rec.eligible} ? 'text-success' : 'text-muted'"
+                                      th:text="${rec.score} + '%'">90%</span>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="progress mb-3" style="height: 6px;">
+                            <div class="progress-bar" role="progressbar" 
+                                 th:style="'width: ' + ${rec.score} + '%;'"
+                                 th:classappend="${rec.eligible} ? 'bg-success' : 'bg-secondary'"></div>
+                        </div>
+
+                        <!-- Team Details Row -->
+                        <div class="row g-2 text-muted small mb-3">
+                            <div class="col-sm-4">
+                                <i class="bi bi-person me-1"></i> Leader: <strong th:text="${rec.team.teamLeader}">Leader</strong>
+                            </div>
+                            <div class="col-sm-4">
+                                <i class="bi bi-geo-alt me-1"></i> Sector: <strong th:text="${rec.team.operatingArea}">Sector</strong>
+                            </div>
+                            <div class="col-sm-4">
+                                <i class="bi bi-people me-1"></i> Capacity: <strong th:text="${rec.team.capacity}">15</strong>
+                            </div>
+                        </div>
+
+                        <!-- Matching Factors Breakdown -->
+                        <div class="mb-3" th:if="${not #lists.isEmpty(rec.matchingFactors)}">
+                            <strong class="small text-success d-block mb-1">
+                                <i class="bi bi-check2-circle me-1"></i> Matching Factors:
+                            </strong>
+                            <ul class="list-unstyled mb-0 small text-secondary ps-3">
+                                <li th:each="factor : ${rec.matchingFactors}" class="mb-1">
+                                    &bull; <span th:text="${factor}">Factor</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Constraint Warnings -->
+                        <div class="mb-3" th:if="${not #lists.isEmpty(rec.constraintWarnings)}">
+                            <strong class="small text-danger d-block mb-1">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Operational Constraints:
+                            </strong>
+                            <ul class="list-unstyled mb-0 small text-danger ps-3">
+                                <li th:each="w : ${rec.constraintWarnings}" class="mb-1">
+                                    &bull; <span th:text="${w}">Warning</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Deployment Form -->
+                        <div class="pt-3 border-top d-flex justify-content-end" th:if="${rec.eligible}">
+                            <form th:action="@{'/rescue-requests/' + ${selectedRequest.id} + '/assign'}" method="post" class="d-flex flex-column flex-sm-row gap-2 w-100">
+                                <input type="hidden" name="teamId" th:value="${rec.team.id}">
+                                <input type="text" name="notes" class="form-control form-control-sm flex-grow-1" placeholder="Officer dispatch notes (optional)...">
+                                <button type="submit" class="btn btn-resq-primary btn-sm fw-semibold text-nowrap"
+                                        th:data-confirm="'Confirm deployment of ' + ${rec.team.name} + ' to ' + ${selectedRequest.location} + '?'">
+                                    <i class="bi bi-send-check me-1"></i> Deploy This Squad
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

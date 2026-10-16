@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Request Emergency Rescue &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-md-9 col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">Request Emergency Rescue</h2>
+                    <p class="text-muted small mb-0">File an urgent evacuation request for stranded individuals or families</p>
+                </div>
+                <a th:href="${#authorization.expression('isAuthenticated()')} ? @{/rescue-requests} : @{/}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Back
+                </a>
+            </div>
+
+            <!-- Emergency Guidance Alert -->
+            <div class="alert alert-warning border-warning-subtle shadow-sm mb-4">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle-fill fs-3 text-warning me-3"></i>
+                    <div>
+                        <strong class="d-block">Life Safety Notice:</strong>
+                        If you are in immediate life-threatening physical peril, also dial local emergency dispatch services (112 / 108) while submitting your coordinates here.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-resq shadow-sm p-4 border-0">
+                <form th:action="@{/rescue-requests/new}" th:object="${requestDto}" method="post">
+
+                    <input type="hidden" th:field="*{victimId}">
+
+                    <div class="mb-3">
+                        <label for="disasterId" class="form-label fw-semibold">Disaster Incident <span class="text-danger">*</span></label>
+                        <select id="disasterId" th:field="*{disasterId}" class="form-select"
+                                th:classappend="${#fields.hasErrors('disasterId')} ? 'is-invalid' : ''" required>
+                            <option value="">-- Select Active Disaster Incident --</option>
+                            <option th:each="d : ${disasters}" th:value="${d.id}" th:text="${d.name}">Disaster</option>
+                        </select>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('disasterId')}" th:errors="*{disasterId}"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="location" class="form-label fw-semibold">Exact Location / Stranded Landmark <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-geo-alt-fill text-danger"></i></span>
+                            <input type="text" id="location" th:field="*{location}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('location')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. Near Lighthouse Road, Old Fishermen Colony Plot 12, Rooftop of 2-storey house" required>
+                        </div>
+                        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('location')}" th:errors="*{location}"></div>
+                        <div class="form-text small">Provide recognizable landmarks, building names, or road intersections.</div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="peopleCount" class="form-label fw-semibold">People Requiring Rescue <span class="text-danger">*</span></label>
+                            <input type="number" id="peopleCount" th:field="*{peopleCount}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('peopleCount')} ? 'is-invalid' : ''"
+                                   min="1" required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('peopleCount')}" th:errors="*{peopleCount}"></div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="contactNumber" class="form-label fw-semibold">Contact Phone Number <span class="text-danger">*</span></label>
+                            <input type="text" id="contactNumber" th:field="*{contactNumber}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('contactNumber')} ? 'is-invalid' : ''"
+                                   placeholder="Phone or alternative number" required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('contactNumber')}" th:errors="*{contactNumber}"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="urgency" class="form-label fw-semibold">Immediate Hazard Urgency <span class="text-danger">*</span></label>
+                        <select id="urgency" th:field="*{urgency}" class="form-select"
+                                th:classappend="${#fields.hasErrors('urgency')} ? 'is-invalid' : ''" required>
+                            <option th:each="u : ${urgencies}" th:value="${u.name()}" th:text="${u.displayName}">Urgency</option>
+                        </select>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('urgency')}" th:errors="*{urgency}"></div>
+                        <div class="form-text small">Select 'Critical' if water is rising rapidly, structural collapse is imminent, or injured persons are stranded.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="description" class="form-label fw-semibold">Situation Narrative & Special Needs <span class="text-danger">*</span></label>
+                        <textarea id="description" th:field="*{description}" class="form-control" rows="4"
+                                  th:classappend="${#fields.hasErrors('description')} ? 'is-invalid' : ''"
+                                  placeholder="Describe obstacles (depth of floodwaters, mud flow, cut off roads), physical condition, elderly or infant requirements..." required></textarea>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+                    </div>
+
+                    <div class="d-grid gap-2 pt-2">
+                        <button type="submit" class="btn btn-warning text-dark btn-lg fw-bold shadow-sm">
+                            <i class="bi bi-life-preserver me-2"></i> Submit Emergency Request
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

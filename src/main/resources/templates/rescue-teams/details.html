@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title th:text="${team.name} + ' (' + ${team.teamIdentifier} + ') &mdash; ResQHub'">Rescue Squad Details</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="fw-bold mb-0" style="color: var(--resq-green-dark);" th:text="${team.name}">Team Name</h2>
+                <span class="badge bg-light text-dark border font-monospace" th:text="${team.teamIdentifier}">TEAM-001</span>
+                <span th:class="'badge ' + 
+                    (${team.availabilityStatus.name() == 'AVAILABLE'} ? 'bg-success-subtle text-success border border-success-subtle' : 
+                    (${team.availabilityStatus.name() == 'ASSIGNED'} ? 'bg-warning-subtle text-dark border border-warning-subtle' : 
+                    (${team.availabilityStatus.name() == 'ON_OPERATION'} ? 'bg-primary text-white' : 
+                    'bg-secondary-subtle text-secondary border border-secondary-subtle')))"
+                      th:text="${team.availabilityStatus.displayName}">
+                    Status
+                </span>
+            </div>
+            <p class="text-muted small mb-0">
+                <i class="bi bi-geo-alt-fill text-danger me-1"></i> Operating Sector: <strong th:text="${team.operatingArea}">Area</strong>
+                &bull;
+                <i class="bi bi-person-badge me-1"></i> Commander: <span th:text="${team.teamLeader}">Leader</span>
+                &bull;
+                <i class="bi bi-telephone me-1"></i> Radio Contact: <span th:text="${team.contactNumber}">Phone</span>
+            </p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a th:href="@{/rescue-teams}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Teams
+            </a>
+            <a th:href="@{'/rescue-teams/edit/' + ${team.id}}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-pencil me-1"></i> Edit Unit
+            </a>
+            <form th:if="${team.availabilityStatus.name() != 'AVAILABLE'}"
+                  th:action="@{'/rescue-teams/release/' + ${team.id}}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-warning text-dark btn-sm fw-semibold"
+                        data-confirm="Release squad to AVAILABLE state?">
+                    <i class="bi bi-box-arrow-right me-1"></i> Release Squad
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main Profile & Members -->
+        <div class="col-lg-8">
+            <!-- Skills & Capabilities Card -->
+            <div class="card card-resq p-4 shadow-sm border-0 mb-4">
+                <h5 class="fw-bold mb-3" style="color: var(--resq-green-dark);">
+                    <i class="bi bi-tools me-2"></i> Operational Capabilities & Specifications
+                </h5>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <label class="text-muted small d-block">Rescue Evacuation Capacity</label>
+                        <span class="fs-5 fw-bold text-success" th:text="${team.capacity} + ' individuals / trip'">15 individuals</span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="text-muted small d-block">Roster State</label>
+                        <span class="badge bg-light text-dark border fs-6" th:text="${team.status}">ACTIVE</span>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-light rounded border mb-0">
+                    <strong class="d-block mb-1 text-primary">
+                        <i class="bi bi-award-fill me-1"></i> Specialized Certifications & Equipment:
+                    </strong>
+                    <span class="fs-6 text-dark" th:text="${team.skills}">Skills list...</span>
+                </div>
+            </div>
+
+            <!-- Squad Operatives Roster -->
+            <div class="card card-resq p-4 shadow-sm border-0 mb-4">
+                <h5 class="fw-bold mb-3" style="color: var(--resq-green-dark);">
+                    <i class="bi bi-people-fill me-2"></i> Squad Operatives Roster
+                </h5>
+
+                <div class="table-responsive" th:if="${not #lists.isEmpty(members)}">
+                    <table class="table table-sm table-resq align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Operative Name</th>
+                                <th>Role Title</th>
+                                <th>Contact</th>
+                                <th>Specialty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="m : ${members}">
+                                <td class="fw-bold" th:text="${m.memberName}">Operative</td>
+                                <td th:text="${m.roleTitle}">Role</td>
+                                <td class="small text-muted" th:text="${m.contactNumber ?: '—'}">Phone</td>
+                                <td class="small" th:text="${m.specialty ?: '—'}">Specialty</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="text-center py-4 text-muted small" th:if="${#lists.isEmpty(members)}">
+                    No individual member profiles added to this team roster yet.
+                </div>
+            </div>
+
+            <!-- Mission History -->
+            <div class="card card-resq p-4 shadow-sm border-0">
+                <h5 class="fw-bold mb-3" style="color: var(--resq-green-dark);">
+                    <i class="bi bi-clock-history me-2"></i> Deployment Mission History
+                </h5>
+
+                <div class="table-responsive" th:if="${not #lists.isEmpty(history)}">
+                    <table class="table table-sm table-resq align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Request #</th>
+                                <th>Status</th>
+                                <th>Deployed At</th>
+                                <th>Completed At</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="h : ${history}">
+                                <td>
+                                    <a th:href="@{'/rescue-requests/' + ${h.requestId}}" class="font-monospace fw-bold" th:text="${h.requestNumber}">
+                                        REQ-2026-0001
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border" th:text="${h.status}">Status</span>
+                                </td>
+                                <td class="small text-muted" th:text="${#temporals.format(h.startTime, 'dd MMM, HH:mm')}">Time</td>
+                                <td class="small text-muted" th:text="${h.actualCompletion != null ? #temporals.format(h.actualCompletion, 'dd MMM, HH:mm') : '—'}">Time</td>
+                                <td class="small" th:text="${h.progressNotes}">Notes</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="text-center py-4 text-muted small" th:if="${#lists.isEmpty(history)}">
+                    This unit has no past or recorded deployment missions.
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar: Active Mission -->
+        <div class="col-lg-4">
+            <div class="card card-resq p-4 shadow-sm border-0 mb-4" th:if="${team.activeAssignmentId != null}">
+                <h5 class="fw-bold mb-3" style="color: var(--resq-alert-critical);">
+                    <i class="bi bi-radar me-2"></i> Current Active Mission
+                </h5>
+                <div class="p-3 bg-danger-subtle rounded border border-danger-subtle mb-3">
+                    <label class="text-muted small d-block">Mission Coordinates</label>
+                    <strong class="text-danger" th:text="${team.activeMissionLocation}">Location</strong>
+                </div>
+                <a th:href="@{'/rescue-requests/' + ${history[0].requestId}}" class="btn btn-outline-danger btn-sm w-100">
+                    <i class="bi bi-eye me-1"></i> View Mission Request
+                </a>
+            </div>
+
+            <div class="card card-resq p-4 shadow-sm border-0 bg-light">
+                <h6 class="fw-bold mb-2" style="color: var(--resq-brown-primary);">
+                    <i class="bi bi-info-circle me-1"></i> Allocation Guidelines
+                </h6>
+                <p class="small text-muted mb-0">
+                    Teams in <code>AVAILABLE</code> status are scored automatically during Smart Allocation based on capacity, sector coverage, and specialized water or rope equipment.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

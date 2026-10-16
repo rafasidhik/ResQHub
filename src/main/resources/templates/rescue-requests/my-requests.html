@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>My Rescue Requests &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">My Rescue Requests</h2>
+            <p class="text-muted small mb-0">Track real-time coordination status and squad deployments for requests you submitted</p>
+        </div>
+        <a th:href="@{/rescue-requests/new}" class="btn btn-warning text-dark fw-bold">
+            <i class="bi bi-plus-circle me-1"></i> Submit New Request
+        </a>
+    </div>
+
+    <div class="card card-resq shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-resq align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Request #</th>
+                            <th>Location</th>
+                            <th>People Stranded</th>
+                            <th>Priority</th>
+                            <th>Current Status</th>
+                            <th>Assigned Unit</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(requests)}">
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-shield-check fs-2 d-block mb-2 text-success"></i>
+                                You have not submitted any rescue requests.
+                            </td>
+                        </tr>
+                        <tr th:each="r : ${requests}">
+                            <td>
+                                <a th:href="@{'/rescue-requests/' + ${r.id}}" class="fw-bold text-decoration-none font-monospace"
+                                   style="color: var(--resq-green-dark);" th:text="${r.requestNumber}">
+                                    REQ-2026-0001
+                                </a>
+                                <div class="small text-muted" th:text="${#temporals.format(r.createdAt, 'dd MMM yyyy, HH:mm')}">Date</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">
+                                    <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                                    <span th:text="${r.location}">Location</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary-subtle text-secondary" th:text="${r.peopleCount} + ' individuals'">
+                                    1 person
+                                </span>
+                            </td>
+                            <td>
+                                <span th:class="'badge rounded-pill ' + 
+                                    (${r.calculatedPriority.name() == 'CRITICAL'} ? 'bg-danger' : 
+                                    (${r.calculatedPriority.name() == 'HIGH'} ? 'bg-warning text-dark' : 'bg-primary'))"
+                                      th:text="${r.calculatedPriority.displayName}">
+                                    Priority
+                                </span>
+                            </td>
+                            <td>
+                                <span th:class="'badge ' + 
+                                    (${r.status.name() == 'PENDING'} ? 'bg-warning-subtle text-dark border border-warning-subtle' : 
+                                    (${r.status.name() == 'VERIFIED'} ? 'bg-info-subtle text-info border border-info-subtle' : 
+                                    (${r.status.name() == 'ASSIGNED'} ? 'bg-primary-subtle text-primary border border-primary-subtle' : 
+                                    (${r.status.name() == 'IN_PROGRESS'} ? 'bg-primary text-white' : 
+                                    (${r.status.name() == 'COMPLETED'} ? 'bg-success-subtle text-success border border-success-subtle' : 
+                                    'bg-secondary-subtle text-secondary border border-secondary-subtle')))))"
+                                      th:text="${r.status.displayName}">
+                                    Status
+                                </span>
+                            </td>
+                            <td>
+                                <span th:if="${r.activeTeamName != null}" class="badge bg-success-subtle text-success border border-success-subtle">
+                                    <i class="bi bi-shield-fill-check me-1"></i> <span th:text="${r.activeTeamName}">NDRF Alpha</span>
+                                </span>
+                                <span th:unless="${r.activeTeamName != null}" class="text-muted small">
+                                    Awaiting squad assignment
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a th:href="@{'/rescue-requests/' + ${r.id}}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-eye me-1"></i> Details
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-3" th:if="${totalPages > 1}">
+            <div class="small text-muted">
+                Page <strong th:text="${currentPage + 1}">1</strong> of <strong th:text="${totalPages}">1</strong>
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                        <a class="page-link" th:href="@{/rescue-requests/my-requests(page=${currentPage - 1})}">&laquo; Prev</a>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                        th:classappend="${currentPage == i} ? 'active' : ''">
+                        <a class="page-link" th:href="@{/rescue-requests/my-requests(page=${i})}" th:text="${i + 1}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled' : ''">
+                        <a class="page-link" th:href="@{/rescue-requests/my-requests(page=${currentPage + 1})}">Next &raquo;</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+</body>
+</html>

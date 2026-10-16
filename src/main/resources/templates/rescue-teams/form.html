@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title th:text="${isCreate} ? 'Register Team &mdash; ResQHub' : 'Edit Team &mdash; ResQHub'">Rescue Team Form</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);"
+                        th:text="${isCreate} ? 'Register Response Unit' : 'Edit Rescue Team Details'">
+                        Rescue Team Form
+                    </h2>
+                    <p class="text-muted small mb-0">Roster specialized personnel, equipment certifications, and sector coverage</p>
+                </div>
+                <a th:href="@{/rescue-teams}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Teams
+                </a>
+            </div>
+
+            <div class="card card-resq shadow-sm p-4 border-0">
+                <form th:action="${isCreate} ? @{/rescue-teams/create} : @{/rescue-teams/edit}"
+                      th:object="${teamDto}" method="post">
+
+                    <input type="hidden" th:if="${!isCreate}" th:field="*{id}">
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-7">
+                            <label for="name" class="form-label fw-semibold">Team / Squad Name <span class="text-danger">*</span></label>
+                            <input type="text" id="name" th:field="*{name}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. NDRF Alpha Swift Water Squad" required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                        </div>
+
+                        <div class="col-md-5">
+                            <label for="teamLeader" class="form-label fw-semibold">Team Commander / Leader <span class="text-danger">*</span></label>
+                            <input type="text" id="teamLeader" th:field="*{teamLeader}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('teamLeader')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. Inspector Vikram Rathore" required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('teamLeader')}" th:errors="*{teamLeader}"></div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="contactNumber" class="form-label fw-semibold">Radio / Phone Dispatch Contact <span class="text-danger">*</span></label>
+                            <input type="text" id="contactNumber" th:field="*{contactNumber}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('contactNumber')} ? 'is-invalid' : ''"
+                                   placeholder="+91 98700 11001" required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('contactNumber')}" th:errors="*{contactNumber}"></div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="capacity" class="form-label fw-semibold">Simultaneous Rescue Capacity <span class="text-danger">*</span></label>
+                            <input type="number" id="capacity" th:field="*{capacity}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('capacity')} ? 'is-invalid' : ''"
+                                   min="1" required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('capacity')}" th:errors="*{capacity}"></div>
+                            <div class="form-text small">Maximum individuals evacuated per single deployment cycle.</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="operatingArea" class="form-label fw-semibold">Designated Operating Sector / Area <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-geo-alt text-danger"></i></span>
+                            <input type="text" id="operatingArea" th:field="*{operatingArea}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('operatingArea')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. Wayanad Highlands - Meppadi Sector, Kuttanad & Vembanad Backwaters" required>
+                        </div>
+                        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('operatingArea')}" th:errors="*{operatingArea}"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="skills" class="form-label fw-semibold">Specialized Operational Skills & Equipment <span class="text-danger">*</span></label>
+                        <input type="text" id="skills" th:field="*{skills}" class="form-control"
+                               th:classappend="${#fields.hasErrors('skills')} ? 'is-invalid' : ''"
+                               placeholder="e.g. Water Rescue, Motorized Zodiac Boat Handling, High Altitude Ropes, CPR First Aid" required>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('skills')}" th:errors="*{skills}"></div>
+                        <div class="form-text small">Used by Smart Team Allocation to match incident hazards.</div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="availabilityStatus" class="form-label fw-semibold">Availability Status <span class="text-danger">*</span></label>
+                            <select id="availabilityStatus" th:field="*{availabilityStatus}" class="form-select"
+                                    th:classappend="${#fields.hasErrors('availabilityStatus')} ? 'is-invalid' : ''" required>
+                                <option th:each="a : ${availabilities}" th:value="${a.name()}" th:text="${a.displayName}">Availability</option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('availabilityStatus')}" th:errors="*{availabilityStatus}"></div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="status" class="form-label fw-semibold">Roster Status <span class="text-danger">*</span></label>
+                            <select id="status" th:field="*{status}" class="form-select"
+                                    th:classappend="${#fields.hasErrors('status')} ? 'is-invalid' : ''" required>
+                                <option value="ACTIVE">ACTIVE &mdash; Deployed in operational grid</option>
+                                <option value="INACTIVE">INACTIVE &mdash; Stood down</option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('status')}" th:errors="*{status}"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4" th:if="${isCreate}">
+                        <label for="newMembersText" class="form-label fw-semibold">Squad Operatives (One per line or comma-separated)</label>
+                        <textarea id="newMembersText" th:field="*{newMembersText}" class="form-control" rows="3"
+                                  placeholder="Suresh Pillai&#10;Dr. Geeta Nair&#10;Manish Tiwari"></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a th:href="@{/rescue-teams}" class="btn btn-outline-secondary px-4">Cancel</a>
+                        <button type="submit" class="btn btn-resq-primary px-4 fw-semibold">
+                            <i class="bi bi-save me-1"></i>
+                            <span th:text="${isCreate} ? 'Register Team' : 'Update Team'">Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
