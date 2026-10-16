@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title>Disaster Incidents Directory &mdash; ResQHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);">Disaster Incidents</h2>
+            <p class="text-muted small mb-0">Active and tracked natural and civil disaster emergencies requiring coordinated response</p>
+        </div>
+        <div sec:authorize="hasAnyRole('ADMIN', 'RESCUE_OFFICER')">
+            <a th:href="@{/disasters/create}" class="btn btn-resq-primary">
+                <i class="bi bi-plus-circle me-1"></i> Declare Incident
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter & Search Controls -->
+    <div class="card card-resq mb-4 p-3 border-0 shadow-sm">
+        <form th:action="@{/disasters}" method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" th:value="${search}" class="form-control"
+                           placeholder="Search by incident name or location...">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select name="type" class="form-select">
+                    <option value="ALL" th:selected="${selectedType == 'ALL'}">All Types</option>
+                    <option th:each="t : ${types}" th:value="${t.name()}" th:text="${t.displayName}"
+                            th:selected="${selectedType == t.name()}">Type</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="severity" class="form-select">
+                    <option value="ALL" th:selected="${selectedSeverity == 'ALL'}">All Severities</option>
+                    <option th:each="s : ${severities}" th:value="${s.name()}" th:text="${s.displayName}"
+                            th:selected="${selectedSeverity == s.name()}">Severity</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="ALL" th:selected="${selectedStatus == 'ALL'}">All Statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st.name()}" th:text="${st.displayName}"
+                            th:selected="${selectedStatus == st.name()}">Status</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-secondary flex-grow-1">
+                    <i class="bi bi-filter"></i> Apply
+                </button>
+                <a th:href="@{/disasters}" class="btn btn-outline-secondary" title="Reset Filters">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Disasters Cards Grid -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 text-center py-5 text-muted" th:if="${#lists.isEmpty(disasters)}">
+            <i class="bi bi-shield-check fs-1 text-success d-block mb-2"></i>
+            <h5>No disaster incidents found</h5>
+            <p class="small">No active or recorded incidents match your filter parameters.</p>
+        </div>
+
+        <div class="col-md-6 col-lg-4" th:each="d : ${disasters}">
+            <div class="card card-resq h-100 shadow-sm border-0 d-flex flex-column">
+                <div class="card-body p-4 d-flex flex-column">
+                    <!-- Badges Row -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span th:class="'badge rounded-pill ' + 
+                            (${d.severity.name() == 'CRITICAL'} ? 'bg-danger' : 
+                            (${d.severity.name() == 'HIGH'} ? 'bg-warning text-dark' : 
+                            (${d.severity.name() == 'MODERATE'} ? 'bg-primary' : 'bg-success')))"
+                              th:text="${d.severity.displayName}">
+                            Critical
+                        </span>
+
+                        <span th:class="'badge ' + 
+                            (${d.status.name() == 'ACTIVE'} ? 'bg-success-subtle text-success border border-success-subtle' : 
+                            (${d.status.name() == 'CONTAINED'} ? 'bg-warning-subtle text-dark border border-warning-subtle' : 
+                            'bg-secondary-subtle text-secondary border border-secondary-subtle'))"
+                              th:text="${d.status.displayName}">
+                            Active
+                        </span>
+                    </div>
+
+                    <!-- Title & Type -->
+                    <h5 class="card-title fw-bold mb-1" style="color: var(--resq-green-dark);" th:text="${d.name}">
+                        Disaster Incident Name
+                    </h5>
+                    <div class="text-muted small mb-3">
+                        <i class="bi bi-tag me-1"></i> <span th:text="${d.disasterType.displayName}">Disaster Type</span>
+                        &bull;
+                        <i class="bi bi-calendar-event me-1"></i> Started <span th:text="${d.startDate}">Date</span>
+                    </div>
+
+                    <!-- Location -->
+                    <p class="card-text text-muted mb-3 flex-grow-1">
+                        <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                        <span th:text="${d.location}">Incident Location</span>
+                        <br>
+                        <span class="small" th:text="${#strings.abbreviate(d.description, 120)}">Description summary...</span>
+                    </p>
+
+                    <!-- Impact Quick Metrics -->
+                    <div class="bg-light p-2 rounded mb-3 d-flex justify-content-around text-center small">
+                        <div>
+                            <span class="fw-bold d-block text-danger" th:text="${d.victimCount}">0</span>
+                            <span class="text-muted" style="font-size: 0.75rem;">Victims</span>
+                        </div>
+                        <div class="border-start"></div>
+                        <div>
+                            <span class="fw-bold d-block text-primary" th:text="${d.rescueRequestCount}">0</span>
+                            <span class="text-muted" style="font-size: 0.75rem;">Requests</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <div class="d-grid mt-auto">
+                        <a th:href="@{'/disasters/' + ${d.id}}" class="btn btn-outline-success btn-sm fw-semibold">
+                            <i class="bi bi-eye me-1"></i> View Situation Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-between align-items-center py-3" th:if="${totalPages > 1}">
+        <div class="small text-muted">
+            Page <strong th:text="${currentPage + 1}">1</strong> of <strong th:text="${totalPages}">1</strong>
+            (Total <span th:text="${totalDisasters}">0</span> incidents)
+        </div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                    <a class="page-link" th:href="@{/disasters(page=${currentPage - 1}, search=${search}, status=${selectedStatus}, severity=${selectedSeverity}, type=${selectedType})}">&laquo; Prev</a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                    th:classappend="${currentPage == i} ? 'active' : ''">
+                    <a class="page-link" th:href="@{/disasters(page=${i}, search=${search}, status=${selectedStatus}, severity=${selectedSeverity}, type=${selectedType})}" th:text="${i + 1}">1</a>
+                </li>
+                <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled' : ''">
+                    <a class="page-link" th:href="@{/disasters(page=${currentPage + 1}, search=${search}, status=${selectedStatus}, severity=${selectedSeverity}, type=${selectedType})}">Next &raquo;</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+</body>
+</html>

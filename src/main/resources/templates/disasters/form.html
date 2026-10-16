@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::content})}">
+<head>
+    <title th:text="${isCreate} ? 'Declare Incident &mdash; ResQHub' : 'Edit Disaster Incident &mdash; ResQHub'">Disaster Form</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1" style="color: var(--resq-green-dark);"
+                        th:text="${isCreate} ? 'Declare New Disaster Incident' : 'Edit Incident Details'">
+                        Disaster Incident
+                    </h2>
+                    <p class="text-muted small mb-0">Record critical parameters to coordinate emergency response, rescue requests, and shelters</p>
+                </div>
+                <a th:href="@{/disasters}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Disasters
+                </a>
+            </div>
+
+            <div class="card card-resq shadow-sm p-4 border-0">
+                <form th:action="${isCreate} ? @{/disasters/create} : @{/disasters/edit}"
+                      th:object="${disasterDto}" method="post">
+
+                    <input type="hidden" th:if="${!isCreate}" th:field="*{id}">
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label fw-semibold">Disaster Title / Identifier <span class="text-danger">*</span></label>
+                        <input type="text" id="name" th:field="*{name}" class="form-control"
+                               th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''"
+                               placeholder="e.g. Cyclone Vardah Coastal Inundation">
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="disasterType" class="form-label fw-semibold">Disaster Classification <span class="text-danger">*</span></label>
+                            <select id="disasterType" th:field="*{disasterType}" class="form-select"
+                                    th:classappend="${#fields.hasErrors('disasterType')} ? 'is-invalid' : ''" required>
+                                <option th:each="t : ${types}" th:value="${t.name()}" th:text="${t.displayName}">Type</option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('disasterType')}" th:errors="*{disasterType}"></div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="startDate" class="form-label fw-semibold">Incident Start Date <span class="text-danger">*</span></label>
+                            <input type="date" id="startDate" th:field="*{startDate}" class="form-control" required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('startDate')}" th:errors="*{startDate}"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="location" class="form-label fw-semibold">Affected Geographic Location / Sector <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-geo-alt text-danger"></i></span>
+                            <input type="text" id="location" th:field="*{location}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('location')} ? 'is-invalid' : ''"
+                                   placeholder="e.g. Mundakkai & Chooralmala, Wayanad District; Kuttanad, Alappuzha District" required>
+                        </div>
+                        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('location')}" th:errors="*{location}"></div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="severity" class="form-label fw-semibold">Emergency Severity <span class="text-danger">*</span></label>
+                            <select id="severity" th:field="*{severity}" class="form-select"
+                                    th:classappend="${#fields.hasErrors('severity')} ? 'is-invalid' : ''" required>
+                                <option th:each="s : ${severities}" th:value="${s.name()}" th:text="${s.displayName}">Severity</option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('severity')}" th:errors="*{severity}"></div>
+                            <div class="form-text small">Guides automated rescue prioritization scoring.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="status" class="form-label fw-semibold">Operational Status <span class="text-danger">*</span></label>
+                            <select id="status" th:field="*{status}" class="form-select"
+                                    th:classappend="${#fields.hasErrors('status')} ? 'is-invalid' : ''" required>
+                                <option th:each="st : ${statuses}" th:value="${st.name()}" th:text="${st.displayName}">Status</option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('status')}" th:errors="*{status}"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="description" class="form-label fw-semibold">Situation Assessment & Notes</label>
+                        <textarea id="description" th:field="*{description}" class="form-control" rows="4"
+                                  placeholder="Provide summary of affected perimeters, breach points, road blockages, and primary hazards..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a th:href="@{/disasters}" class="btn btn-outline-secondary px-4">Cancel</a>
+                        <button type="submit" class="btn btn-resq-primary px-4 fw-semibold">
+                            <i class="bi bi-save me-1"></i>
+                            <span th:text="${isCreate} ? 'Declare Incident' : 'Update Record'">Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
