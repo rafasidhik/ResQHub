@@ -28,13 +28,10 @@
 INSERT INTO users (id, username, email, password_hash, full_name, phone, role, status) VALUES
 (1, 'admin', 'admin@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Administrator System', '+91 98765 43210', 'ADMIN', 'ACTIVE'),
 (2, 'rescue_officer', 'rescue.officer@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Kavita Menon', '+91 98765 43211', 'RESCUE_OFFICER', 'ACTIVE'),
-(3, 'rescue_officer2', 'rescue.officer2@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Rajesh Nair', '+91 98765 43212', 'RESCUE_OFFICER', 'ACTIVE'),
-(4, 'camp_manager', 'camp.manager@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Anjali Menon', '+91 98765 43213', 'CAMP_MANAGER', 'ACTIVE'),
-(5, 'camp_manager2', 'camp.manager2@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Arun Kurup', '+91 98765 43214', 'CAMP_MANAGER', 'ACTIVE'),
-(6, 'volunteer_user', 'volunteer.user@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Deepak Menon', '+91 98765 43215', 'VOLUNTEER', 'ACTIVE'),
-(7, 'volunteer_user2', 'volunteer.user2@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Priya Nambiar', '+91 98765 43216', 'VOLUNTEER', 'ACTIVE'),
-(8, 'citizen_user', 'citizen.user@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Rahul Nair', '+91 98765 43217', 'CITIZEN', 'ACTIVE'),
-(9, 'demo', 'demo@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Demo Citizen', '+91 98765 43218', 'CITIZEN', 'ACTIVE')
+(3, 'camp_manager', 'camp.manager@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Anjali Menon', '+91 98765 43213', 'CAMP_MANAGER', 'ACTIVE'),
+(4, 'volunteer_user', 'volunteer.user@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Deepak Menon', '+91 98765 43215', 'VOLUNTEER', 'ACTIVE'),
+(5, 'citizen_user', 'citizen.user@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Rahul Nair', '+91 98765 43217', 'CITIZEN', 'ACTIVE'),
+(6, 'demo', 'demo@resqhub.org', '$2a$10$Dr1m0dEIFXy3EduetGX19.9.SXL37Uk1VynSYMIbQHnirGS8A1HQC', 'Demo Citizen', '+91 98765 43218', 'CITIZEN', 'ACTIVE')
 ON DUPLICATE KEY UPDATE
     password_hash = VALUES(password_hash),
     full_name = VALUES(full_name),
