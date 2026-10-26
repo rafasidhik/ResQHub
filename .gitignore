@@ -1,0 +1,30 @@
+# secrets & local config
+src/main/resources/config/db.properties
+resqhub.properties
+.env
+*.local
+
+# build output
+target/
+*.war
+*.class
+
+# logs & temporary files
+*.log
+logs/
+*.tmp
+
+# IDE & OS metadata
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+.factorypath
+.DS_Store
+Thumbs.db
+
+# Python bytecode
+__pycache__/
+*.pyc

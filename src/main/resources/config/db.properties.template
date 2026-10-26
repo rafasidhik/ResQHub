@@ -1,0 +1,14 @@
+# ResQHub database configuration TEMPLATE (contains no real secrets).
+#
+# 1. Copy this file to   src/main/resources/config/db.properties
+#    (that file is git-ignored and ends up inside the WAR under WEB-INF/classes,
+#    which Tomcat never serves to browsers),
+# 2. fill in YOUR MySQL username and password, then rebuild.
+#
+# Alternatives that keep the password OUT of the WAR (recommended for real use):
+#   * file  $CATALINA_BASE/conf/resqhub.properties   (same keys as below)
+#   * env vars  RESQHUB_DB_URL, RESQHUB_DB_USER, RESQHUB_DB_PASSWORD
+#   * JVM option  -Dresqhub.config=/path/to/resqhub.properties
+db.url=jdbc:mysql://localhost:3306/resqhub_web?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+db.username=YOUR_MYSQL_USERNAME
+db.password=YOUR_MYSQL_PASSWORD
