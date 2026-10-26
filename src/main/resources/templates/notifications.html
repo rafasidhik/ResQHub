@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Notifications & Alerts', 'NOTIFICATIONS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Notifications &amp; Alerts</h1>
+      <div class="sub">Alerts addressed to you. The list is as of this page load — it does not update by itself.</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <form th:if="${canRefresh}" method="post" th:action="@{/app/notifications}" class="d-inline">
+        <input type="hidden" name="action" value="refresh">
+        <button class="btn btn-outline-secondary" type="submit">
+          <i class="bi bi-arrow-repeat me-1"></i>Refresh alerts
+        </button>
+      </form>
+      <form method="post" th:action="@{/app/notifications}" class="d-inline">
+        <input type="hidden" name="action" value="readAll">
+        <button class="btn btn-outline-primary" type="submit">
+          <i class="bi bi-check2-all me-1"></i>Mark all read
+        </button>
+      </form>
+      <button th:if="${canBroadcast}" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#broadcast">
+        <i class="bi bi-megaphone me-1"></i>Send alert
+      </button>
+    </div>
+  </div>
+
+  <form method="get" th:action="@{/app/notifications}" class="row g-2 mb-3 no-print">
+    <div class="col-md-3">
+      <select class="form-select" name="type" aria-label="Type" data-rq-autosubmit>
+        <option value="">All types</option>
+        <option th:each="o : ${types}"
+                th:value="${o[0]}"
+                th:text="${o[1]}"
+                th:selected="${fType != null and o[0] == fType.name()}">Type</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select class="form-select" name="priority" aria-label="Priority" data-rq-autosubmit>
+        <option value="">All priorities</option>
+        <option th:each="o : ${priorities}"
+                th:value="${o[0]}"
+                th:text="${o[1]}"
+                th:selected="${fPriority != null and o[0] == fPriority.name()}">Priority</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select class="form-select" name="status" aria-label="Status" data-rq-autosubmit>
+        <option value="">All statuses</option>
+        <option th:each="o : ${statuses}"
+                th:value="${o[0]}"
+                th:text="${o[1]}"
+                th:selected="${fStatus != null and o[0] == fStatus.name()}">Status</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <a class="btn btn-outline-secondary" th:href="@{/app/notifications}">Clear filters</a>
+    </div>
+  </form>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table rq-table align-middle" id="tblNotes">
+        <thead>
+          <tr>
+            <th th:each="h : ${headers}" scope="col" th:text="${h}">Header</th>
+            <th scope="col" class="text-end no-print">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="r, iterStat : ${rows}" data-row>
+            <td th:each="cell, cStat : ${r}">
+              <th:block th:with="hname=${headers[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                <span th:if="${(hname == 'Status' or hname == 'Priority' or hname == 'Type') and !cellText.isEmpty() and cellText != '-'}"
+                      class="rq-badge"
+                      th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                      th:text="${cellText}">Status</span>
+                <span th:unless="${(hname == 'Status' or hname == 'Priority' or hname == 'Type') and !cellText.isEmpty() and cellText != '-'}"
+                      th:text="${cellText}">Cell</span>
+              </th:block>
+            </td>
+            <td class="rq-actions no-print" th:with="n=${items[iterStat.index]}">
+              <form th:if="${n.status.name() == 'UNREAD'}" method="post" th:action="@{/app/notifications}" class="d-inline">
+                <input type="hidden" name="action" value="read">
+                <input type="hidden" name="id" th:value="${n.id}">
+                <button class="btn btn-sm btn-outline-primary" type="submit">Mark read</button>
+              </form>
+              <form th:if="${n.status.name() != 'ARCHIVED'}" method="post" th:action="@{/app/notifications}" class="d-inline">
+                <input type="hidden" name="action" value="archive">
+                <input type="hidden" name="id" th:value="${n.id}">
+                <button class="btn btn-sm btn-outline-secondary" type="submit">Archive</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(rows)}" data-empty>
+            <td th:colspan="${#lists.size(headers) + 1}">
+              <div class="rq-empty">
+                <i class="bi bi-bell-slash"></i>
+                <div class="empty-title">No notifications.</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Send Alert Modal -->
+  <div th:if="${canBroadcast}" class="modal fade" id="broadcast" tabindex="-1" aria-labelledby="broadcastTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/notifications}">
+          <input type="hidden" name="action" value="broadcast">
+          <div class="modal-header">
+            <h5 class="modal-title" id="broadcastTitle">Send an alert</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Category <span class="text-danger">*</span></label>
+              <select class="form-select" name="bType" required>
+                <option th:each="opt : ${types}" th:value="${opt[0]}" th:text="${opt[1]}">Category</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Priority <span class="text-danger">*</span></label>
+              <select class="form-select" name="bPriority" required>
+                <option th:each="opt : ${priorities}" th:value="${opt[0]}" th:text="${opt[1]}">Priority</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Message <span class="text-danger">*</span></label>
+              <textarea class="form-control" name="message" rows="3" required maxlength="500"></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Related module (optional)</label>
+              <input type="text" class="form-control" name="relatedModule">
+            </div>
+            <div class="col-12">
+              <div class="form-section">
+                <div class="small fw-semibold text-brown mb-2">Send to roles</div>
+                <div class="d-flex flex-wrap gap-3">
+                  <div class="form-check" th:each="o, rs : ${roleOptions}">
+                    <input class="form-check-input" type="checkbox" name="roles" th:id="${'role' + rs.index}" th:value="${o[0]}">
+                    <label class="form-check-label" th:for="${'role' + rs.index}" th:text="${o[1]}">Role</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Send alert</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

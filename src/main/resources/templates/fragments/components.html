@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Page Header Fragment -->
+<div th:fragment="pagehead(title, subtitle)" class="rq-page-head">
+  <div>
+    <h1 th:text="${title}">Page Title</h1>
+    <div th:if="${subtitle != null and !subtitle.isEmpty()}" class="sub" th:text="${subtitle}">Page Subtitle</div>
+  </div>
+</div>
+
+<!-- Stat Tile Fragment -->
+<div th:fragment="stat(label, value, icon, href, tone)" class="card h-100">
+  <a class="rq-stat" th:classappend="${tone != null ? tone : ''}" th:href="${href != null ? href : '#'}">
+    <span class="ico"><i class="bi" th:classappend="${icon}"></i></span>
+    <span>
+      <span class="num d-block" th:text="${value}">0</span>
+      <span class="lbl" th:text="${label}">Label</span>
+    </span>
+  </a>
+</div>
+
+</body>
+</html>

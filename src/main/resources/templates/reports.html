@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Reports & Analytics', 'REPORTS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Reports &amp; Analytics</h1>
+      <div class="sub">Live figures calculated from the database</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print" th:if="${report != null}">
+      <a class="btn btn-outline-primary" th:href="${exportUrl}">
+        <i class="bi bi-filetype-csv me-1"></i>Export CSV
+      </a>
+      <button class="btn btn-outline-secondary" type="button" onclick="window.print()" id="printBtn">
+        <i class="bi bi-printer me-1"></i>Print
+      </button>
+    </div>
+  </div>
+
+  <div class="card mb-4 no-print">
+    <div class="card-body">
+      <form method="get" th:action="@{/app/reports}" class="row g-3 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label" for="reportType">Report</label>
+          <select class="form-select" id="reportType" name="type">
+            <option th:each="o : ${reportTypes}"
+                    th:value="${o[0]}"
+                    th:text="${o[1]}"
+                    th:selected="${o[0] == selectedType.name()}">Report</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="f_disaster">Disaster</label>
+          <select class="form-select" id="f_disaster" name="disasterId">
+            <option value="">All disasters</option>
+            <option th:each="o : ${disasterOptions}"
+                    th:value="${o[0]}"
+                    th:text="${o[1]}"
+                    th:selected="${param.disasterId != null and param.disasterId[0] == o[0].toString()}">Disaster</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="f_from">From date</label>
+          <input class="form-control" type="date" id="f_from" name="fromDate"
+                 th:value="${param.fromDate != null ? param.fromDate[0] : ''}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="f_to">To date</label>
+          <input class="form-control" type="date" id="f_to" name="toDate"
+                 th:value="${param.toDate != null ? param.toDate[0] : ''}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="f_loc">Location contains</label>
+          <input class="form-control" id="f_loc" name="location"
+                 th:value="${param.location != null ? param.location[0] : ''}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="f_cat">Resource category</label>
+          <select class="form-select" id="f_cat" name="resourceCategory">
+            <option value="">All</option>
+            <option th:each="o : ${categories}"
+                    th:value="${o[0]}"
+                    th:text="${o[1]}"
+                    th:selected="${param.resourceCategory != null and param.resourceCategory[0] == o[0]}">Category</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <button class="btn btn-primary" type="submit">
+            <i class="bi bi-graph-up me-1"></i>Generate report
+          </button>
+          <a class="btn btn-outline-secondary" th:href="@{/app/reports}">Reset</a>
+          <span class="small text-brown ms-2">Filters apply only to the report types that support them.</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div th:if="${report != null}">
+    <h2 class="h5" th:text="${report.title()}">Report Title</h2>
+    <div th:if="${!#lists.isEmpty(report.summaryLines())}" class="rq-beige mb-4">
+      <ul class="mb-0">
+        <li th:each="line : ${report.summaryLines()}" th:text="${line}">Summary line</li>
+      </ul>
+    </div>
+    <div th:if="${!#lists.isEmpty(reportHeaders)}" class="card">
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblReport">
+          <thead>
+            <tr>
+              <th th:each="h : ${reportHeaders}" scope="col" th:text="${h}">Header</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="row : ${reportRows}" data-row>
+              <td th:each="cell : ${row}" th:text="${cell != null ? cell.toString() : ''}">Cell</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(reportRows)}" data-empty>
+              <td th:colspan="${#lists.size(reportHeaders)}">
+                <div class="rq-empty">
+                  <i class="bi bi-table"></i>
+                  <div class="empty-title">No detail rows for the selected filters.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Donation Management', 'DONATIONS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Donation Management</h1>
+      <div class="sub">Cash and material donations, donors and distribution tracking</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addDonor">
+        <i class="bi bi-person-plus me-1"></i>Add donor
+      </button>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDonation">
+        <i class="bi bi-gift me-1"></i>Record donation
+      </button>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="rq-stat-card">
+        <div class="rq-stat-icon"><i class="bi bi-cash-coin"></i></div>
+        <div class="rq-stat-info">
+          <div class="rq-stat-value" th:text="${'₹ ' + sCash}">₹ 0</div>
+          <div class="rq-stat-label">Total cash donated</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="rq-stat-card">
+        <div class="rq-stat-icon"><i class="bi bi-gift"></i></div>
+        <div class="rq-stat-info">
+          <div class="rq-stat-value" th:text="${sCount}">0</div>
+          <div class="rq-stat-label">Donations</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="rq-stat-card">
+        <div class="rq-stat-icon"><i class="bi bi-people"></i></div>
+        <div class="rq-stat-info">
+          <div class="rq-stat-value" th:text="${sDonors}">0</div>
+          <div class="rq-stat-label">Donors</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="rq-stat-card">
+        <div class="rq-stat-icon"><i class="bi bi-truck"></i></div>
+        <div class="rq-stat-info">
+          <div class="rq-stat-value" th:text="${sDistributions}">0</div>
+          <div class="rq-stat-label">Distribution records</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabDon" type="button"
+              th:text="${'Donations (' + #lists.size(donations) + ')'}">Donations (0)</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabDonors" type="button"
+              th:text="${'Donors (' + #lists.size(donors) + ')'}">Donors (0)</button>
+    </li>
+  </ul>
+
+  <div class="tab-content card border-top-0 rounded-top-0">
+    <!-- Donations tab -->
+    <div class="tab-pane fade show active" id="tabDon">
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblDonations">
+          <thead>
+            <tr>
+              <th th:each="h : ${donationHeaders}" scope="col" th:text="${h}">Header</th>
+              <th scope="col" class="text-end no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r, iterStat : ${donationRows}" data-row>
+              <td th:each="cell, cStat : ${r}">
+                <th:block th:with="hname=${donationHeaders[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                  <span th:if="${(hname == 'Status' or hname == 'Type') and !cellText.isEmpty() and cellText != '-'}"
+                        class="rq-badge"
+                        th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                        th:text="${cellText}">Status</span>
+                  <span th:unless="${(hname == 'Status' or hname == 'Type') and !cellText.isEmpty() and cellText != '-'}"
+                        th:text="${cellText}">Cell</span>
+                </th:block>
+              </td>
+              <td class="rq-actions no-print" th:with="d=${donations[iterStat.index]}">
+                <a class="btn btn-sm btn-primary" th:href="@{/app/donations(id=${d.id})}">Open</a>
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                        data-rq-edit="editDonation"
+                        th:data-rq-title="${'Edit donation #' + d.id}"
+                        th:data-id="${d.id}"
+                        th:data-donation-type="${d.donationType}"
+                        th:data-amount="${d.amount}"
+                        th:data-material-name="${d.materialName}"
+                        th:data-quantity="${d.quantity}"
+                        th:data-description="${d.description}">Edit</button>
+                <form method="post" th:action="@{/app/donations}" class="d-inline"
+                      th:data-rq-confirm="${'Delete donation #' + d.id + '?'}">
+                  <input type="hidden" name="action" value="deleteDonation">
+                  <input type="hidden" name="id" th:value="${d.id}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(donationRows)}" data-empty>
+              <td th:colspan="${#lists.size(donationHeaders) + 1}">
+                <div class="rq-empty">
+                  <i class="bi bi-gift"></i>
+                  <div class="empty-title">No donations recorded.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Donors tab -->
+    <div class="tab-pane fade" id="tabDonors">
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblDonors">
+          <thead>
+            <tr>
+              <th th:each="h : ${donorHeaders}" scope="col" th:text="${h}">Header</th>
+              <th scope="col" class="text-end no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r, iterStat : ${donorRows}" data-row>
+              <td th:each="cell, cStat : ${r}">
+                <th:block th:with="hname=${donorHeaders[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                  <span th:if="${hname == 'Type' and !cellText.isEmpty()}"
+                        class="rq-badge"
+                        th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                        th:text="${cellText}">Type</span>
+                  <span th:unless="${hname == 'Type' and !cellText.isEmpty()}"
+                        th:text="${cellText}">Cell</span>
+                </th:block>
+              </td>
+              <td class="rq-actions no-print" th:with="o=${donors[iterStat.index]}">
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                        data-rq-edit="editDonor"
+                        th:data-rq-title="${'Edit ' + o.fullName}"
+                        th:data-id="${o.id}"
+                        th:data-full-name="${o.fullName}"
+                        th:data-contact-number="${o.contactNumber}"
+                        th:data-email="${o.email}"
+                        th:data-location="${o.location}"
+                        th:data-donor-type="${o.donorType}">Edit</button>
+                <form method="post" th:action="@{/app/donations}" class="d-inline"
+                      th:data-rq-confirm="${'Delete donor ' + o.fullName + '?'}">
+                  <input type="hidden" name="action" value="deleteDonor">
+                  <input type="hidden" name="id" th:value="${o.id}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(donorRows)}" data-empty>
+              <td th:colspan="${#lists.size(donorHeaders) + 1}">
+                <div class="rq-empty">
+                  <i class="bi bi-people"></i>
+                  <div class="empty-title">No donors yet.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Donor Modal -->
+  <div class="modal fade" id="addDonor" tabindex="-1" aria-labelledby="addDonorTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/donations}">
+          <input type="hidden" name="action" value="addDonor">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addDonorTitle">Add donor</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="fullName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Donor type <span class="text-danger">*</span></label>
+              <select class="form-select" name="donorType" required>
+                <option th:each="opt : ${donorTypes}" th:value="${opt[0]}" th:text="${opt[1]}">Type</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contact (10 digits) <span class="text-danger">*</span></label>
+              <input type="tel" class="form-control" name="contactNumber" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" name="email">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Location</label>
+              <input type="text" class="form-control" name="location">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add donor</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Donor Modal -->
+  <div class="modal fade" id="editDonor" tabindex="-1" aria-labelledby="editDonorTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/donations}">
+          <input type="hidden" name="action" value="updateDonor">
+          <input type="hidden" name="id">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editDonorTitle">Edit donor</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="fullName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Donor type <span class="text-danger">*</span></label>
+              <select class="form-select" name="donorType" required>
+                <option th:each="opt : ${donorTypes}" th:value="${opt[0]}" th:text="${opt[1]}">Type</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contact (10 digits) <span class="text-danger">*</span></label>
+              <input type="tel" class="form-control" name="contactNumber" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" name="email">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Location</label>
+              <input type="text" class="form-control" name="location">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Record Donation Modal -->
+  <div class="modal fade" id="addDonation" tabindex="-1" aria-labelledby="addDonationTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/donations}">
+          <input type="hidden" name="action" value="addDonation">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addDonationTitle">Record a donation</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Donor <span class="text-danger">*</span></label>
+              <select class="form-select" name="donorId" required>
+                <option th:each="opt : ${donorOptions}" th:value="${opt[0]}" th:text="${opt[1]}">Donor</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Type <span class="text-danger">*</span></label>
+              <select class="form-select" name="donationType" required>
+                <option th:each="opt : ${donationTypes}" th:value="${opt[0]}" th:text="${opt[1]}">Type</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Amount (₹) — cash only</label>
+              <input type="number" class="form-control" name="amount" min="0.01" step="0.01">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Material — material only</label>
+              <input type="text" class="form-control" name="materialName">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Quantity — material only</label>
+              <input type="number" class="form-control" name="quantity" min="1">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" name="description" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Record donation</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Donation Modal -->
+  <div class="modal fade" id="editDonation" tabindex="-1" aria-labelledby="editDonationTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/donations}">
+          <input type="hidden" name="action" value="updateDonation">
+          <input type="hidden" name="id">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editDonationTitle">Edit donation</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Type <span class="text-danger">*</span></label>
+              <select class="form-select" name="donationType" required>
+                <option th:each="opt : ${donationTypes}" th:value="${opt[0]}" th:text="${opt[1]}">Type</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Amount (₹) — cash only</label>
+              <input type="number" class="form-control" name="amount" min="0.01" step="0.01">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Material — material only</label>
+              <input type="text" class="form-control" name="materialName">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Quantity — material only</label>
+              <input type="number" class="form-control" name="quantity" min="1">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" name="description" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

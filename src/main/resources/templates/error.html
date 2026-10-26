@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Error · ResQHub</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/assets/images/logo.svg(v='4.0')}">
+  <link rel="stylesheet" th:href="@{/assets/vendor/bootstrap/bootstrap.min.css}">
+  <link rel="stylesheet" th:href="@{/assets/vendor/icons/bootstrap-icons.min.css}">
+  <link rel="stylesheet" th:href="@{/assets/css/resqhub.css(v='4.0')}">
+</head>
+<body class="d-grid place-items-center" style="min-height:100vh;place-items:center;background:var(--rq-bg)">
+<div class="card text-center" style="max-width:480px">
+  <div class="card-body p-5">
+    <i class="bi bi-compass display-3 text-brown"></i>
+    <h1 class="h3 mt-3" th:text="${errorTitle != null ? errorTitle : 'Something went wrong'}">Error</h1>
+    <p class="text-brown" th:text="${errorMessage != null ? errorMessage : 'The request could not be completed. Please try again later.'}">
+      An error occurred.
+    </p>
+    <a class="btn btn-primary" th:href="@{/app/dashboard}">Go to ResQHub</a>
+  </div>
+</div>
+</body>
+</html>

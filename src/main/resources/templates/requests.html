@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Rescue Requests', 'REQUESTS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Rescue Requests</h1>
+      <div class="sub">Prioritised queue — priority is calculated automatically from the request details</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRequest">
+        <i class="bi bi-plus-lg me-1"></i>New request
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="p-3 pb-0 no-print">
+      <input type="search" class="form-control form-control-sm" style="max-width:320px"
+             placeholder="Search this table…" aria-label="Search this table" data-rq-search="tblRequests">
+    </div>
+    <div class="table-responsive">
+      <table class="table rq-table align-middle" id="tblRequests">
+        <thead>
+          <tr>
+            <th th:each="h : ${headers}" scope="col" th:text="${h}">Header</th>
+            <th scope="col" class="text-end no-print">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="r, iterStat : ${rows}" data-row>
+            <td th:each="cell, cStat : ${r}">
+              <th:block th:with="hname=${headers[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                <span th:if="${(hname == 'Status' or hname == 'Priority' or hname == 'Request Status') and !cellText.isEmpty() and cellText != '-'}"
+                      class="rq-badge"
+                      th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(#strings.replace(cellText, ' ', '-'), '/', '-'))}"
+                      th:text="${cellText}">Status</span>
+                <span th:unless="${(hname == 'Status' or hname == 'Priority' or hname == 'Request Status') and !cellText.isEmpty() and cellText != '-'}"
+                      th:text="${cellText}">Cell text</span>
+              </th:block>
+            </td>
+            <td class="rq-actions no-print" th:with="q=${items[iterStat.index]}">
+              <a class="btn btn-sm btn-primary" th:href="@{/app/requests(id=${q.id})}">Open</a>
+              <button type="button" class="btn btn-sm btn-outline-primary"
+                      data-rq-edit="editRequest"
+                      th:data-rq-title="${'Edit request #' + q.id}"
+                      th:data-id="${q.id}"
+                      th:data-requester-name="${q.requesterName}"
+                      th:data-contact-number="${q.contactNumber}"
+                      th:data-location="${q.location}"
+                      th:data-people="${q.peopleCount}"
+                      th:data-children="${q.childrenCount}"
+                      th:data-elderly="${q.elderlyCount}"
+                      th:data-life-threatening="${q.lifeThreatening}"
+                      th:data-medical-emergency="${q.medicalEmergency}"
+                      th:data-trapped="${q.trappedUnderDebris}"
+                      th:data-disaster-id="${q.disasterId}"
+                      th:data-victim-id="${q.victimId}"
+                      th:data-assistance="${q.requiredAssistance}">Edit</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div th:if="${#lists.isEmpty(rows)}" class="rq-empty">
+        <i class="bi bi-life-preserver"></i>No rescue requests.
+      </div>
+      <div class="rq-empty rq-no-match" style="display:none">
+        <i class="bi bi-search"></i>No rows match your search.
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Request Modal -->
+  <div class="modal fade" id="createRequest" tabindex="-1" aria-labelledby="createRequest-t" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/requests}" autocomplete="off">
+        <input type="hidden" name="action" value="create">
+        <div class="modal-header">
+          <h2 class="modal-title" id="createRequest-t">New rescue request</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="cr_name">Requester name <span class="req">*</span></label>
+              <input class="form-control" id="cr_name" name="requesterName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cr_phone">Contact number (10 digits) <span class="req">*</span></label>
+              <input class="form-control" type="tel" id="cr_phone" name="contactNumber" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="cr_location">Location <span class="req">*</span></label>
+              <input class="form-control" id="cr_location" name="location" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="cr_people">People <span class="req">*</span></label>
+              <input class="form-control" type="number" id="cr_people" name="people" min="1" value="1" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="cr_children">Children</label>
+              <input class="form-control" type="number" id="cr_children" name="children" min="0" value="0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="cr_elderly">Elderly</label>
+              <input class="form-control" type="number" id="cr_elderly" name="elderly" min="0" value="0">
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="cr_life" name="lifeThreatening" value="true">
+                <label class="form-check-label" for="cr_life">Life-threatening</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="cr_med" name="medicalEmergency" value="true">
+                <label class="form-check-label" for="cr_med">Medical emergency</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="cr_trapped" name="trapped" value="true">
+                <label class="form-check-label" for="cr_trapped">Trapped under debris</label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cr_disaster">Disaster <span class="req">*</span></label>
+              <select class="form-select" id="cr_disaster" name="disasterId" required>
+                <option th:each="opt : ${disasterOptions}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cr_victim">Victim record</label>
+              <select class="form-select" id="cr_victim" name="victimId">
+                <option value="">— None —</option>
+                <option th:each="opt : ${victimOptions}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="cr_assistance">Required assistance</label>
+              <textarea class="form-control" id="cr_assistance" name="assistance" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Request Modal -->
+  <div class="modal fade" id="editRequest" tabindex="-1" aria-labelledby="editRequest-t" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/requests}" autocomplete="off">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id">
+        <div class="modal-header">
+          <h2 class="modal-title" id="editRequest-t">Edit rescue request</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="er_name">Requester name <span class="req">*</span></label>
+              <input class="form-control" id="er_name" name="requesterName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="er_phone">Contact number (10 digits) <span class="req">*</span></label>
+              <input class="form-control" type="tel" id="er_phone" name="contactNumber" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="er_location">Location <span class="req">*</span></label>
+              <input class="form-control" id="er_location" name="location" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="er_people">People <span class="req">*</span></label>
+              <input class="form-control" type="number" id="er_people" name="people" min="1" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="er_children">Children</label>
+              <input class="form-control" type="number" id="er_children" name="children" min="0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="er_elderly">Elderly</label>
+              <input class="form-control" type="number" id="er_elderly" name="elderly" min="0">
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="er_life" name="lifeThreatening" value="true">
+                <label class="form-check-label" for="er_life">Life-threatening</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="er_med" name="medicalEmergency" value="true">
+                <label class="form-check-label" for="er_med">Medical emergency</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="er_trapped" name="trapped" value="true">
+                <label class="form-check-label" for="er_trapped">Trapped under debris</label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="er_disaster">Disaster <span class="req">*</span></label>
+              <select class="form-select" id="er_disaster" name="disasterId" required>
+                <option th:each="opt : ${disasterOptions}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="er_victim">Victim record</label>
+              <select class="form-select" id="er_victim" name="victimId">
+                <option value="">— None —</option>
+                <option th:each="opt : ${victimOptions}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="er_assistance">Required assistance</label>
+              <textarea class="form-control" id="er_assistance" name="assistance" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

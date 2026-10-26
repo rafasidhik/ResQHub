@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${'Food request ' + r.requestCode}, 'FOOD', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1 th:text="${'Food request ' + r.requestCode}">Food request CODE</h1>
+      <div class="sub" th:text="${r.location + ' · ' + r.beneficiaries + ' beneficiaries'}">Location · 0 beneficiaries</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <a class="btn btn-outline-secondary" th:href="@{/app/food}">
+        <i class="bi bi-arrow-left me-1"></i>All requests
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between">
+          <span>Status</span>
+          <span>
+            <span class="rq-badge"
+                  th:classappend="${'rq-' + #strings.toLowerCase(r.priority)}"
+                  th:text="${r.priority.label}">Priority</span>
+            <span class="rq-badge"
+                  th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(r.status.label, ' ', '-'))}"
+                  th:text="${r.status.label}">Status</span>
+          </span>
+        </div>
+        <div class="card-body">
+          <dl class="kv row mb-0">
+            <dt class="col-5">Disaster</dt>
+            <dd class="col-7" th:text="${disasterName}">Disaster</dd>
+            <dt class="col-5">Beneficiary type</dt>
+            <dd class="col-7" th:text="${r.beneficiaryType.label}">Type</dd>
+            <dt class="col-5">Required</dt>
+            <dd class="col-7" th:text="${r.requiredQuantity}">0</dd>
+            <dt class="col-5">Allocated</dt>
+            <dd class="col-7">
+              <span th:text="${r.allocatedQuantity}">0</span>
+              <span class="text-brown" th:text="${'(' + allocatedResource + ')'}">(Resource)</span>
+            </dd>
+            <dt class="col-5">Distributed</dt>
+            <dd class="col-7" th:text="${r.distributedQuantity}">0</dd>
+            <dt class="col-5">Remaining</dt>
+            <dd class="col-7" th:text="${r.remainingQuantity()}">0</dd>
+            <dt class="col-5">Volunteer</dt>
+            <dd class="col-7" th:text="${assignedVolunteer}">Volunteer</dd>
+            <dt class="col-5">Notes</dt>
+            <dd class="col-7 mb-0" th:text="${r.description != null and !r.description.isEmpty() ? r.description : '—'}">—</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">Workflow</div>
+        <div class="card-body d-grid gap-2">
+          <form th:if="${r.status.name() == 'PENDING'}" method="post" th:action="@{/app/food}">
+            <input type="hidden" name="action" value="approve">
+            <input type="hidden" name="id" th:value="${r.id}">
+            <button class="btn btn-primary w-100" type="submit">
+              <i class="bi bi-check2 me-1"></i>Approve request
+            </button>
+          </form>
+          <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#allocateFood">
+            <i class="bi bi-box-seam me-1"></i>Allocate stock
+          </button>
+          <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignFoodVol">
+            <i class="bi bi-person-check me-1"></i>Assign volunteer
+          </button>
+          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#distributeFood">
+            <i class="bi bi-truck me-1"></i>Record distribution
+          </button>
+          <form method="post" th:action="@{/app/food}" class="d-flex gap-2">
+            <input type="hidden" name="action" value="status">
+            <input type="hidden" name="id" th:value="${r.id}">
+            <select class="form-select" name="status" aria-label="Set status">
+              <option th:each="o : ${statuses}"
+                      th:value="${o[0]}"
+                      th:text="${o[1]}"
+                      th:selected="${o[0] == r.status.name()}">Status</option>
+            </select>
+            <button class="btn btn-outline-secondary" type="submit">Set status</button>
+          </form>
+          <form th:if="${r.status.name() != 'CANCELLED' and r.status.name() != 'COMPLETED'}"
+                method="post" th:action="@{/app/food}" data-rq-confirm="Cancel this food request?">
+            <input type="hidden" name="action" value="cancel">
+            <input type="hidden" name="id" th:value="${r.id}">
+            <button class="btn btn-outline-danger w-100" type="submit">Cancel request</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header">Distribution history</div>
+    <div class="table-responsive">
+      <table class="table rq-table align-middle" id="tblFoodDist">
+        <thead>
+          <tr>
+            <th th:each="h : ${distHeaders}" scope="col" th:text="${h}">Header</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="row : ${distRows}" data-row>
+            <td th:each="cell : ${row}" th:text="${cell != null ? cell.toString() : ''}">Cell</td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(distRows)}" data-empty>
+            <td th:colspan="${#lists.size(distHeaders)}">
+              <div class="rq-empty">
+                <i class="bi bi-truck"></i>
+                <div class="empty-title">Nothing distributed for this request yet.</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Allocate Food Modal -->
+  <div class="modal fade" id="allocateFood" tabindex="-1" aria-labelledby="allocateFoodTitle" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/food}">
+          <input type="hidden" name="action" value="allocate">
+          <input type="hidden" name="id" th:value="${r.id}">
+          <div class="modal-header">
+            <h5 class="modal-title" id="allocateFoodTitle">Allocate stock to this request</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-12">
+              <label class="form-label">Food resource <span class="text-danger">*</span></label>
+              <select class="form-select" name="resourceId" required>
+                <option th:each="opt : ${foodResourceOptions}" th:value="${opt[0]}" th:text="${opt[1]}">Resource</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Quantity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="quantity" min="1" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Allocate</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Volunteer Modal -->
+  <div class="modal fade" id="assignFoodVol" tabindex="-1" aria-labelledby="assignFoodVolTitle" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/food}">
+          <input type="hidden" name="action" value="assignVolunteer">
+          <input type="hidden" name="id" th:value="${r.id}">
+          <div class="modal-header">
+            <h5 class="modal-title" id="assignFoodVolTitle">Assign a volunteer</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-12">
+              <label class="form-label">Volunteer <span class="text-danger">*</span></label>
+              <select class="form-select" name="volunteerId" required>
+                <option th:each="opt : ${volunteerOptions}" th:value="${opt[0]}" th:text="${opt[1]}">Volunteer</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Assign</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Record Distribution Modal -->
+  <div class="modal fade" id="distributeFood" tabindex="-1" aria-labelledby="distributeFoodTitle" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/food}">
+          <input type="hidden" name="action" value="distribute">
+          <input type="hidden" name="id" th:value="${r.id}">
+          <div class="modal-header">
+            <h5 class="modal-title" id="distributeFoodTitle">Record a distribution</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-12">
+              <label class="form-label">Food resource <span class="text-danger">*</span></label>
+              <select class="form-select" name="resourceId" required>
+                <option th:each="opt : ${foodResourceOptions}"
+                        th:value="${opt[0]}"
+                        th:text="${opt[1]}"
+                        th:selected="${opt[0] == r.allocatedResourceId}">Resource</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Quantity distributed <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="quantity" min="1" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">People served <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="served" min="0" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Location <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="location" th:value="${r.location}" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Note</label>
+              <input type="text" class="form-control" name="note">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Record</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

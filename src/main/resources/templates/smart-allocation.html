@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Smart Shelter Allocation', 'SMART_ALLOCATION', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Smart Shelter Allocation</h1>
+      <div class="sub">Ranks shelters by capacity, accessibility, facilities and proximity</div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="rq-stat-card" th:classappend="${countWaiting > 0 ? 'rq-tone-warn' : ''}">
+        <div class="rq-stat-icon"><i class="bi bi-hourglass-split"></i></div>
+        <div class="rq-stat-info">
+          <div class="rq-stat-value" th:text="${countWaiting}">0</div>
+          <div class="rq-stat-label">Waiting for shelter</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="rq-stat-card">
+        <div class="rq-stat-icon"><i class="bi bi-clock-history"></i></div>
+        <div class="rq-stat-info">
+          <div class="rq-stat-value" th:text="${countPending}">0</div>
+          <div class="rq-stat-label">Pending allocations</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="rq-stat-card">
+        <div class="rq-stat-icon"><i class="bi bi-house-check"></i></div>
+        <div class="rq-stat-info">
+          <div class="rq-stat-value" th:text="${countActive}">0</div>
+          <div class="rq-stat-label">Active allocations</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header">Allocate a family / group</div>
+    <div class="card-body">
+      <form method="post" th:action="@{/app/smart-allocation}" class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Victim (optional)</label>
+          <select class="form-select" name="victimId">
+            <option value="">— None (family group) —</option>
+            <option th:each="opt : ${victimOptions}"
+                    th:value="${opt[0]}"
+                    th:text="${opt[1]}"
+                    th:selected="${param.victimId != null and param.victimId[0] == opt[0].toString()}">Victim</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Family / group name</label>
+          <input type="text" class="form-control" name="familyName" th:value="${param.familyName != null ? param.familyName[0] : ''}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">People <span class="text-danger">*</span></label>
+          <input type="number" class="form-control" name="people" min="1"
+                 th:value="${param.people != null ? param.people[0] : '1'}" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Priority <span class="text-danger">*</span></label>
+          <select class="form-select" name="priority" required>
+            <option th:each="opt : ${priorities}"
+                    th:value="${opt[0]}"
+                    th:text="${opt[1]}"
+                    th:selected="${param.priority != null ? param.priority[0] == opt[0] : opt[0] == 'MEDIUM'}">Priority</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Their current location <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" name="location"
+                 th:value="${param.location != null ? param.location[0] : ''}" required>
+        </div>
+        <div class="col-12">
+          <div class="form-section">
+            <div class="small fw-semibold text-brown mb-2">Special needs</div>
+            <div class="row g-2">
+              <div class="col-6 col-md-3 form-check">
+                <input class="form-check-input" type="checkbox" name="needWheelchair" id="needWheelchair"
+                       th:checked="${param.needWheelchair != null}">
+                <label class="form-check-label" for="needWheelchair">Wheelchair access</label>
+              </div>
+              <div class="col-6 col-md-3 form-check">
+                <input class="form-check-input" type="checkbox" name="needElderly" id="needElderly"
+                       th:checked="${param.needElderly != null}">
+                <label class="form-check-label" for="needElderly">Elderly friendly</label>
+              </div>
+              <div class="col-6 col-md-3 form-check">
+                <input class="form-check-input" type="checkbox" name="needMedical" id="needMedical"
+                       th:checked="${param.needMedical != null}">
+                <label class="form-check-label" for="needMedical">Medical access</label>
+              </div>
+              <div class="col-6 col-md-3 form-check">
+                <input class="form-check-input" type="checkbox" name="needSpecial" id="needSpecial"
+                       th:checked="${param.needSpecial != null}">
+                <label class="form-check-label" for="needSpecial">Special assistance</label>
+              </div>
+            </div>
+            <div th:if="${!#lists.isEmpty(facilityOptions)}" class="small fw-semibold text-brown mt-3 mb-2">Required facilities</div>
+            <div th:if="${!#lists.isEmpty(facilityOptions)}" class="d-flex flex-wrap gap-3">
+              <div class="form-check" th:each="f, fs : ${facilityOptions}">
+                <input class="form-check-input" type="checkbox" name="facility" th:id="${'fac' + fs.index}" th:value="${f}"
+                       th:checked="${param.facility != null and #arrays.contains(param.facility, f)}">
+                <label class="form-check-label" th:for="${'fac' + fs.index}" th:text="${f}">Facility</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Notes</label>
+          <textarea class="form-control" name="notes" rows="2" th:text="${param.notes != null ? param.notes[0] : ''}"></textarea>
+        </div>
+        <div class="col-12 d-flex flex-wrap gap-2 align-items-center">
+          <button class="btn btn-outline-primary" type="submit" name="action" value="preview">
+            <i class="bi bi-list-ol me-1"></i>Preview ranking
+          </button>
+          <button class="btn btn-primary" type="submit" name="action" value="allocate">
+            <i class="bi bi-house-check me-1"></i>Allocate best shelter
+          </button>
+          <div class="form-check ms-2">
+            <input class="form-check-input" type="checkbox" id="createPending" name="createPending"
+                   th:checked="${param.createPending != null}">
+            <label class="form-check-label" for="createPending">Create as <em>pending</em> (confirm later)</label>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Preview result card if available -->
+  <div th:if="${preview != null}" class="card mb-4 border-success">
+    <div class="card-header"><i class="bi bi-list-ol me-1"></i>Ranking preview — nothing has been allocated yet</div>
+    <div th:if="${#lists.isEmpty(previewRows)}" class="rq-empty">
+      No shelter can accommodate this request right now.
+    </div>
+    <div th:if="${!#lists.isEmpty(previewRows)}">
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblPreview">
+          <thead>
+            <tr>
+              <th th:each="h : ${previewHeaders}" scope="col" th:text="${h}">Header</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r : ${previewRows}" data-row>
+              <td th:each="cell : ${r}" th:text="${cell != null ? cell.toString() : ''}">Cell</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div th:if="${preview.best != null}" class="p-3 border-top">
+        <strong>Best match:</strong> <span th:text="${preview.best.shelter.name}">Shelter</span>
+        (score <span th:text="${#numbers.formatDecimal(preview.best.score, 1, 2)}">0.00</span>)
+        <ul class="mb-0 small text-brown mt-1">
+          <li th:each="rs : ${preview.best.reasons}" th:text="${rs}">Reason</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Allocations list card -->
+  <div class="card mb-4">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <span>Allocations</span>
+      <form method="get" th:action="@{/app/smart-allocation}" class="d-flex gap-2">
+        <select class="form-select form-select-sm" name="statusFilter" aria-label="Filter by status" data-rq-autosubmit>
+          <option value="">All statuses</option>
+          <option th:each="o : ${statusFilters}"
+                  th:value="${o[0]}"
+                  th:text="${o[1]}"
+                  th:selected="${statusFilter != null and o[0] == statusFilter.name()}">Status</option>
+        </select>
+        <button class="btn btn-sm btn-outline-primary" type="submit">Filter</button>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table rq-table align-middle" id="tblAllocs">
+        <thead>
+          <tr>
+            <th th:each="h : ${allocationHeaders}" scope="col" th:text="${h}">Header</th>
+            <th scope="col" class="text-end no-print">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="r, iterStat : ${allocationRows}" data-row>
+            <td th:each="cell, cStat : ${r}">
+              <th:block th:with="hname=${allocationHeaders[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                <span th:if="${(hname == 'Status' or hname == 'Priority') and !cellText.isEmpty() and cellText != '-'}"
+                      class="rq-badge"
+                      th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                      th:text="${cellText}">Status</span>
+                <span th:unless="${(hname == 'Status' or hname == 'Priority') and !cellText.isEmpty() and cellText != '-'}"
+                      th:text="${cellText}">Cell</span>
+              </th:block>
+            </td>
+            <td class="rq-actions no-print" th:with="a=${allocations[iterStat.index]}">
+              <form th:if="${a.status.name() == 'PENDING'}" method="post" th:action="@{/app/smart-allocation}" class="d-inline">
+                <input type="hidden" name="action" value="confirmPending">
+                <input type="hidden" name="allocationId" th:value="${a.id}">
+                <button class="btn btn-sm btn-primary" type="submit">Confirm</button>
+              </form>
+              <form th:if="${a.status.name() == 'ACTIVE'}" method="post" th:action="@{/app/smart-allocation}" class="d-inline">
+                <input type="hidden" name="action" value="checkIn">
+                <input type="hidden" name="allocationId" th:value="${a.id}">
+                <button class="btn btn-sm btn-primary" type="submit">Check in</button>
+              </form>
+              <form th:if="${a.status.name() == 'CHECKED_IN'}" method="post" th:action="@{/app/smart-allocation}" class="d-inline">
+                <input type="hidden" name="action" value="complete">
+                <input type="hidden" name="allocationId" th:value="${a.id}">
+                <button class="btn btn-sm btn-primary" type="submit">Complete</button>
+              </form>
+              <form th:if="${a.status.name() == 'PENDING' or a.status.name() == 'ACTIVE'}"
+                    method="post" th:action="@{/app/smart-allocation}" class="d-inline"
+                    data-rq-confirm="Cancel this allocation?">
+                <input type="hidden" name="action" value="cancel">
+                <input type="hidden" name="allocationId" th:value="${a.id}">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Cancel</button>
+              </form>
+              <form th:if="${a.status.name() == 'ACTIVE' or a.status.name() == 'CHECKED_IN'}"
+                    method="post" th:action="@{/app/smart-allocation}" class="d-inline"
+                    data-rq-confirm="Release and free the beds?">
+                <input type="hidden" name="action" value="release">
+                <input type="hidden" name="allocationId" th:value="${a.id}">
+                <button class="btn btn-sm btn-outline-secondary" type="submit">Release</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(allocationRows)}" data-empty>
+            <td th:colspan="${#lists.size(allocationHeaders) + 1}">
+              <div class="rq-empty">
+                <i class="bi bi-house"></i>
+                <div class="empty-title">No allocations yet.</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Victims waiting for a shelter -->
+  <div class="card">
+    <div class="card-header">Victims waiting for a shelter</div>
+    <div class="table-responsive">
+      <table class="table rq-table align-middle" id="tblWaiting">
+        <thead>
+          <tr>
+            <th th:each="h : ${waitHeaders}" scope="col" th:text="${h}">Header</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="r : ${waitRows}" data-row>
+            <td th:each="cell, cStat : ${r}">
+              <th:block th:with="hname=${waitHeaders[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                <span th:if="${hname == 'Priority' and !cellText.isEmpty() and cellText != '-'}"
+                      class="rq-badge"
+                      th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                      th:text="${cellText}">Priority</span>
+                <span th:unless="${hname == 'Priority' and !cellText.isEmpty() and cellText != '-'}"
+                      th:text="${cellText}">Cell</span>
+              </th:block>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(waitRows)}" data-empty>
+            <td th:colspan="${#lists.size(waitHeaders)}">
+              <div class="rq-empty">
+                <i class="bi bi-check2-circle"></i>
+                <div class="empty-title">Nobody is waiting for shelter.</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>

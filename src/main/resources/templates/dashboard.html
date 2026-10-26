@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Dashboard', 'DASHBOARD', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Dashboard</h1>
+      <div class="sub" th:text="${'Welcome, ' + (currentUser != null ? currentUser.fullName : '') + ' — ' + (currentUser != null and currentUser.role != null ? currentUser.role.label : '')}">
+        Welcome, User
+      </div>
+    </div>
+  </div>
+
+  <div th:if="${statsError != null}" class="alert alert-warning" th:text="${statsError}">Warning</div>
+
+  <div th:if="${s != null}">
+    <th:block th:if="${currentUser != null and currentUser.role != null and currentUser.role.name() != 'CAMP_MANAGER'}">
+      <h2 class="h6 text-brown text-uppercase mb-2">Operations</h2>
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Active disasters (of ' + ${s.totalDisasters} + ')', ${s.activeDisasters}, 'bi-tornado', @{/app/disasters}, ${s.activeDisasters > 0 ? 'warn' : ''})}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Critical victims (of ' + ${s.totalVictims} + ')', ${s.criticalVictims}, 'bi-heart-pulse', @{/app/victims}, ${s.criticalVictims > 0 ? 'danger' : ''})}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Pending rescue requests', ${s.pendingRequests}, 'bi-life-preserver', @{/app/requests}, ${s.pendingRequests > 0 ? 'warn' : ''})}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Critical requests', ${s.criticalRequests}, 'bi-exclamation-octagon', @{/app/requests}, ${s.criticalRequests > 0 ? 'danger' : ''})}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Teams available (of ' + ${s.totalTeams} + ')', ${s.availableTeams}, 'bi-shield-check', @{/app/teams}, '')}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Teams deployed', ${s.deployedTeams}, 'bi-truck', @{/app/teams}, '')}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Volunteers available (of ' + ${s.totalVolunteers} + ')', ${s.volunteersAvailable}, 'bi-person-heart', @{/app/volunteers}, '')}"></div>
+        </div>
+        <div th:if="${currentUser.role.name() == 'ADMIN'}" class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Pending account deletions', ${s.pendingDeletions}, 'bi-person-x', @{/app/users}, ${s.pendingDeletions > 0 ? 'warn' : ''})}"></div>
+        </div>
+      </div>
+    </th:block>
+
+    <th:block th:if="${currentUser != null and currentUser.role != null and currentUser.role.name() != 'RESCUE_OFFICER'}">
+      <h2 class="h6 text-brown text-uppercase mb-2">Relief &amp; Supplies</h2>
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Shelters accepting (of ' + ${s.totalShelters} + ')', ${s.sheltersAccepting}, 'bi-house-heart', @{/app/shelters}, '')}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Shelters near capacity', ${s.sheltersNearCapacity}, 'bi-house-exclamation', @{/app/shelters}, ${s.sheltersNearCapacity > 0 ? 'warn' : ''})}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Open food requests', ${s.foodOpenRequests}, 'bi-basket', @{/app/food}, '')}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Food shortages', ${s.foodShortages}, 'bi-basket2', @{/app/food}, ${s.foodShortages > 0 ? 'danger' : ''})}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Resource types tracked', ${s.totalResources}, 'bi-box-seam', @{/app/resources}, '')}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Low-stock resources', ${s.resourcesLow}, 'bi-box-arrow-down', @{/app/resources}, ${s.resourcesLow > 0 ? 'warn' : ''})}"></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div th:replace="~{fragments/components :: stat('Out-of-stock resources', ${s.resourcesOut}, 'bi-x-octagon', @{/app/resources}, ${s.resourcesOut > 0 ? 'danger' : ''})}"></div>
+        </div>
+      </div>
+    </th:block>
+  </div>
+
+  <div th:if="${s == null}" class="rq-beige mb-4">
+    <h2 class="h5">Quick actions</h2>
+    <div class="d-flex gap-2 flex-wrap mt-2">
+      <a class="btn btn-primary" th:href="@{/app/report-emergency}"><i class="bi bi-exclamation-octagon me-1"></i>Report Emergency</a>
+      <a th:if="${currentUser != null and currentUser.role != null and currentUser.role.name() != 'CITIZEN' and currentUser.role.name() != 'VOLUNTEER'}"
+         class="btn btn-primary" th:href="@{/app/reports}"><i class="bi bi-graph-up me-1"></i>Reports</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-bell me-1"></i>Recent notifications</span>
+      <a class="btn btn-sm btn-outline-primary" th:href="@{/app/notifications}">View all</a>
+    </div>
+    <div th:if="${recent == null or #lists.isEmpty(recent)}" class="rq-empty">
+      <i class="bi bi-bell-slash"></i>No notifications for you right now.
+    </div>
+    <ul th:if="${recent != null and !#lists.isEmpty(recent)}" class="list-group list-group-flush">
+      <li th:each="n : ${recent}" class="list-group-item d-flex gap-3 align-items-start">
+        <span class="rq-badge" th:classappend="${'rq-' + #strings.toLowerCase(n.priority)}" th:text="${n.priority}">HIGH</span>
+        <span class="flex-grow-1" th:text="${n.message}">Notification message</span>
+        <span class="small text-brown" th:text="${n.status}">Status</span>
+      </li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${s.name}, 'SHELTERS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1 th:text="${s.name}">Shelter Name</h1>
+      <div class="sub" th:text="${s.code + ' · ' + s.city + ', ' + s.district}">Code · City, District</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <a class="btn btn-outline-secondary" th:href="@{/app/shelters}">
+        <i class="bi bi-arrow-left me-1"></i>All shelters
+      </a>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#allocate">
+        <i class="bi bi-person-plus me-1"></i>Allocate people
+      </button>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-1">
+            <strong>Occupancy</strong>
+            <span th:text="${s.currentOccupancy + ' / ' + s.maxCapacity + ' (' + percent + '%)'}">0 / 100 (0%)</span>
+          </div>
+          <div class="rq-bar" th:classappend="${percent >= 100 ? 'hot' : (percent >= 80 ? 'mid' : '')}"
+               role="progressbar" th:aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">
+            <span th:style="${'width:' + percent + '%'}"></span>
+          </div>
+          <div class="small text-brown mt-2" th:text="${'Available beds: ' + (s.maxCapacity - s.currentOccupancy)}">Available beds: 0</div>
+          <form method="post" th:action="@{/app/shelters}" class="d-flex gap-2 mt-3">
+            <input type="hidden" name="action" value="occupancy">
+            <input type="hidden" name="id" th:value="${s.id}">
+            <input class="form-control" type="number" min="0" name="occupancy" th:value="${s.currentOccupancy}" aria-label="Current occupancy" required>
+            <button class="btn btn-primary" type="submit">Update occupancy</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2">
+            <strong>Status</strong>
+            <span class="rq-badge"
+                  th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(s.operationalStatus.label, ' ', '-'))}"
+                  th:text="${s.operationalStatus.label}">Status</span>
+          </div>
+          <form method="post" th:action="@{/app/shelters}" class="d-flex gap-2">
+            <input type="hidden" name="action" value="status">
+            <input type="hidden" name="id" th:value="${s.id}">
+            <select class="form-select" name="status" aria-label="Status">
+              <option th:each="o : ${statuses}"
+                      th:value="${o[0]}"
+                      th:text="${o[1]}"
+                      th:selected="${o[0] == s.operationalStatus.name()}">Status</option>
+            </select>
+            <button class="btn btn-primary" type="submit">Update</button>
+          </form>
+          <div class="small text-brown mt-3" th:text="${'Manager: ' + s.managerName + ' · ' + s.contactNumber}">Manager</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabAlloc" type="button"
+              th:text="${'Allocations (' + #lists.size(allocations) + ')'}">Allocations (0)</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabFac" type="button"
+              th:text="${'Facilities (' + #lists.size(facilities) + ')'}">Facilities (0)</button>
+    </li>
+  </ul>
+
+  <div class="tab-content card border-top-0 rounded-top-0">
+    <!-- Allocations tab -->
+    <div class="tab-pane fade show active" id="tabAlloc">
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblAlloc">
+          <thead>
+            <tr>
+              <th th:each="h : ${allocationHeaders}" scope="col" th:text="${h}">Header</th>
+              <th scope="col" class="text-end no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r, iterStat : ${allocationRows}" data-row>
+              <td th:each="cell, cStat : ${r}">
+                <th:block th:with="hname=${allocationHeaders[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                  <span th:if="${(hname == 'Status' or hname == 'Priority') and !cellText.isEmpty() and cellText != '-'}"
+                        class="rq-badge"
+                        th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                        th:text="${cellText}">Status</span>
+                  <span th:unless="${(hname == 'Status' or hname == 'Priority') and !cellText.isEmpty() and cellText != '-'}"
+                        th:text="${cellText}">Cell</span>
+                </th:block>
+              </td>
+              <td class="rq-actions no-print" th:with="a=${allocations[iterStat.index]}">
+                <form th:if="${a.status.name() == 'ACTIVE' or a.status.name() == 'CHECKED_IN' or a.status.name() == 'PENDING'}"
+                      method="post" th:action="@{/app/shelters}" class="d-inline"
+                      data-rq-confirm="Release this allocation and free the beds?">
+                  <input type="hidden" name="action" value="release">
+                  <input type="hidden" name="allocationId" th:value="${a.id}">
+                  <input type="hidden" name="id" th:value="${s.id}">
+                  <button class="btn btn-sm btn-outline-secondary" type="submit">Release</button>
+                </form>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(allocationRows)}" data-empty>
+              <td th:colspan="${#lists.size(allocationHeaders) + 1}">
+                <div class="rq-empty">
+                  <i class="bi bi-people"></i>
+                  <div class="empty-title">Nobody is allocated to this shelter.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Facilities tab -->
+    <div class="tab-pane fade" id="tabFac">
+      <div class="p-3 pb-0">
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFacility">
+          <i class="bi bi-plus-lg me-1"></i>Add facility
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblFac">
+          <thead>
+            <tr>
+              <th th:each="h : ${facilityHeaders}" scope="col" th:text="${h}">Header</th>
+              <th scope="col" class="text-end no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r, iterStat : ${facilityRows}" data-row>
+              <td th:each="cell : ${r}" th:text="${cell != null ? cell.toString() : ''}">Facility</td>
+              <td class="rq-actions no-print" th:with="f=${facilities[iterStat.index]}">
+                <form method="post" th:action="@{/app/shelters}" class="d-inline" data-rq-confirm="Remove this facility?">
+                  <input type="hidden" name="action" value="removeFacility">
+                  <input type="hidden" name="id" th:value="${s.id}">
+                  <input type="hidden" name="facilityName" th:value="${f.facilityName}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                </form>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(facilityRows)}" data-empty>
+              <td th:colspan="${#lists.size(facilityHeaders) + 1}">
+                <div class="rq-empty">
+                  <i class="bi bi-info-circle"></i>
+                  <div class="empty-title">No facilities listed.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Allocate Modal -->
+  <div class="modal fade" id="allocate" tabindex="-1" aria-labelledby="allocateTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/shelters}">
+          <input type="hidden" name="action" value="allocate">
+          <input type="hidden" name="id" th:value="${s.id}">
+          <div class="modal-header">
+            <h5 class="modal-title" id="allocateTitle" th:text="${'Allocate people to ' + s.name}">Allocate people</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-12">
+              <p class="small text-brown mb-0">
+                Capacity and status rules are enforced by the system. For ranked suggestions use
+                <a th:href="@{/app/smart-allocation}">Smart Allocation</a>.
+              </p>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Victim (optional)</label>
+              <select class="form-select" name="victimId">
+                <option value="">— None (family group) —</option>
+                <option th:each="opt : ${victimOptions}" th:value="${opt[0]}" th:text="${opt[1]}">Victim</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Family / group name</label>
+              <input type="text" class="form-control" name="familyName">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Number of people <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="people" min="1" value="1" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Notes</label>
+              <textarea class="form-control" name="notes" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Allocate</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Facility Modal -->
+  <div class="modal fade" id="addFacility" tabindex="-1" aria-labelledby="addFacilityTitle" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/shelters}">
+          <input type="hidden" name="action" value="addFacility">
+          <input type="hidden" name="id" th:value="${s.id}">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addFacilityTitle">Add facility</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Facility (e.g. Drinking water) <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="facilityName" required>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="available" id="facAvail" checked>
+              <label class="form-check-label" for="facAvail">Currently available</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

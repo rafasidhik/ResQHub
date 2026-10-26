@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Shelter Management', 'SHELTERS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Shelter Management</h1>
+      <div class="sub">Capacity, occupancy and facilities of relief shelters</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createShelter">
+        <i class="bi bi-plus-lg me-1"></i>Add shelter
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="p-3 pb-0 no-print">
+      <input type="search" class="form-control form-control-sm" style="max-width:320px"
+             placeholder="Search this table…" aria-label="Search this table" data-rq-search="tblShelters">
+    </div>
+    <div class="table-responsive">
+      <table class="table rq-table align-middle" id="tblShelters">
+        <thead>
+          <tr>
+            <th th:each="h : ${headers}" scope="col" th:text="${h}">Header</th>
+            <th scope="col" class="text-end no-print">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="r, iterStat : ${rows}" data-row>
+            <td th:each="cell, cStat : ${r}">
+              <th:block th:with="hname=${headers[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                <span th:if="${(hname == 'Status' or hname == 'Operational Status') and !cellText.isEmpty() and cellText != '-'}"
+                      class="rq-badge"
+                      th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                      th:text="${cellText}">Status</span>
+                <span th:unless="${(hname == 'Status' or hname == 'Operational Status') and !cellText.isEmpty() and cellText != '-'}"
+                      th:text="${cellText}">Cell</span>
+              </th:block>
+            </td>
+            <td class="rq-actions no-print" th:with="s=${items[iterStat.index]}">
+              <a class="btn btn-sm btn-primary" th:href="@{/app/shelters(id=${s.id})}">Open</a>
+              <button type="button" class="btn btn-sm btn-outline-primary"
+                      data-rq-edit="editShelter"
+                      th:data-rq-title="${'Edit ' + s.name}"
+                      th:data-id="${s.id}"
+                      th:data-name="${s.name}"
+                      th:data-code="${s.code}"
+                      th:data-district="${s.district}"
+                      th:data-city="${s.city}"
+                      th:data-address="${s.address}"
+                      th:data-location-description="${s.locationDescription}"
+                      th:data-max-capacity="${s.maxCapacity}"
+                      th:data-occupancy="${s.currentOccupancy}"
+                      th:data-status="${s.operationalStatus}"
+                      th:data-contact="${s.contactNumber}"
+                      th:data-manager="${s.managerName}"
+                      th:data-disaster-id="${s.disasterId}"
+                      th:data-wheelchair="${s.wheelchairAccessible}"
+                      th:data-elderly="${s.elderlyFriendly}"
+                      th:data-medical="${s.medicalAccessible}"
+                      th:data-assistance="${s.specialAssistance}">Edit</button>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(rows)}" data-empty>
+            <td th:colspan="${#lists.size(headers) + 1}">
+              <div class="rq-empty">
+                <i class="bi bi-house-heart"></i>
+                <div class="empty-title">No shelters yet.</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create Shelter Modal -->
+  <div class="modal fade" id="createShelter" tabindex="-1" aria-labelledby="createShelterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/shelters}">
+          <input type="hidden" name="action" value="create">
+          <div class="modal-header">
+            <h5 class="modal-title" id="createShelterTitle">Add shelter</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Shelter name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Code (unique) <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="code" maxlength="20" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">District <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="district" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">City <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="city" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Address <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="address" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Location description / landmark</label>
+              <input type="text" class="form-control" name="locationDescription">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Maximum capacity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="maxCapacity" min="1" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Current occupancy <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="occupancy" min="0" value="0" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Status <span class="text-danger">*</span></label>
+              <select class="form-select" name="status" required>
+                <option th:each="opt : ${statuses}" th:value="${opt[0]}" th:text="${opt[1]}">Status</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contact (10 digits) <span class="text-danger">*</span></label>
+              <input type="tel" class="form-control" name="contact" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Camp manager <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="manager" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Related disaster</label>
+              <select class="form-select" name="disasterId">
+                <option value="">— None —</option>
+                <option th:each="opt : ${disasterOptions}" th:value="${opt[0]}" th:text="${opt[1]}">Disaster</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <div class="form-section row g-2">
+                <div class="col-12 small fw-semibold text-brown">Accessibility</div>
+                <div class="col-6 col-md-3 form-check">
+                  <input class="form-check-input" type="checkbox" name="wheelchair" id="createWc">
+                  <label class="form-check-label" for="createWc">Wheelchair accessible</label>
+                </div>
+                <div class="col-6 col-md-3 form-check">
+                  <input class="form-check-input" type="checkbox" name="elderly" id="createEl">
+                  <label class="form-check-label" for="createEl">Elderly friendly</label>
+                </div>
+                <div class="col-6 col-md-3 form-check">
+                  <input class="form-check-input" type="checkbox" name="medical" id="createMed">
+                  <label class="form-check-label" for="createMed">Medical access</label>
+                </div>
+                <div class="col-6 col-md-3 form-check">
+                  <input class="form-check-input" type="checkbox" name="assistance" id="createSp">
+                  <label class="form-check-label" for="createSp">Special assistance</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save shelter</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Shelter Modal -->
+  <div class="modal fade" id="editShelter" tabindex="-1" aria-labelledby="editShelterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/shelters}">
+          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="id">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editShelterTitle">Edit shelter</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Shelter name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Code (unique) <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="code" maxlength="20" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">District <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="district" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">City <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="city" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Address <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="address" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Location description / landmark</label>
+              <input type="text" class="form-control" name="locationDescription">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Maximum capacity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="maxCapacity" min="1" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Current occupancy <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="occupancy" min="0" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Status <span class="text-danger">*</span></label>
+              <select class="form-select" name="status" required>
+                <option th:each="opt : ${statuses}" th:value="${opt[0]}" th:text="${opt[1]}">Status</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contact (10 digits) <span class="text-danger">*</span></label>
+              <input type="tel" class="form-control" name="contact" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Camp manager <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="manager" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Related disaster</label>
+              <select class="form-select" name="disasterId">
+                <option value="">— None —</option>
+                <option th:each="opt : ${disasterOptions}" th:value="${opt[0]}" th:text="${opt[1]}">Disaster</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <div class="form-section row g-2">
+                <div class="col-12 small fw-semibold text-brown">Accessibility</div>
+                <div class="col-6 col-md-3 form-check">
+                  <input class="form-check-input" type="checkbox" name="wheelchair" id="editWc">
+                  <label class="form-check-label" for="editWc">Wheelchair accessible</label>
+                </div>
+                <div class="col-6 col-md-3 form-check">
+                  <input class="form-check-input" type="checkbox" name="elderly" id="editEl">
+                  <label class="form-check-label" for="editEl">Elderly friendly</label>
+                </div>
+                <div class="col-6 col-md-3 form-check">
+                  <input class="form-check-input" type="checkbox" name="medical" id="editMed">
+                  <label class="form-check-label" for="editMed">Medical access</label>
+                </div>
+                <div class="col-6 col-md-3 form-check">
+                  <input class="form-check-input" type="checkbox" name="assistance" id="editSp">
+                  <label class="form-check-label" for="editSp">Special assistance</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

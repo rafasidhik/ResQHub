@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${'Rescue request #' + r.id}, 'REQUESTS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1 th:text="${'Rescue request #' + r.id}">Rescue request #1</h1>
+      <div class="sub" th:text="${'Requested ' + r.requestedAt}">Requested datetime</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <a class="btn btn-outline-secondary" th:href="@{/app/requests}">
+        <i class="bi bi-arrow-left me-1"></i>All requests
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Request details</span>
+          <span>
+            <span class="rq-badge" th:classappend="${'rq-' + #strings.toLowerCase(r.priority)}" th:text="${'Priority: ' + r.priority.label}">Priority: High</span>
+            <span class="rq-badge" th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(r.status.label, ' ', '-'))}" th:text="${r.status.label}">Status</span>
+          </span>
+        </div>
+        <div class="card-body">
+          <dl class="kv row mb-0">
+            <dt class="col-sm-4">Requester</dt>
+            <dd class="col-sm-8" th:text="${r.requesterName + ' · ' + r.contactNumber}">Name · Phone</dd>
+
+            <dt class="col-sm-4">Location</dt>
+            <dd class="col-sm-8" th:text="${r.location}">Location</dd>
+
+            <dt class="col-sm-4">People</dt>
+            <dd class="col-sm-8" th:text="${r.peopleCount + ' total · ' + r.childrenCount + ' children · ' + r.elderlyCount + ' elderly'}">Counts</dd>
+
+            <dt class="col-sm-4">Flags</dt>
+            <dd class="col-sm-8">
+              <span th:if="${r.lifeThreatening}" class="rq-badge rq-critical me-1">Life-threatening</span>
+              <span th:if="${r.medicalEmergency}" class="rq-badge rq-high me-1">Medical emergency</span>
+              <span th:if="${r.trappedUnderDebris}" class="rq-badge rq-high me-1">Trapped</span>
+              <span th:if="${!r.lifeThreatening and !r.medicalEmergency and !r.trappedUnderDebris}">None</span>
+            </dd>
+
+            <dt class="col-sm-4">Disaster / Victim</dt>
+            <dd class="col-sm-8" th:text="${(r.disasterId != null ? '#' + r.disasterId : '—') + ' / ' + (r.victimId != null ? '#' + r.victimId : '—')}">Ids</dd>
+
+            <dt class="col-sm-4">Assistance needed</dt>
+            <dd class="col-sm-8" th:text="${r.requiredAssistance != null and !r.requiredAssistance.isEmpty() ? r.requiredAssistance : '—'}">Assistance</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-calculator me-1"></i>How the priority was calculated</div>
+        <div class="card-body">
+          <pre class="mb-0" style="white-space:pre-wrap;font-family:inherit" th:text="${explanation}">Explanation</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card mb-4">
+        <div class="card-header">Workflow actions</div>
+        <div class="card-body d-grid gap-2">
+          <!-- PENDING actions -->
+          <form th:if="${r.status != null and r.status.name() == 'PENDING'}" method="post" th:action="@{/app/requests}">
+            <input type="hidden" name="action" value="startReview">
+            <input type="hidden" name="id" th:value="${r.id}">
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-eye me-1"></i>Start review</button>
+          </form>
+
+          <!-- UNDER_REVIEW actions -->
+          <th:block th:if="${r.status != null and r.status.name() == 'UNDER_REVIEW'}">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignTeam">
+              <i class="bi bi-people me-1"></i>Assign a team
+            </button>
+            <form method="post" th:action="@{/app/requests}">
+              <input type="hidden" name="action" value="unreview">
+              <input type="hidden" name="id" th:value="${r.id}">
+              <button class="btn btn-outline-secondary w-100" type="submit">Return to pending</button>
+            </form>
+          </th:block>
+
+          <!-- Active Assignment Actions -->
+          <th:block th:if="${active != null}">
+            <form th:if="${active.assignmentStatus != null and active.assignmentStatus.name() == 'ASSIGNED'}" method="post" th:action="@{/app/requests}">
+              <input type="hidden" name="action" value="progress">
+              <input type="hidden" name="assignmentId" th:value="${active.id}">
+              <input type="hidden" name="id" th:value="${r.id}">
+              <input type="hidden" name="target" value="EN_ROUTE">
+              <button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-truck me-1"></i>Mark en route</button>
+            </form>
+            <form th:if="${active.assignmentStatus != null and (active.assignmentStatus.name() == 'ASSIGNED' or active.assignmentStatus.name() == 'EN_ROUTE')}" method="post" th:action="@{/app/requests}">
+              <input type="hidden" name="action" value="progress">
+              <input type="hidden" name="assignmentId" th:value="${active.id}">
+              <input type="hidden" name="id" th:value="${r.id}">
+              <input type="hidden" name="target" value="ON_SITE">
+              <button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-geo-alt me-1"></i>Mark on site</button>
+            </form>
+            <form method="post" th:action="@{/app/requests}" data-rq-confirm="Mark this rescue as completed?">
+              <input type="hidden" name="action" value="complete">
+              <input type="hidden" name="assignmentId" th:value="${active.id}">
+              <input type="hidden" name="id" th:value="${r.id}">
+              <button class="btn btn-primary w-100" type="submit"><i class="bi bi-check2-circle me-1"></i>Complete rescue</button>
+            </form>
+            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#abortAssignment">
+              <i class="bi bi-x-circle me-1"></i>Abort assignment
+            </button>
+          </th:block>
+
+          <!-- Cancel / Delete -->
+          <form th:if="${r.status != null and r.status.name() != 'RESCUED' and r.status.name() != 'CANCELLED'}"
+                method="post" th:action="@{/app/requests}" data-rq-confirm="Cancel this rescue request?">
+            <input type="hidden" name="action" value="cancel">
+            <input type="hidden" name="id" th:value="${r.id}">
+            <button class="btn btn-outline-danger w-100" type="submit">Cancel request</button>
+          </form>
+
+          <form method="post" th:action="@{/app/requests}" th:data-rq-confirm="${'Permanently delete request #' + r.id + '?'}">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" th:value="${r.id}">
+            <button class="btn btn-link text-danger w-100" type="submit">Delete request</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Assignment history</div>
+        <div th:if="${#lists.isEmpty(history)}" class="rq-empty py-4">No team assigned yet.</div>
+        <ul th:if="${!#lists.isEmpty(history)}" class="list-group list-group-flush">
+          <li th:each="a : ${history}" class="list-group-item">
+            <div class="d-flex justify-content-between">
+              <strong th:text="${teamNames[a.rescueTeamId]}">Team Name</strong>
+              <span class="rq-badge" th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(a.assignmentStatus.label, ' ', '-'))}"
+                    th:text="${a.assignmentStatus.label}">Status</span>
+            </div>
+            <div th:if="${a.notes != null and !a.notes.isEmpty()}" class="small text-brown" th:text="${a.notes}">Notes</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Team Modal -->
+  <div class="modal fade" id="assignTeam" tabindex="-1" aria-labelledby="assignTeam-t" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/requests}" autocomplete="off">
+        <input type="hidden" name="action" value="assign">
+        <input type="hidden" name="id" th:value="${r.id}">
+        <div class="modal-header">
+          <h2 class="modal-title" id="assignTeam-t">Assign a rescue team</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="as_team" th:text="${suitableCount > 0 ? 'Suitable available teams' : 'Available teams'}">Teams</label>
+              <select class="form-select" id="as_team" name="teamId" required>
+                <option th:each="opt : ${suitableCount > 0 ? suitableIds : teamOptions}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+              <div class="form-text" th:text="${suitableCount > 0 ? 'Filtered to teams matching this request.' : 'No team matched the request exactly; showing all available teams.'}">Help text</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Assign</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Abort Assignment Modal -->
+  <div th:if="${active != null}" class="modal fade" id="abortAssignment" tabindex="-1" aria-labelledby="abortAssignment-t" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/requests}" autocomplete="off">
+        <input type="hidden" name="action" value="abort">
+        <input type="hidden" name="assignmentId" th:value="${active.id}">
+        <input type="hidden" name="id" th:value="${r.id}">
+        <div class="modal-header">
+          <h2 class="modal-title" id="abortAssignment-t">Abort assignment</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="ab_notes">Reason</label>
+              <textarea class="form-control" id="ab_notes" name="notes" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Abort</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

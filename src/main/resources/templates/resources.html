@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Resources & Inventory', 'RESOURCES', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Resources &amp; Inventory</h1>
+      <div class="sub">Stock levels, movements and distribution tracking</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <form method="post" th:action="@{/app/resources}" class="d-inline">
+        <input type="hidden" name="action" value="alerts">
+        <button class="btn btn-outline-secondary" type="submit">
+          <i class="bi bi-bell me-1"></i>Refresh low-stock alerts
+        </button>
+      </form>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createResource">
+        <i class="bi bi-plus-lg me-1"></i>Add resource
+      </button>
+    </div>
+  </div>
+
+  <div th:if="${!#lists.isEmpty(lowStock)}" class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <strong th:text="${#lists.size(lowStock) + ' resource(s) at or below minimum level:'}">0 resource(s) low:</strong>
+    <span th:each="l, ls : ${lowStock}"
+          th:text="${l.name + ' (' + l.availableQuantity + '/' + l.minimumLevel + ')' + (ls.last ? '' : ', ')}">Item</span>
+  </div>
+
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabInv" type="button"
+              th:text="${'Inventory (' + #lists.size(items) + ')'}">Inventory (0)</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMov" type="button">Stock movements</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabDist" type="button">Distributions</button>
+    </li>
+  </ul>
+
+  <div class="tab-content card border-top-0 rounded-top-0">
+    <!-- Inventory tab -->
+    <div class="tab-pane fade show active" id="tabInv">
+      <div class="p-3 pb-0 no-print">
+        <input type="search" class="form-control form-control-sm" style="max-width:320px"
+               placeholder="Search this table…" aria-label="Search this table" data-rq-search="tblRes">
+      </div>
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblRes">
+          <thead>
+            <tr>
+              <th th:each="h : ${headers}" scope="col" th:text="${h}">Header</th>
+              <th scope="col" class="text-end no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r, iterStat : ${rows}" data-row>
+              <td th:each="cell, cStat : ${r}">
+                <th:block th:with="hname=${headers[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                  <span th:if="${(hname == 'Status' or hname == 'Category') and !cellText.isEmpty() and cellText != '-'}"
+                        class="rq-badge"
+                        th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                        th:text="${cellText}">Category</span>
+                  <span th:unless="${(hname == 'Status' or hname == 'Category') and !cellText.isEmpty() and cellText != '-'}"
+                        th:text="${cellText}">Cell</span>
+                </th:block>
+              </td>
+              <td class="rq-actions no-print" th:with="res=${items[iterStat.index]}">
+                <button type="button" class="btn btn-sm btn-primary"
+                        data-rq-edit="stockIn"
+                        th:data-rq-title="${'Stock in: ' + res.name}"
+                        th:data-id="${res.id}">Stock in</button>
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                        data-rq-edit="stockOut"
+                        th:data-rq-title="${'Stock out: ' + res.name}"
+                        th:data-id="${res.id}">Stock out</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        data-rq-edit="distribute"
+                        th:data-rq-title="${'Distribute: ' + res.name + ' (' + res.availableQuantity + ' available)'}"
+                        th:data-id="${res.id}">Distribute</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        data-rq-edit="editResource"
+                        th:data-rq-title="${'Edit ' + res.name}"
+                        th:data-id="${res.id}"
+                        th:data-name="${res.name}"
+                        th:data-category="${res.category}"
+                        th:data-min-level="${res.minimumLevel}"
+                        th:data-unit="${res.unit}"
+                        th:data-description="${res.description}">Edit</button>
+                <form th:if="${canAdminDelete}" method="post" th:action="@{/app/resources}" class="d-inline"
+                      th:data-rq-confirm="${'Delete resource ' + res.name + '?'}">
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="id" th:value="${res.id}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(rows)}" data-empty>
+              <td th:colspan="${#lists.size(headers) + 1}">
+                <div class="rq-empty">
+                  <i class="bi bi-box-seam"></i>
+                  <div class="empty-title">No resources recorded.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Stock movements tab -->
+    <div class="tab-pane fade" id="tabMov">
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblMov">
+          <thead>
+            <tr>
+              <th th:each="h : ${movementHeaders}" scope="col" th:text="${h}">Header</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r : ${movementRows}" data-row>
+              <td th:each="cell, cStat : ${r}">
+                <th:block th:with="hname=${movementHeaders[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                  <span th:if="${hname == 'Movement' and !cellText.isEmpty()}"
+                        class="rq-badge"
+                        th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                        th:text="${cellText}">Movement</span>
+                  <span th:unless="${hname == 'Movement' and !cellText.isEmpty()}"
+                        th:text="${cellText}">Cell</span>
+                </th:block>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(movementRows)}" data-empty>
+              <td th:colspan="${#lists.size(movementHeaders)}">
+                <div class="rq-empty">
+                  <i class="bi bi-arrow-left-right"></i>
+                  <div class="empty-title">No stock movements yet.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Distributions tab -->
+    <div class="tab-pane fade" id="tabDist">
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblDist">
+          <thead>
+            <tr>
+              <th th:each="h : ${distributionHeaders}" scope="col" th:text="${h}">Header</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r : ${distributionRows}" data-row>
+              <td th:each="cell, cStat : ${r}">
+                <th:block th:with="hname=${distributionHeaders[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                  <span th:if="${hname == 'Destination' and !cellText.isEmpty()}"
+                        class="rq-badge"
+                        th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                        th:text="${cellText}">Destination</span>
+                  <span th:unless="${hname == 'Destination' and !cellText.isEmpty()}"
+                        th:text="${cellText}">Cell</span>
+                </th:block>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(distributionRows)}" data-empty>
+              <td th:colspan="${#lists.size(distributionHeaders)}">
+                <div class="rq-empty">
+                  <i class="bi bi-truck"></i>
+                  <div class="empty-title">Nothing distributed yet.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Resource Modal -->
+  <div class="modal fade" id="createResource" tabindex="-1" aria-labelledby="createResourceTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/resources}">
+          <input type="hidden" name="action" value="create">
+          <div class="modal-header">
+            <h5 class="modal-title" id="createResourceTitle">Add resource</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Code (unique) <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="code" maxlength="20" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Category <span class="text-danger">*</span></label>
+              <select class="form-select" name="category" required>
+                <option th:each="opt : ${categories}" th:value="${opt[0]}" th:text="${opt[1]}">Category</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Unit (kg, litres, packs…) <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="unit" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Opening quantity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="available" min="0" value="0" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Minimum level (low-stock alert) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="minLevel" min="0" value="10" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" name="description" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save resource</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Resource Modal -->
+  <div class="modal fade" id="editResource" tabindex="-1" aria-labelledby="editResourceTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/resources}">
+          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="id">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editResourceTitle">Edit resource</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Category <span class="text-danger">*</span></label>
+              <select class="form-select" name="category" required>
+                <option th:each="opt : ${categories}" th:value="${opt[0]}" th:text="${opt[1]}">Category</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Unit <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="unit" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Minimum level <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="minLevel" min="0" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" name="description" rows="2"></textarea>
+            </div>
+            <div class="col-12 small text-brown">
+              Quantity is changed only through stock-in / stock-out / distribution, so every change is recorded.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock In Modal -->
+  <div class="modal fade" id="stockIn" tabindex="-1" aria-labelledby="stockInTitle" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/resources}">
+          <input type="hidden" name="action" value="stockIn">
+          <input type="hidden" name="id">
+          <div class="modal-header">
+            <h5 class="modal-title" id="stockInTitle">Stock in</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-12">
+              <label class="form-label">Quantity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="quantity" min="1" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Source (donor / supplier)</label>
+              <input type="text" class="form-control" name="source">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Related disaster</label>
+              <select class="form-select" name="disasterId">
+                <option value="">— None —</option>
+                <option th:each="opt : ${disasterOptions}" th:value="${opt[0]}" th:text="${opt[1]}">Disaster</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Reason / note</label>
+              <input type="text" class="form-control" name="reason">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add stock</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Out Modal -->
+  <div class="modal fade" id="stockOut" tabindex="-1" aria-labelledby="stockOutTitle" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/resources}">
+          <input type="hidden" name="action" value="stockOut">
+          <input type="hidden" name="id">
+          <div class="modal-header">
+            <h5 class="modal-title" id="stockOutTitle">Stock out</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-12">
+              <label class="form-label">Quantity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="quantity" min="1" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Destination</label>
+              <input type="text" class="form-control" name="destination">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Related disaster</label>
+              <select class="form-select" name="disasterId">
+                <option value="">— None —</option>
+                <option th:each="opt : ${disasterOptions}" th:value="${opt[0]}" th:text="${opt[1]}">Disaster</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Reason / note</label>
+              <input type="text" class="form-control" name="reason">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Remove stock</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Distribute Modal -->
+  <div class="modal fade" id="distribute" tabindex="-1" aria-labelledby="distributeTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/resources}">
+          <input type="hidden" name="action" value="distribute">
+          <input type="hidden" name="id">
+          <div class="modal-header">
+            <h5 class="modal-title" id="distributeTitle">Distribute</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Quantity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="quantity" min="1" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Destination type <span class="text-danger">*</span></label>
+              <select class="form-select" name="destination" required>
+                <option th:each="opt : ${destinations}" th:value="${opt[0]}" th:text="${opt[1]}">Destination</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Distributed to (name) <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="distributedTo" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Disaster</label>
+              <select class="form-select" name="disasterId">
+                <option value="">— None —</option>
+                <option th:each="opt : ${disasterOptions}" th:value="${opt[0]}" th:text="${opt[1]}">Disaster</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Shelter</label>
+              <select class="form-select" name="shelterId">
+                <option value="">— None —</option>
+                <option th:each="opt : ${shelterOptions}" th:value="${opt[0]}" th:text="${opt[1]}">Shelter</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Victim</label>
+              <select class="form-select" name="victimId">
+                <option value="">— None —</option>
+                <option th:each="opt : ${victimOptions}" th:value="${opt[0]}" th:text="${opt[1]}">Victim</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Reason / note</label>
+              <input type="text" class="form-control" name="reason">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Record distribution</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

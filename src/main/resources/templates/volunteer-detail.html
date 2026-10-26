@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${v.fullName}, 'VOLUNTEERS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1 th:text="${v.fullName}">Volunteer Name</h1>
+      <div class="sub" th:text="${v.emergencyRole.label + ' · ' + v.location + ' · ' + workload + ' active task(s) of max ' + v.maxWorkload}">
+        Role · Location · 0 active tasks
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <a class="btn btn-outline-secondary" th:href="@{/app/volunteers}">
+        <i class="bi bi-arrow-left me-1"></i>All volunteers
+      </a>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignTask">
+        <i class="bi bi-clipboard-plus me-1"></i>Assign task
+      </button>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-5">
+      <div class="card">
+        <div class="card-body">
+          <div class="small text-brown mb-1">Availability</div>
+          <form method="post" th:action="@{/app/volunteers}" class="d-flex gap-2">
+            <input type="hidden" name="action" value="availability">
+            <input type="hidden" name="id" th:value="${v.id}">
+            <select class="form-select" name="availability" aria-label="Availability">
+              <option th:each="o : ${availabilities}"
+                      th:value="${o[0]}"
+                      th:text="${o[1]}"
+                      th:selected="${o[0] == v.availability.name()}">Available</option>
+            </select>
+            <button class="btn btn-primary" type="submit">Update</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-7">
+      <div class="card h-100">
+        <div class="card-body">
+          <dl class="kv row mb-0">
+            <dt class="col-4">Contact</dt>
+            <dd class="col-8" th:text="${v.contactNumber}">1234567890</dd>
+            <dt class="col-4">Email</dt>
+            <dd class="col-8 mb-0" th:text="${v.email != null and !v.email.isEmpty() ? v.email : '—'}">—</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="small text-brown mb-1">Login account (lets this volunteer open <em>My Tasks</em>)</div>
+      <form method="post" th:action="@{/app/volunteers}" class="d-flex flex-wrap gap-2 align-items-center">
+        <input type="hidden" name="action" value="link">
+        <input type="hidden" name="id" th:value="${v.id}">
+        <select class="form-select" style="max-width:360px" name="userId" aria-label="Linked login account">
+          <option value="">— Not linked —</option>
+          <option th:each="o : ${volunteerUsers}"
+                  th:value="${o[0]}"
+                  th:text="${o[1]}"
+                  th:selected="${o[0] == v.userId}">User</option>
+        </select>
+        <button class="btn btn-primary" type="submit">Save link</button>
+        <span th:if="${linkedUser != null}" class="small text-brown">
+          Currently linked to <strong th:text="${linkedUser.username}">user</strong>
+        </span>
+      </form>
+      <div th:if="${#lists.isEmpty(volunteerUsers)}" class="form-text">
+        No accounts with the Volunteer role exist yet — create one under User Management.
+      </div>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabTasks" type="button"
+              th:text="${'Tasks (' + #lists.size(tasks) + ')'}">Tasks (0)</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSkills" type="button"
+              th:text="${'Skills (' + #lists.size(skills) + ')'}">Skills (0)</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabActivity" type="button">Activity</button>
+    </li>
+  </ul>
+
+  <div class="tab-content card border-top-0 rounded-top-0">
+    <!-- Tasks tab -->
+    <div class="tab-pane fade show active" id="tabTasks">
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblTasks">
+          <thead>
+            <tr>
+              <th th:each="h : ${taskHeaders}" scope="col" th:text="${h}">Header</th>
+              <th scope="col" class="text-end no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r, iterStat : ${taskRows}" data-row>
+              <td th:each="cell, cStat : ${r}">
+                <th:block th:with="hname=${taskHeaders[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                  <span th:if="${(hname == 'Status' or hname == 'Priority') and !cellText.isEmpty() and cellText != '-'}"
+                        class="rq-badge"
+                        th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                        th:text="${cellText}">Status</span>
+                  <span th:unless="${(hname == 'Status' or hname == 'Priority') and !cellText.isEmpty() and cellText != '-'}"
+                        th:text="${cellText}">Cell</span>
+                </th:block>
+              </td>
+              <td class="rq-actions no-print" th:with="t=${tasks[iterStat.index]}">
+                <th:block th:with="nextStatus=${t.status.name() == 'ASSIGNED' ? 'ACCEPTED' : (t.status.name() == 'ACCEPTED' ? 'IN_PROGRESS' : (t.status.name() == 'IN_PROGRESS' ? 'COMPLETED' : ''))}">
+                  <form th:if="${!nextStatus.isEmpty()}" method="post" th:action="@{/app/volunteers}" class="d-inline">
+                    <input type="hidden" name="action" value="taskStatus">
+                    <input type="hidden" name="assignmentId" th:value="${t.id}">
+                    <input type="hidden" name="status" th:value="${nextStatus}">
+                    <input type="hidden" name="id" th:value="${v.id}">
+                    <button class="btn btn-sm btn-primary" type="submit"
+                            th:text="${nextStatus == 'ACCEPTED' ? 'Accept' : (nextStatus == 'IN_PROGRESS' ? 'Start' : 'Complete')}">
+                      Action
+                    </button>
+                  </form>
+                </th:block>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(taskRows)}" data-empty>
+              <td th:colspan="${#lists.size(taskHeaders) + 1}">
+                <div class="rq-empty">
+                  <i class="bi bi-clipboard"></i>
+                  <div class="empty-title">No tasks assigned yet.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Skills tab -->
+    <div class="tab-pane fade" id="tabSkills">
+      <div class="p-3 pb-0">
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addSkill">
+          <i class="bi bi-plus-lg me-1"></i>Add skill
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblSkills">
+          <thead>
+            <tr>
+              <th th:each="h : ${skillHeaders}" scope="col" th:text="${h}">Header</th>
+              <th scope="col" class="text-end no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r, iterStat : ${skillRows}" data-row>
+              <td th:each="cell : ${r}" th:text="${cell != null ? cell.toString() : ''}">Skill</td>
+              <td class="rq-actions no-print" th:with="s=${skills[iterStat.index]}">
+                <form method="post" th:action="@{/app/volunteers}" class="d-inline" data-rq-confirm="Delete this skill?">
+                  <input type="hidden" name="action" value="deleteSkill">
+                  <input type="hidden" name="skillId" th:value="${s.id}">
+                  <input type="hidden" name="id" th:value="${v.id}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(skillRows)}" data-empty>
+              <td th:colspan="${#lists.size(skillHeaders) + 1}">
+                <div class="rq-empty">
+                  <i class="bi bi-award"></i>
+                  <div class="empty-title">No skills recorded.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Activity tab -->
+    <div class="tab-pane fade" id="tabActivity">
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblActivity">
+          <thead>
+            <tr>
+              <th th:each="h : ${activityHeaders}" scope="col" th:text="${h}">Header</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r : ${activityRows}" data-row>
+              <td th:each="cell : ${r}" th:text="${cell != null ? cell.toString() : ''}">Activity</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(activityRows)}" data-empty>
+              <td th:colspan="${#lists.size(activityHeaders)}">
+                <div class="rq-empty">
+                  <i class="bi bi-clock-history"></i>
+                  <div class="empty-title">No activity logged yet.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Task Modal -->
+  <div class="modal fade" id="assignTask" tabindex="-1" aria-labelledby="assignTaskTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/volunteers}">
+          <input type="hidden" name="action" value="assignTask">
+          <input type="hidden" name="id" th:value="${v.id}">
+          <div class="modal-header">
+            <h5 class="modal-title" id="assignTaskTitle" th:text="${'Assign a task to ' + v.fullName}">Assign task</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Task name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="taskName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Task location <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="location" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Priority (1 = low … 5 = high) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="priority" min="1" max="5" value="3" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" name="description" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Assign task</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Skill Modal -->
+  <div class="modal fade" id="addSkill" tabindex="-1" aria-labelledby="addSkillTitle" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/volunteers}">
+          <input type="hidden" name="action" value="addSkill">
+          <input type="hidden" name="id" th:value="${v.id}">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addSkillTitle">Add skill</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Skill <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="skillName" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add skill</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

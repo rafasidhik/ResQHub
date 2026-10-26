@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:fragment="layout(pageTitle, activeModule, content)">
+<head th:fragment="head(title)">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${title != null ? title + ' · ResQHub' : 'ResQHub'}">ResQHub</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/assets/images/logo.svg(v='4.0')}">
+  <link rel="stylesheet" th:href="@{/assets/vendor/bootstrap/bootstrap.min.css}">
+  <link rel="stylesheet" th:href="@{/assets/vendor/icons/bootstrap-icons.min.css}">
+  <link rel="stylesheet" th:href="@{/assets/css/resqhub.css(v='4.0')}">
+</head>
+<body>
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+
+<!-- ===== sidebar (permanent on desktop, off-canvas on mobile) ===== -->
+<aside th:fragment="sidebar(activeMod)" class="offcanvas-lg offcanvas-start rq-sidebar" tabindex="-1" id="sidebar" aria-label="Main navigation">
+  <div class="offcanvas-header d-lg-none justify-content-end py-2">
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close menu"></button>
+  </div>
+  <a class="rq-brand" th:href="@{/app/dashboard}">
+    <img th:src="@{/assets/images/logo.svg(v='4.0')}" alt="ResQHub logo">
+    <span><span class="name d-block">ResQHub</span><span class="slogan">Help. Hope. Humanity.</span></span>
+  </a>
+  <nav class="rq-nav pb-4">
+    <th:block th:each="entry : ${navGroups}">
+      <div class="rq-nav-group" th:text="${entry.key}">Group Name</div>
+      <a th:each="m : ${entry.value}"
+         th:href="@{${m.path}}"
+         th:class="${(m.name() == activeModule || m.name() == activeMod) ? 'active' : ''}">
+        <i class="bi" th:classappend="${m.icon}"></i>
+        <span th:text="${m.label}">Module Label</span>
+      </a>
+    </th:block>
+  </nav>
+</aside>
+
+<div class="rq-main">
+  <header th:fragment="topbar" class="rq-topbar d-flex align-items-center gap-3">
+    <button class="btn btn-outline-primary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" aria-label="Open menu">
+      <i class="bi bi-list"></i>
+    </button>
+    <div class="fw-semibold d-none d-md-block text-brown">Integrated Disaster Response Coordination System</div>
+    <div class="ms-auto d-flex align-items-center gap-3">
+      <a class="bell text-decoration-none fs-5" th:href="@{/app/notifications}" title="Notifications"
+         th:attr="aria-label=${'Notifications, ' + (unreadCount ?: 0) + ' unread'}">
+        <i class="bi bi-bell"></i>
+        <span th:if="${unreadCount != null and unreadCount > 0}" class="count" th:text="${unreadCount}">0</span>
+      </a>
+      <div class="dropdown">
+        <button class="btn btn-light border d-flex align-items-center gap-2" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-person-circle"></i>
+          <span class="text-start lh-1 d-none d-sm-block">
+            <span class="d-block small fw-semibold" th:text="${currentUser != null ? currentUser.fullName : 'User'}">Full Name</span>
+            <span class="d-block text-brown" style="font-size:.7rem" th:text="${currentUser != null and currentUser.role != null ? currentUser.role.label : ''}">Role</span>
+          </span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" th:href="@{/app/profile}"><i class="bi bi-person me-2"></i>My Profile</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <form method="post" th:action="@{/logout}">
+              <button class="dropdown-item" type="submit"><i class="bi bi-box-arrow-right me-2"></i>Log out</button>
+            </form>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="rq-content">
+    <div th:if="${flashMessage != null}" class="alert alert-dismissible fade show"
+         th:classappend="${flashType == 'error' or flashType == 'danger' ? 'alert-danger' : 'alert-success'}" role="alert">
+      <i class="bi me-2" th:classappend="${flashType == 'error' or flashType == 'danger' ? 'bi-exclamation-triangle' : 'bi-check-circle'}"></i>
+      <span th:text="${flashMessage}">Operation completed.</span>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- Main Content Injection -->
+    <th:block th:replace="${content}">
+      <p>Page Content goes here</p>
+    </th:block>
+  </main>
+
+  <footer th:fragment="footer" class="rq-footer">
+    ResQHub · Integrated Disaster Response Coordination System · <em>Help. Hope. Humanity.</em>
+  </footer>
+</div>
+
+<!-- shared confirm dialog (replaces JOptionPane confirm) -->
+<div th:fragment="confirmModal" class="modal fade" id="rqConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title">Please confirm</h2>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body rq-confirm-text"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-danger" id="rqConfirmYes">Yes, continue</button>
+    </div>
+  </div></div>
+</div>
+
+<script th:fragment="scripts" th:src="@{/assets/vendor/bootstrap/bootstrap.bundle.min.js}"></script>
+<script th:src="@{/assets/js/rq.js}"></script>
+</body>
+</html>

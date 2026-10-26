@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(${team.teamName}, 'TEAMS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1 th:text="${team.teamName}">Team Name</h1>
+      <div class="sub" th:text="${team.teamType.label + ' · based at ' + team.baseLocation}">Type · Base</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <a class="btn btn-outline-secondary" th:href="@{/app/teams}">
+        <i class="bi bi-arrow-left me-1"></i>All teams
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card"><div class="card-body">
+        <div class="small text-brown mb-1">Availability</div>
+        <form method="post" th:action="@{/app/teams}" class="d-flex gap-2">
+          <input type="hidden" name="action" value="availability">
+          <input type="hidden" name="id" th:value="${team.id}">
+          <select class="form-select" name="availability" aria-label="Availability">
+            <option th:each="o : ${availabilities}" th:value="${o[0]}" th:text="${o[1]}"
+                    th:selected="${team.availabilityStatus != null and o[0] == team.availabilityStatus.name()}"></option>
+          </select>
+          <button class="btn btn-primary" type="submit">Update</button>
+        </form>
+      </div></div>
+    </div>
+    <div class="col-md-6">
+      <div class="card"><div class="card-body">
+        <div class="small text-brown mb-1">Operational status</div>
+        <form method="post" th:action="@{/app/teams}" class="d-flex gap-2">
+          <input type="hidden" name="action" value="operational">
+          <input type="hidden" name="id" th:value="${team.id}">
+          <select class="form-select" name="operational" aria-label="Operational status">
+            <option th:each="o : ${operationals}" th:value="${o[0]}" th:text="${o[1]}"
+                    th:selected="${team.operationalStatus != null and o[0] == team.operationalStatus.name()}"></option>
+          </select>
+          <button class="btn btn-primary" type="submit">Update</button>
+        </form>
+      </div></div>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabMembers" type="button"
+              th:text="${'Members (' + #lists.size(members) + ')'}">Members (0)</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSkills" type="button"
+              th:text="${'Skills (' + #lists.size(skills) + ')'}">Skills (0)</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabEquip" type="button"
+              th:text="${'Equipment (' + #lists.size(equipment) + ')'}">Equipment (0)</button>
+    </li>
+  </ul>
+
+  <div class="tab-content card border-top-0 rounded-top-0">
+    <!-- Members Tab -->
+    <div class="tab-pane fade show active" id="tabMembers">
+      <div class="p-3 pb-0">
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addMember">
+          <i class="bi bi-plus-lg me-1"></i>Add member
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblMembers">
+          <thead>
+            <tr>
+              <th th:each="h : ${memberHeaders}" scope="col" th:text="${h}">Header</th>
+              <th scope="col" class="text-end no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r, iterStat : ${memberRows}">
+              <td th:each="cell, cStat : ${r}">
+                <th:block th:with="hname=${memberHeaders[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                  <span th:if="${hname == 'Availability' and !cellText.isEmpty() and cellText != '-'}"
+                        class="rq-badge"
+                        th:classappend="${'rq-' + #strings.toLowerCase(cellText)}"
+                        th:text="${cellText}">Available</span>
+                  <span th:unless="${hname == 'Availability' and !cellText.isEmpty() and cellText != '-'}"
+                        th:text="${cellText}">Cell text</span>
+                </th:block>
+              </td>
+              <td class="rq-actions no-print" th:with="m=${members[iterStat.index]}">
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                        data-rq-edit="editMember"
+                        th:data-rq-title="${'Edit ' + m.memberName}"
+                        th:data-member-id="${m.id}"
+                        th:data-member-name="${m.memberName}"
+                        th:data-role="${m.role}"
+                        th:data-contact-number="${m.contactNumber}"
+                        th:data-special-skills="${m.specialSkills}"
+                        th:data-availability="${m.availability}">Edit</button>
+                <form method="post" th:action="@{/app/teams}" class="d-inline"
+                      th:data-rq-confirm="${'Remove ' + m.memberName + ' from the team?'}">
+                  <input type="hidden" name="action" value="deleteMember">
+                  <input type="hidden" name="memberId" th:value="${m.id}">
+                  <input type="hidden" name="id" th:value="${team.id}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                </form>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div th:if="${#lists.isEmpty(memberRows)}" class="rq-empty">No members added.</div>
+      </div>
+    </div>
+
+    <!-- Skills Tab -->
+    <div class="tab-pane fade" id="tabSkills">
+      <div class="p-3 pb-0">
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addSkill">
+          <i class="bi bi-plus-lg me-1"></i>Add skill
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblSkills">
+          <thead>
+            <tr>
+              <th th:each="h : ${skillHeaders}" scope="col" th:text="${h}">Header</th>
+              <th scope="col" class="text-end no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r, iterStat : ${skillRows}">
+              <td th:each="cell : ${r}" th:text="${cell}">Cell text</td>
+              <td class="rq-actions no-print" th:with="s=${skills[iterStat.index]}">
+                <form method="post" th:action="@{/app/teams}" class="d-inline" data-rq-confirm="Delete this skill?">
+                  <input type="hidden" name="action" value="deleteSkill">
+                  <input type="hidden" name="skillId" th:value="${s.id}">
+                  <input type="hidden" name="id" th:value="${team.id}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div th:if="${#lists.isEmpty(skillRows)}" class="rq-empty">No skills recorded.</div>
+      </div>
+    </div>
+
+    <!-- Equipment Tab -->
+    <div class="tab-pane fade" id="tabEquip">
+      <div class="p-3 pb-0">
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipment">
+          <i class="bi bi-plus-lg me-1"></i>Add equipment
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblEquip">
+          <thead>
+            <tr>
+              <th th:each="h : ${equipmentHeaders}" scope="col" th:text="${h}">Header</th>
+              <th scope="col" class="text-end no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r, iterStat : ${equipmentRows}">
+              <td th:each="cell : ${r}" th:text="${cell}">Cell text</td>
+              <td class="rq-actions no-print" th:with="e=${equipment[iterStat.index]}">
+                <form method="post" th:action="@{/app/teams}" class="d-inline" data-rq-confirm="Delete this equipment entry?">
+                  <input type="hidden" name="action" value="deleteEquipment">
+                  <input type="hidden" name="equipmentId" th:value="${e.id}">
+                  <input type="hidden" name="id" th:value="${team.id}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div th:if="${#lists.isEmpty(equipmentRows)}" class="rq-empty">No equipment recorded.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Member Modal -->
+  <div class="modal fade" id="addMember" tabindex="-1" aria-labelledby="addMember-t" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/teams}" autocomplete="off">
+        <input type="hidden" name="action" value="addMember">
+        <input type="hidden" name="id" th:value="${team.id}">
+        <div class="modal-header">
+          <h2 class="modal-title" id="addMember-t">Add team member</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="am_name">Name <span class="req">*</span></label>
+              <input class="form-control" id="am_name" name="memberName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="am_role">Role <span class="req">*</span></label>
+              <input class="form-control" id="am_role" name="role" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="am_phone">Contact</label>
+              <input class="form-control" type="tel" id="am_phone" name="contactNumber">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="am_skills">Special skills</label>
+              <input class="form-control" id="am_skills" name="specialSkills">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add member</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Member Modal -->
+  <div class="modal fade" id="editMember" tabindex="-1" aria-labelledby="editMember-t" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/teams}" autocomplete="off">
+        <input type="hidden" name="action" value="updateMember">
+        <input type="hidden" name="id" th:value="${team.id}">
+        <input type="hidden" name="memberId">
+        <div class="modal-header">
+          <h2 class="modal-title" id="editMember-t">Edit member</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="em_name">Name <span class="req">*</span></label>
+              <input class="form-control" id="em_name" name="memberName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="em_role">Role <span class="req">*</span></label>
+              <input class="form-control" id="em_role" name="role" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="em_phone">Contact</label>
+              <input class="form-control" type="tel" id="em_phone" name="contactNumber">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="em_skills">Special skills</label>
+              <input class="form-control" id="em_skills" name="specialSkills">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="em_avail">Availability <span class="req">*</span></label>
+              <select class="form-select" id="em_avail" name="availability" required>
+                <option th:each="o : ${availabilities}" th:value="${o[0]}" th:text="${o[1]}"></option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Skill Modal -->
+  <div class="modal fade" id="addSkill" tabindex="-1" aria-labelledby="addSkill-t" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/teams}" autocomplete="off">
+        <input type="hidden" name="action" value="addSkill">
+        <input type="hidden" name="id" th:value="${team.id}">
+        <div class="modal-header">
+          <h2 class="modal-title" id="addSkill-t">Add skill</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="as_skill">Skill <span class="req">*</span></label>
+              <input class="form-control" id="as_skill" name="skillName" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="as_desc">Description</label>
+              <textarea class="form-control" id="as_desc" name="description" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add skill</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Equipment Modal -->
+  <div class="modal fade" id="addEquipment" tabindex="-1" aria-labelledby="addEquipment-t" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/teams}" autocomplete="off">
+        <input type="hidden" name="action" value="addEquipment">
+        <input type="hidden" name="id" th:value="${team.id}">
+        <div class="modal-header">
+          <h2 class="modal-title" id="addEquipment-t">Add equipment</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label" for="ae_name">Equipment <span class="req">*</span></label>
+              <input class="form-control" id="ae_name" name="equipmentName" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="ae_qty">Quantity <span class="req">*</span></label>
+              <input class="form-control" type="number" id="ae_qty" name="quantity" min="1" value="1" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="ae_desc">Description</label>
+              <textarea class="form-control" id="ae_desc" name="description" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add equipment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('My Profile', '', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>My Profile</h1>
+      <div class="sub">Your account details and security</div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">Account details</div>
+        <div class="card-body">
+          <dl class="kv row mb-3">
+            <dt class="col-5">Username</dt>
+            <dd class="col-7" th:text="${currentUser != null ? currentUser.username : ''}">username</dd>
+            <dt class="col-5">Role</dt>
+            <dd class="col-7" th:text="${currentUser != null ? currentUser.role.label : ''}">Role</dd>
+            <dt class="col-5">Status</dt>
+            <dd class="col-7" th:if="${currentUser != null}">
+              <span class="rq-badge"
+                    th:classappend="${'rq-' + #strings.toLowerCase(currentUser.accountStatus)}"
+                    th:text="${currentUser.accountStatus.label}">Active</span>
+            </dd>
+          </dl>
+          <form method="post" th:action="@{/app/profile}" class="row g-3">
+            <input type="hidden" name="action" value="profile">
+            <div class="col-12">
+              <label class="form-label">Full name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="fullName"
+                     th:value="${param.fullName != null ? param.fullName[0] : (currentUser != null ? currentUser.fullName : '')}" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              <input type="email" class="form-control" name="email"
+                     th:value="${param.email != null ? param.email[0] : (currentUser != null ? currentUser.email : '')}" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Phone</label>
+              <input type="tel" class="form-control" name="phone"
+                     th:value="${param.phone != null ? param.phone[0] : (currentUser != null ? currentUser.phone : '')}">
+            </div>
+            <div class="col-12">
+              <button class="btn btn-primary" type="submit">
+                <i class="bi bi-check2 me-1"></i>Save changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card mb-4">
+        <div class="card-header">Change password</div>
+        <div class="card-body">
+          <form method="post" th:action="@{/app/profile}" class="row g-3">
+            <input type="hidden" name="action" value="password">
+            <div class="col-12">
+              <label class="form-label">Current password <span class="text-danger">*</span></label>
+              <input type="password" class="form-control" name="oldPassword" required autocomplete="current-password">
+            </div>
+            <div class="col-12">
+              <label class="form-label">New password <span class="text-danger">*</span></label>
+              <input type="password" class="form-control" name="newPassword" required autocomplete="new-password">
+              <div class="form-text">8+ characters, letters and digits</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Confirm new password <span class="text-danger">*</span></label>
+              <input type="password" class="form-control" name="confirmPassword" required autocomplete="new-password">
+            </div>
+            <div class="col-12">
+              <button class="btn btn-primary" type="submit">
+                <i class="bi bi-key me-1"></i>Change password
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div th:if="${canRequestDeletion}" class="card">
+        <div class="card-header">Delete my account</div>
+        <div class="card-body">
+          <p class="small text-brown">Sends a request to an administrator, who must approve it before your account is removed.</p>
+          <form method="post" th:action="@{/app/profile}" data-rq-confirm="Send an account-deletion request to the administrators?">
+            <input type="hidden" name="action" value="deletion">
+            <button class="btn btn-outline-danger" type="submit">
+              <i class="bi bi-person-x me-1"></i>Request account deletion
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

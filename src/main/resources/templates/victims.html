@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Victim Management', 'VICTIMS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Victim Management</h1>
+      <div class="sub" th:text="${disasterFilter == null ? 'All registered victims' : 'Filtered by disaster #' + disasterFilter}">
+        All registered victims
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <a th:if="${disasterFilter != null}" class="btn btn-outline-secondary" th:href="@{/app/victims}">Clear filter</a>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createVictim">
+        <i class="bi bi-person-plus me-1"></i>Register victim
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="p-3 pb-0 no-print">
+      <input type="search" class="form-control form-control-sm" style="max-width:320px"
+             placeholder="Search this table…" aria-label="Search this table" data-rq-search="tblVictims">
+    </div>
+    <div class="table-responsive">
+      <table class="table rq-table align-middle" id="tblVictims">
+        <thead>
+          <tr>
+            <th th:each="h : ${headers}" scope="col" th:text="${h}">Header</th>
+            <th scope="col" class="text-end no-print">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="r, iterStat : ${rows}" data-row>
+            <td th:each="cell, cStat : ${r}">
+              <th:block th:with="hname=${headers[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                <span th:if="${(hname == 'Status' or hname == 'Emergency Status' or hname == 'Shelter Status' or hname == 'Triage') and !cellText.isEmpty() and cellText != '-'}"
+                      class="rq-badge"
+                      th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(#strings.replace(cellText, ' ', '-'), '/', '-'))}"
+                      th:text="${cellText}">Status</span>
+                <span th:unless="${(hname == 'Status' or hname == 'Emergency Status' or hname == 'Shelter Status' or hname == 'Triage') and !cellText.isEmpty() and cellText != '-'}"
+                      th:text="${cellText}">Cell text</span>
+              </th:block>
+            </td>
+            <td class="rq-actions no-print" th:with="v=${items[iterStat.index]}">
+              <button type="button" class="btn btn-sm btn-outline-primary"
+                      data-rq-edit="editVictim"
+                      th:data-rq-title="${'Edit victim #' + v.id}"
+                      th:data-id="${v.id}"
+                      th:data-full-name="${v.fullName}"
+                      th:data-age="${v.age}"
+                      th:data-gender="${v.gender}"
+                      th:data-phone="${v.phone}"
+                      th:data-emergency-status="${v.emergencyStatus}"
+                      th:data-medical-condition="${v.medicalCondition}"
+                      th:data-family-info="${v.familyInfo}"
+                      th:data-current-location="${v.currentLocation}"
+                      th:data-disaster-id="${v.disasterId}">Edit</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                      data-rq-edit="triageVictim"
+                      th:data-rq-title="${'Triage: ' + v.fullName}"
+                      th:data-id="${v.id}"
+                      th:data-emergency-status="${v.emergencyStatus}">Triage</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                      data-rq-edit="shelterVictim"
+                      th:data-rq-title="${'Shelter status: ' + v.fullName}"
+                      th:data-id="${v.id}"
+                      th:data-shelter-status="${v.shelterStatus}">Shelter</button>
+              <form method="post" th:action="@{/app/victims}" class="d-inline"
+                    th:data-rq-confirm="${'Delete victim record ' + v.fullName + '?'}">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="id" th:value="${v.id}">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div th:if="${#lists.isEmpty(rows)}" class="rq-empty">
+        <i class="bi bi-people"></i>No victims registered.
+      </div>
+      <div class="rq-empty rq-no-match" style="display:none">
+        <i class="bi bi-search"></i>No rows match your search.
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Victim Modal -->
+  <div class="modal fade" id="createVictim" tabindex="-1" aria-labelledby="createVictim-t" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/victims}" autocomplete="off">
+        <input type="hidden" name="action" value="create">
+        <div class="modal-header">
+          <h2 class="modal-title" id="createVictim-t">Register victim</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="cv_fullName">Full name <span class="req">*</span></label>
+              <input class="form-control" id="cv_fullName" name="fullName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cv_age">Age <span class="req">*</span></label>
+              <input class="form-control" type="number" id="cv_age" name="age" min="0" max="120" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cv_gender">Gender <span class="req">*</span></label>
+              <select class="form-select" id="cv_gender" name="gender" required>
+                <option th:each="opt : ${genders}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cv_phone">Phone (10 digits)</label>
+              <input class="form-control" type="tel" id="cv_phone" name="phone">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cv_emergencyStatus">Emergency status <span class="req">*</span></label>
+              <select class="form-select" id="cv_emergencyStatus" name="emergencyStatus" required>
+                <option th:each="opt : ${emergencies}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cv_disasterId">Disaster <span class="req">*</span></label>
+              <select class="form-select" id="cv_disasterId" name="disasterId" required>
+                <option th:each="opt : ${disasterOptions}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="cv_currentLocation">Current location <span class="req">*</span></label>
+              <input class="form-control" id="cv_currentLocation" name="currentLocation" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cv_medicalCondition">Medical condition</label>
+              <textarea class="form-control" id="cv_medicalCondition" name="medicalCondition" rows="2"></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cv_familyInfo">Family information</label>
+              <textarea class="form-control" id="cv_familyInfo" name="familyInfo" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Register</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Victim Modal -->
+  <div class="modal fade" id="editVictim" tabindex="-1" aria-labelledby="editVictim-t" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/victims}" autocomplete="off">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id">
+        <div class="modal-header">
+          <h2 class="modal-title" id="editVictim-t">Edit victim</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="ev_fullName">Full name <span class="req">*</span></label>
+              <input class="form-control" id="ev_fullName" name="fullName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ev_age">Age <span class="req">*</span></label>
+              <input class="form-control" type="number" id="ev_age" name="age" min="0" max="120" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ev_gender">Gender <span class="req">*</span></label>
+              <select class="form-select" id="ev_gender" name="gender" required>
+                <option th:each="opt : ${genders}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ev_phone">Phone (10 digits)</label>
+              <input class="form-control" type="tel" id="ev_phone" name="phone">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ev_emergencyStatus">Emergency status <span class="req">*</span></label>
+              <select class="form-select" id="ev_emergencyStatus" name="emergencyStatus" required>
+                <option th:each="opt : ${emergencies}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ev_disasterId">Disaster <span class="req">*</span></label>
+              <select class="form-select" id="ev_disasterId" name="disasterId" required>
+                <option th:each="opt : ${disasterOptions}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="ev_currentLocation">Current location <span class="req">*</span></label>
+              <input class="form-control" id="ev_currentLocation" name="currentLocation" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ev_medicalCondition">Medical condition</label>
+              <textarea class="form-control" id="ev_medicalCondition" name="medicalCondition" rows="2"></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ev_familyInfo">Family information</label>
+              <textarea class="form-control" id="ev_familyInfo" name="familyInfo" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Triage Modal -->
+  <div class="modal fade" id="triageVictim" tabindex="-1" aria-labelledby="triageVictim-t" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/victims}" autocomplete="off">
+        <input type="hidden" name="action" value="triage">
+        <input type="hidden" name="id">
+        <div class="modal-header">
+          <h2 class="modal-title" id="triageVictim-t">Update triage</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="tv_status">Emergency status <span class="req">*</span></label>
+              <select class="form-select" id="tv_status" name="emergencyStatus" required>
+                <option th:each="opt : ${emergencies}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Shelter Status Modal -->
+  <div class="modal fade" id="shelterVictim" tabindex="-1" aria-labelledby="shelterVictim-t" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/victims}" autocomplete="off">
+        <input type="hidden" name="action" value="shelterStatus">
+        <input type="hidden" name="id">
+        <div class="modal-header">
+          <h2 class="modal-title" id="shelterVictim-t">Shelter status</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="sv_status">Shelter status <span class="req">*</span></label>
+              <select class="form-select" id="sv_status" name="shelterStatus" required>
+                <option th:each="opt : ${shelterStatuses}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

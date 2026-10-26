@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Volunteers', 'VOLUNTEERS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Volunteers</h1>
+      <div class="sub">Registered volunteers, skills and workload</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#smartAssign">
+        <i class="bi bi-stars me-1"></i>Smart-assign a task
+      </button>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createVolunteer">
+        <i class="bi bi-person-plus me-1"></i>Register volunteer
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="p-3 pb-0 no-print">
+      <input type="search" class="form-control form-control-sm" style="max-width:320px"
+             placeholder="Search this table…" aria-label="Search this table" data-rq-search="tblVolunteers">
+    </div>
+    <div class="table-responsive">
+      <table class="table rq-table align-middle" id="tblVolunteers">
+        <thead>
+          <tr>
+            <th th:each="h : ${headers}" scope="col" th:text="${h}">Header</th>
+            <th scope="col" class="text-end no-print">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="r, iterStat : ${rows}" data-row>
+            <td th:each="cell, cStat : ${r}">
+              <th:block th:with="hname=${headers[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                <span th:if="${(hname == 'Status' or hname == 'Availability' or hname == 'Role' or hname == 'Emergency Role') and !cellText.isEmpty() and cellText != '-'}"
+                      class="rq-badge"
+                      th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(#strings.replace(cellText, ' ', '-'), '/', '-'))}"
+                      th:text="${cellText}">Status</span>
+                <span th:unless="${(hname == 'Status' or hname == 'Availability' or hname == 'Role' or hname == 'Emergency Role') and !cellText.isEmpty() and cellText != '-'}"
+                      th:text="${cellText}">Cell text</span>
+              </th:block>
+            </td>
+            <td class="rq-actions no-print" th:with="v=${items[iterStat.index]}">
+              <a class="btn btn-sm btn-primary" th:href="@{/app/volunteers(id=${v.id})}">Open</a>
+              <button type="button" class="btn btn-sm btn-outline-primary"
+                      data-rq-edit="editVolunteer"
+                      th:data-rq-title="${'Edit ' + v.fullName}"
+                      th:data-id="${v.id}"
+                      th:data-full-name="${v.fullName}"
+                      th:data-contact-number="${v.contactNumber}"
+                      th:data-email="${v.email}"
+                      th:data-location="${v.location}"
+                      th:data-skills="${v.skills}"
+                      th:data-availability="${v.availability}"
+                      th:data-emergency-role="${v.emergencyRole}"
+                      th:data-max-workload="${v.maxWorkload}">Edit</button>
+              <form method="post" th:action="@{/app/volunteers}" class="d-inline"
+                    th:data-rq-confirm="${'Delete volunteer ' + v.fullName + ' and their tasks?'}">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="id" th:value="${v.id}">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(rows)}" data-empty>
+            <td th:colspan="${#lists.size(headers) + 1}">
+              <div class="rq-empty">
+                <i class="bi bi-person-heart"></i>
+                <div class="empty-title">No volunteers registered.</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create Volunteer Modal -->
+  <div class="modal fade" id="createVolunteer" tabindex="-1" aria-labelledby="createVolunteerTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/volunteers}">
+          <input type="hidden" name="action" value="create">
+          <div class="modal-header">
+            <h5 class="modal-title" id="createVolunteerTitle">Register volunteer</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Full name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="fullName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contact (10 digits) <span class="text-danger">*</span></label>
+              <input type="tel" class="form-control" name="contactNumber" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" name="email">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Location <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="location" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Emergency role <span class="text-danger">*</span></label>
+              <select class="form-select" name="emergencyRole" required>
+                <option th:each="opt : ${emergencyRoles}" th:value="${opt[0]}" th:text="${opt[1]}">Role</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Max concurrent tasks <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="maxWorkload" min="1" value="3" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Availability</label>
+              <select class="form-select" name="availability">
+                <option th:each="opt : ${availabilities}" th:value="${opt[0]}" th:text="${opt[1]}">Availability</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Skills (comma separated)</label>
+              <textarea class="form-control" name="skills" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Register</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Volunteer Modal -->
+  <div class="modal fade" id="editVolunteer" tabindex="-1" aria-labelledby="editVolunteerTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/volunteers}">
+          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="id">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editVolunteerTitle">Edit volunteer</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Full name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="fullName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contact (10 digits) <span class="text-danger">*</span></label>
+              <input type="tel" class="form-control" name="contactNumber" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" name="email">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Location <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="location" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Emergency role <span class="text-danger">*</span></label>
+              <select class="form-select" name="emergencyRole" required>
+                <option th:each="opt : ${emergencyRoles}" th:value="${opt[0]}" th:text="${opt[1]}">Role</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Max concurrent tasks <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="maxWorkload" min="1" value="3" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Availability</label>
+              <select class="form-select" name="availability">
+                <option th:each="opt : ${availabilities}" th:value="${opt[0]}" th:text="${opt[1]}">Availability</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Skills (comma separated)</label>
+              <textarea class="form-control" name="skills" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Smart-assign Task Modal -->
+  <div class="modal fade" id="smartAssign" tabindex="-1" aria-labelledby="smartAssignTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" th:action="@{/app/volunteers}">
+          <input type="hidden" name="action" value="smartAssign">
+          <div class="modal-header">
+            <h5 class="modal-title" id="smartAssignTitle">Smart-assign a task</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body row g-3">
+            <div class="col-12">
+              <p class="small text-brown mb-0">The original matching algorithm scores volunteers on skills, location, availability and workload and assigns the task to the best match.</p>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Task name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="taskName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Task location <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="location" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Skills needed (comma separated)</label>
+              <input type="text" class="form-control" name="taskSkills">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Priority (1 = low … 5 = high) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="priority" min="1" max="5" value="3" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" name="description" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Find best volunteer &amp; assign</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

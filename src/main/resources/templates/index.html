@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ResQHub · Integrated Disaster Response Coordination System</title>
+  <meta name="description" content="ResQHub bridges citizens in distress, first responder rescue teams, community shelters, and emergency aid supplies into a unified, life-saving coordination platform.">
+  <link rel="icon" type="image/svg+xml" th:href="@{/assets/images/logo.svg(v='4.0')}">
+  <link rel="stylesheet" th:href="@{/assets/vendor/bootstrap/bootstrap.min.css}">
+  <link rel="stylesheet" th:href="@{/assets/vendor/icons/bootstrap-icons.min.css}">
+  <link rel="stylesheet" th:href="@{/assets/css/resqhub.css}">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header class="sticky-top">
+    <nav class="navbar navbar-expand-lg rq-landing-nav py-3" aria-label="Main Navigation">
+      <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2" th:href="@{/}">
+          <img th:src="@{/assets/images/logo.svg(v='4.0')}" alt="ResQHub logo" width="36" height="36">
+          <span class="fw-bold text-dark fs-5">ResQHub</span>
+        </a>
+
+        <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#landingNavbar" aria-controls="landingNavbar" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="landingNavbar">
+          <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-lg-2">
+            <li class="nav-item"><a class="nav-link" href="#overview">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="#disasters">Disaster</a></li>
+            <li class="nav-item"><a class="nav-link" href="#shelters">Shelter</a></li>
+            <li class="nav-item"><a class="nav-link" href="#about">About Us</a></li>
+            <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+          </ul>
+
+          <div class="d-flex align-items-center gap-2 mt-3 mt-lg-0">
+            <a th:href="@{/app/report-emergency}" class="btn btn-danger btn-sm px-3 shadow-sm d-flex align-items-center">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i> Report SOS
+            </a>
+            <button type="button" class="btn btn-relief-orange btn-sm px-3 shadow-sm d-flex align-items-center fw-bold text-white" onclick="openDonateModal()" data-bs-toggle="modal" data-bs-target="#donateModal">
+              <i class="bi bi-heart-fill me-1 text-white"></i> Donate
+            </button>
+            <div sec:authorize="isAnonymous()" class="d-flex align-items-center gap-2">
+              <a th:href="@{/login}" class="btn btn-outline-primary btn-sm px-3">Log-In</a>
+              <a th:href="@{/signup}" class="btn btn-primary btn-sm px-3">Register</a>
+            </div>
+            <div sec:authorize="isAuthenticated()">
+              <a th:href="@{/app/dashboard}" class="btn btn-primary btn-sm px-3 d-flex align-items-center">
+                <i class="bi bi-speedometer2 me-1"></i> Dashboard
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section id="overview" class="rq-landing-hero">
+      <div class="container position-relative">
+        <div class="row align-items-center g-5">
+          <div class="col-lg-7">
+            <div class="rq-hero-badge">
+              <span class="rq-pulse-dot"></span>
+              <span>Live Emergency Coordination System</span>
+            </div>
+            <h1 class="display-4 mb-3">Rapid Disaster Response, Coordinated Rescue, Saving Lives.</h1>
+            <p class="lead mb-4">
+              ResQHub seamlessly connects affected citizens, first responder rescue teams, community shelters, and relief supply chains into a unified, high-reliability command platform.
+            </p>
+            <div class="pt-2">
+              <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+                <a th:href="@{/app/report-emergency}" class="btn btn-danger btn-lg px-4 shadow d-inline-flex align-items-center">
+                  <i class="bi bi-shield-exclamation me-2"></i> Report Emergency (SOS)
+                </a>
+                <button type="button" class="btn btn-relief-orange btn-lg px-4 shadow fw-bold text-white d-inline-flex align-items-center" onclick="openDonateModal()" data-bs-toggle="modal" data-bs-target="#donateModal">
+                  <i class="bi bi-heart-fill me-2 text-white"></i> Donate Relief Aid
+                </button>
+              </div>
+              <div class="d-flex flex-wrap gap-3 align-items-center">
+                <a th:href="@{/signup}" class="btn btn-outline-light btn-lg px-4 fw-semibold">
+                  <i class="bi bi-person-fill me-2"></i> Register as Citizen
+                </a>
+                <a th:href="@{/volunteer-registration}" class="btn btn-outline-light btn-lg px-4 fw-semibold">
+                  <i class="bi bi-person-heart me-2"></i> Register as Volunteer
+                </a>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 text-light opacity-75 small d-flex align-items-center gap-4">
+              <span><i class="bi bi-check-circle-fill text-warning me-1"></i> 24/7 Crisis Dispatch</span>
+              <span><i class="bi bi-check-circle-fill text-warning me-1"></i> Zero-ORM High Speed</span>
+              <span><i class="bi bi-check-circle-fill text-warning me-1"></i> Verified Relief Centers</span>
+            </div>
+          </div>
+
+          <div class="col-lg-5">
+            <div class="rq-hero-card">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0 text-white fw-bold"><i class="bi bi-activity text-warning me-2"></i>Operational Pulse</h2>
+                <span class="badge bg-success text-white px-2 py-1 small">Real-Time</span>
+              </div>
+              <p class="text-white-50 small mb-4">Live operational metrics monitored across active disaster zones and relief shelters.</p>
+              
+              <div class="row g-3">
+                <div class="col-6">
+                  <div class="rq-hero-stat">
+                    <div class="stat-num" th:text="${stats != null and stats.activeDisasters != null ? stats.activeDisasters : '1'}">1</div>
+                    <div class="stat-lbl"><i class="bi bi-exclamation-diamond me-1"></i> Active Disasters</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="rq-hero-stat">
+                    <div class="stat-num" th:text="${stats != null and stats.availableTeams != null ? stats.availableTeams : '10'}">10</div>
+                    <div class="stat-lbl"><i class="bi bi-people me-1"></i> Ready Teams</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="rq-hero-stat">
+                    <div class="stat-num" th:text="${stats != null and stats.totalShelters != null ? stats.totalShelters : '12'}">12</div>
+                    <div class="stat-lbl"><i class="bi bi-house-heart me-1"></i> Safe Shelters</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="rq-hero-stat">
+                    <div class="stat-num" th:text="${stats != null and stats.totalVolunteers != null ? stats.totalVolunteers : '45'}">45</div>
+                    <div class="stat-lbl"><i class="bi bi-heart-pulse me-1"></i> Volunteers</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3 border-top border-white-50 text-white small d-flex align-items-center">
+                <span><i class="bi bi-shield-check text-success me-1"></i> Systems Operational</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Integrated Disaster Management Ecosystem -->
+    <section id="ecosystem" class="rq-section rq-section-alt">
+      <div class="container">
+        <div class="rq-section-head">
+          <div class="tagline">Engineered for Crisis Coordination</div>
+          <h2>Integrated Disaster Management Ecosystem</h2>
+          <p>Every module in ResQHub is purposely built to reduce response latency, synchronize field forces, and deliver life-saving relief efficiently.</p>
+        </div>
+
+        <div class="row g-4">
+          <!-- Feature 1 -->
+          <div class="col-md-6 col-lg-4">
+            <div class="rq-feature-card">
+              <div class="rq-feature-icon rq-icon-danger">
+                <i class="bi bi-broadcast-pin"></i>
+              </div>
+              <h3>Emergency SOS &amp; Triage</h3>
+              <p>Citizens and ground observers can report urgent distress calls with location, headcount (including children and seniors), and critical medical or trapped flags.</p>
+            </div>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="col-md-6 col-lg-4">
+            <div class="rq-feature-card">
+              <div class="rq-feature-icon rq-icon-forest">
+                <i class="bi bi-cpu-fill"></i>
+              </div>
+              <h3>Smart Team Allocation</h3>
+              <p>Algorithmic prioritization matches pending rescue missions with specialized field units (medical, boat, canine, search &amp; rescue) based on vicinity and availability.</p>
+            </div>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="col-md-6 col-lg-4">
+            <div class="rq-feature-card">
+              <div class="rq-feature-icon rq-icon-brown">
+                <i class="bi bi-house-check-fill"></i>
+              </div>
+              <h3>Shelter Capacity Network</h3>
+              <p>Real-time occupancy monitoring for emergency shelters, camps, and evacuation zones. Facilitates citizen check-ins, family tracing, and capacity re-routing.</p>
+            </div>
+          </div>
+
+          <!-- Feature 4 -->
+          <div class="col-md-6 col-lg-4">
+            <div class="rq-feature-card">
+              <div class="rq-feature-icon rq-icon-warn">
+                <i class="bi bi-box2-heart-fill"></i>
+              </div>
+              <h3>Food &amp; Water Logistics</h3>
+              <p>Tracks food packet preparation, nutritional distribution schedules, and safe drinking water delivery to camps, preventing shortages and distribution bottlenecks.</p>
+            </div>
+          </div>
+
+          <!-- Feature 5 -->
+          <div class="col-md-6 col-lg-4">
+            <div class="rq-feature-card">
+              <div class="rq-feature-icon rq-icon-forest">
+                <i class="bi bi-shield-plus"></i>
+              </div>
+              <h3>Medical &amp; Equipment Inventory</h3>
+              <p>Live inventory tracking of essential medical kits, hygiene packs, blankets, boats, and fuel. Automatically highlights low-stock and critical shortages.</p>
+            </div>
+          </div>
+
+          <!-- Feature 6 -->
+          <div class="col-md-6 col-lg-4">
+            <div class="rq-feature-card">
+              <div class="rq-feature-icon rq-icon-brown">
+                <i class="bi bi-people-fill"></i>
+              </div>
+              <h3>Volunteer Mobilization</h3>
+              <p>Enables civic volunteers to register skills, get deployed to verified relief tasks, manage field shifts, and assist camp coordinators with transparent accountability.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Disasters Section -->
+    <section id="disasters" class="rq-section" style="background: var(--resqhub-off-white);">
+      <div class="container">
+        <div class="rq-section-head mb-4">
+          <div class="tagline"><i class="bi bi-broadcast text-danger me-1"></i> Live Situational Awareness</div>
+          <h2>Active Disaster Operations</h2>
+          <p>Real-time incident updates, severity levels, and affected regions actively coordinated by ResQHub emergency response teams.</p>
+        </div>
+
+        <div class="row g-4" th:if="${not #lists.isEmpty(disasters)}">
+          <div class="col-md-6 col-lg-4" th:each="d : ${disasters}">
+            <div class="rq-disaster-card shadow-sm">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge"
+                      th:classappend="${d.status != null and d.status.name() == 'ACTIVE' ? 'bg-danger' : (d.status != null and d.status.name() == 'CONTAINED' ? 'bg-warning text-dark' : 'bg-success')}"
+                      th:text="${d.status != null ? d.status.label : 'Active'}">Status</span>
+                <span class="badge"
+                      th:style="${d.severity != null and d.severity.name() == 'CATASTROPHIC' ? 'background:#5c1d18; color:#fff;' : (d.severity != null and d.severity.name() == 'SEVERE' ? 'background:#8a2b22; color:#fff;' : 'background:#7a5200; color:#fff;')}"
+                      th:text="${d.severity != null ? d.severity.label : 'Severe'}">Severity</span>
+                <span class="badge bg-light text-dark border small" th:text="${d.disasterType != null ? d.disasterType.label : 'Emergency'}">Type</span>
+              </div>
+              <h3 class="h6 fw-bold text-dark mt-2 mb-2" th:text="${d.title}">Disaster Title</h3>
+              <div class="text-secondary small mb-2">
+                <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                <span th:text="${d.location}">Location</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center small text-muted py-2 my-2 border-top border-bottom">
+                <span><i class="bi bi-people-fill text-primary me-1"></i><strong class="text-dark" th:text="${#numbers.formatInteger(d.affectedPopulation, 0, 'COMMA')}">0</strong> affected</span>
+                <span th:if="${d.startDateTime != null}"><i class="bi bi-calendar3 me-1"></i><span th:text="${#temporals.format(d.startDateTime, 'dd MMM yyyy')}">Date</span></span>
+              </div>
+              <p class="small text-muted mb-0 flex-grow-1" th:text="${#strings.abbreviate(d.description, 130)}">Description</p>
+            </div>
+          </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(disasters)}" class="text-center py-5">
+          <div class="text-muted"><i class="bi bi-shield-check fs-1 text-success d-block mb-2"></i>No active critical disasters currently recorded.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Shelters Section -->
+    <section id="shelters" class="rq-section">
+      <div class="container">
+        <div class="rq-section-head mb-4">
+          <div class="tagline"><i class="bi bi-house-heart text-success me-1"></i> Community Evacuation Havens</div>
+          <h2>Live Verified Shelters &amp; Relief Camps</h2>
+          <p>Real-time occupancy, open bed capacities, amenities, and direct manager contact details across verified emergency relief centers.</p>
+        </div>
+
+        <div class="row g-4" th:if="${not #lists.isEmpty(shelters)}">
+          <div class="col-md-6 col-lg-4" th:each="s : ${shelters}">
+            <div class="rq-shelter-card shadow-sm">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <h3 class="h6 fw-bold mb-0 text-dark" th:text="${s.name}">Shelter Name</h3>
+                  <small class="badge bg-light text-dark border mt-1" th:text="${s.code}">SHL-001</small>
+                </div>
+                <span class="badge"
+                      th:classappend="${s.operationalStatus != null and (s.operationalStatus.name() == 'ACTIVE' or s.operationalStatus.name() == 'AVAILABLE') ? 'bg-success' : (s.operationalStatus != null and s.operationalStatus.name() == 'NEAR_CAPACITY' ? 'bg-warning text-dark' : 'bg-danger')}"
+                      th:text="${s.operationalStatus != null ? s.operationalStatus.label : 'Active'}">Status</span>
+              </div>
+              <div class="text-secondary small mb-1">
+                <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                <span th:text="${s.district + ' · ' + s.city}">District, City</span>
+              </div>
+              <small class="text-muted d-block mb-3" th:text="${s.address}">Address</small>
+
+              <!-- Capacity Progress -->
+              <div class="mb-3">
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                  <span>Occupancy: <strong class="text-dark" th:text="${s.currentOccupancy}"></strong> / <span th:text="${s.maxCapacity}"></span></span>
+                  <span class="text-success fw-semibold"><span th:text="${s.maxCapacity - s.currentOccupancy}"></span> spots open</span>
+                </div>
+                <div class="progress" style="height: 7px; background-color: var(--rq-border);">
+                  <div class="progress-bar"
+                       th:classappend="${(s.currentOccupancy * 100 / (s.maxCapacity > 0 ? s.maxCapacity : 1)) > 85 ? 'bg-danger' : ((s.currentOccupancy * 100 / (s.maxCapacity > 0 ? s.maxCapacity : 1)) > 60 ? 'bg-warning' : 'bg-success')}"
+                       role="progressbar"
+                       th:style="'width: ' + ${(s.currentOccupancy * 100 / (s.maxCapacity > 0 ? s.maxCapacity : 1))} + '%'"
+                       th:aria-valuenow="${s.currentOccupancy}" aria-valuemin="0" th:aria-valuemax="${s.maxCapacity}"></div>
+                </div>
+              </div>
+
+              <!-- Amenities -->
+              <div class="d-flex flex-wrap gap-1 mb-3">
+                <span th:if="${s.wheelchairAccessible}" class="badge bg-light text-dark border small" title="Wheelchair Accessible">
+                  <i class="bi bi-person-wheelchair text-primary me-1"></i>Wheelchair
+                </span>
+                <span th:if="${s.elderlyFriendly}" class="badge bg-light text-dark border small" title="Elderly Friendly">
+                  <i class="bi bi-heart-pulse text-success me-1"></i>Elderly
+                </span>
+                <span th:if="${s.medicalAccessible}" class="badge bg-light text-dark border small" title="Medical Assistance">
+                  <i class="bi bi-hospital text-danger me-1"></i>Clinic
+                </span>
+              </div>
+
+              <!-- Manager and Helpline -->
+              <div class="pt-2 border-top mt-auto d-flex justify-content-between align-items-center small">
+                <span class="text-muted"><i class="bi bi-person me-1"></i><span th:text="${s.managerName}">Manager</span></span>
+                <a th:href="'tel:' + ${s.contactNumber}" class="text-success fw-semibold text-decoration-none">
+                  <i class="bi bi-telephone-fill me-1"></i><span th:text="${s.contactNumber}">Phone</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(shelters)}" class="text-center py-5">
+          <div class="text-muted"><i class="bi bi-house fs-1 text-secondary d-block mb-2"></i>No verified shelters currently listed.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dedicated About Us Section -->
+    <section id="about" class="rq-section" style="background: var(--resqhub-off-white); border-top: 1px solid var(--rq-border);">
+      <div class="container">
+        <div class="rq-section-head mb-5">
+          <div class="tagline"><i class="bi bi-shield-heart text-success me-1"></i> Purpose &amp; Humanitarian Mission</div>
+          <h2>About ResQHub</h2>
+          <p>Unifying disaster response networks, safeguarding vulnerable communities, and bridging the critical gap between distress calls and relief action.</p>
+        </div>
+
+        <div class="row g-4 align-items-stretch mb-5">
+          <!-- Story / Left Column -->
+          <div class="col-lg-6">
+            <div class="rq-about-story shadow-sm d-flex flex-column justify-content-between">
+              <div>
+                <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill small fw-semibold text-success mb-3" style="background: var(--resqhub-light-sage);">
+                  <i class="bi bi-clock-history"></i> The ResQHub Genesis
+                </div>
+                <h3>Born from the Frontlines of Disaster Response</h3>
+                <p class="text-secondary leading-relaxed mb-3">
+                  During extreme natural disasters—flash floods, sudden landslides, and coastal cyclones—the critical bottleneck in saving lives is rarely a shortage of human courage; it is <strong>information breakdown and siloed communication</strong>.
+                </p>
+                <p class="text-secondary leading-relaxed mb-4">
+                  ResQHub was engineered to eliminate this barrier. We serve as a dependable, unified bridge connecting district disaster authorities, first responder battalions (NDRF, SDRF, Fire &amp; Rescue), field medical clinics, relief camp wardens, and grassroots civic volunteers into one synchronized operational picture.
+                </p>
+                <div class="row g-3 pt-2">
+                  <div class="col-sm-6">
+                    <div class="p-3 rounded-3" style="background: var(--resqhub-warm-beige);">
+                      <div class="fw-bold text-dark mb-1"><i class="bi bi-geo-alt-fill text-danger me-1"></i> Zero-Delay Triage</div>
+                      <div class="small text-muted">Direct dispatch linking stranded families to the closest qualified rescue unit.</div>
+                    </div>
+                  </div>
+                  <div class="col-sm-6">
+                    <div class="p-3 rounded-3" style="background: var(--resqhub-warm-beige);">
+                      <div class="fw-bold text-dark mb-1"><i class="bi bi-building-check text-success me-1"></i> Verified Capacities</div>
+                      <div class="small text-muted">Continuous ground verification prevents overcrowded camps and resource wastage.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="pt-4 mt-4 border-top text-muted small d-flex align-items-center gap-2">
+                <i class="bi bi-patch-check-fill text-success fs-5"></i>
+                <span>Operated in alignment with National Disaster Management guidelines &amp; community safety frameworks.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mission, Vision, Values / Right Column -->
+          <div class="col-lg-6">
+            <div class="d-flex flex-column h-100 justify-content-between gap-3">
+              <!-- Mission Card -->
+              <div class="rq-value-card shadow-sm">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <div class="rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: var(--resqhub-light-sage); color: var(--resqhub-forest);">
+                    <i class="bi bi-compass-fill"></i>
+                  </div>
+                  <h4 class="h6 fw-bold mb-0 text-dark">Our Mission</h4>
+                </div>
+                <p class="small text-secondary mb-0">
+                  To provide an open, lightning-fast coordination platform that reduces disaster response time from hours to minutes, ensuring equitable aid distribution and zero unattended distress calls.
+                </p>
+              </div>
+
+              <!-- Vision Card -->
+              <div class="rq-value-card shadow-sm" style="border-left-color: var(--resqhub-earth-brown);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <div class="rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: #f7ede8; color: var(--resqhub-earth-brown);">
+                    <i class="bi bi-eye-fill"></i>
+                  </div>
+                  <h4 class="h6 fw-bold mb-0 text-dark">Our Vision</h4>
+                </div>
+                <p class="small text-secondary mb-0">
+                  A disaster-resilient society where technology empowers every community to anticipate, endure, and recover swiftly from natural catastrophes with dignity and mutual solidarity.
+                </p>
+              </div>
+
+              <!-- Core Principles Card -->
+              <div class="rq-value-card shadow-sm" style="border-left-color: var(--resqhub-dark-green);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <div class="rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: var(--resqhub-light-sage); color: var(--resqhub-dark-green);">
+                    <i class="bi bi-people-fill"></i>
+                  </div>
+                  <h4 class="h6 fw-bold mb-0 text-dark">Community-Driven Solidarity</h4>
+                </div>
+                <p class="small text-secondary mb-0">
+                  Technology is only as effective as the community behind it. We provide civic volunteers and camp managers with simple, transparent tools to log needs, distribute rations, and protect the elderly and children.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trust Badges Strip -->
+        <div class="row g-3">
+          <div class="col-6 col-md-3">
+            <div class="rq-trust-pill shadow-sm">
+              <i class="bi bi-lightning-charge-fill text-warning"></i>
+              <div>
+                <div class="fw-bold small text-dark">Real-Time Dispatch</div>
+                <div class="text-muted" style="font-size: 0.78rem;">Live sync with field responders</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="rq-trust-pill shadow-sm">
+              <i class="bi bi-shield-check text-success"></i>
+              <div>
+                <div class="fw-bold small text-dark">Zero-ORM Speed</div>
+                <div class="text-muted" style="font-size: 0.78rem;">High throughput under crisis load</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="rq-trust-pill shadow-sm">
+              <i class="bi bi-heart-pulse-fill text-danger"></i>
+              <div>
+                <div class="fw-bold small text-dark">Human-First Aid</div>
+                <div class="text-muted" style="font-size: 0.78rem;">Specialized infant &amp; elder care</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="rq-trust-pill shadow-sm">
+              <i class="bi bi-diagram-3-fill text-primary"></i>
+              <div>
+                <div class="fw-bold small text-dark">Multi-Agency Hub</div>
+                <div class="text-muted" style="font-size: 0.78rem;">Interoperable crisis network</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Call to Action Banner -->
+    <section class="py-5" style="background: linear-gradient(135deg, var(--resqhub-light-sage), var(--resqhub-warm-beige)); border-top: 1px solid var(--rq-border); border-bottom: 1px solid var(--rq-border);">
+      <div class="container py-4 text-center">
+        <div class="row justify-content-center">
+          <div class="col-lg-8">
+            <span class="badge rounded-pill px-3 py-2 text-uppercase fw-bold mb-3" style="background: var(--resqhub-forest); color: #fff;">Help. Hope. Humanity.</span>
+            <h2 class="display-6 fw-bold text-dark mb-3">Join the ResQHub Emergency Relief Network</h2>
+            <p class="text-secondary fs-5 mb-4">
+              Whether you are a citizen needing safety, a volunteer ready to assist, or an organization providing relief goods, your involvement saves lives.
+            </p>
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+              <a th:href="@{/signup}" class="btn btn-primary btn-lg px-4 shadow-sm">
+                <i class="bi bi-person-plus-fill me-2"></i> Create Citizen Account
+              </a>
+              <a th:href="@{/volunteer-registration}" class="btn btn-secondary btn-lg px-4 shadow-sm">
+                <i class="bi bi-person-heart me-2"></i> Register as Volunteer
+              </a>
+              <a th:href="@{/app/report-emergency}" class="btn btn-danger btn-lg px-4 shadow-sm">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> Report Emergency
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer id="contact" class="rq-landing-footer">
+    <div class="container">
+      <div class="row g-4 justify-content-between align-items-center">
+        <div class="col-lg-6">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <img th:src="@{/assets/images/logo.svg(v='4.0')}" alt="ResQHub logo" width="38" height="38" style="border-radius: 8px; background: #fff; padding: 2px;">
+            <span class="fs-4 fw-bold text-white">ResQHub</span>
+          </div>
+          <div class="fst-italic text-warning mb-2" style="font-size: 0.95rem;">Help. Hope. Humanity.</div>
+          <p class="small text-light opacity-75 mb-0" style="max-width: 32rem;">
+            ResQHub is an Integrated Disaster Response Coordination System designed to unite emergency management authorities, rescue workers, shelters, and citizens during natural and humanitarian crises.
+          </p>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12);">
+            <h5 class="mb-3 text-white"><i class="bi bi-headset text-warning me-2"></i>Emergency Desk</h5>
+            <div class="small d-flex flex-column gap-2">
+              <div><i class="bi bi-shield-fill-exclamation text-danger me-2"></i><strong>Central Emergency:</strong> 112</div>
+              <div><i class="bi bi-telephone-fill text-warning me-2"></i><strong>Disaster Relief:</strong> 1078</div>
+              <div><i class="bi bi-hospital-fill text-danger me-2"></i><strong>Medical Ambulance:</strong> 108</div>
+              <div><i class="bi bi-envelope-fill text-success me-2"></i><strong>Support:</strong> support@resqhub.org</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom text-center">
+        <div>&copy; 2026 ResQHub Emergency Response System. All rights reserved. Zero-ORM Architecture.</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Volunteer Application Success Popup Modal -->
+  <div th:if="${volunteerPopupMessage}" class="modal fade" id="volunteerSuccessModal" tabindex="-1" aria-labelledby="volunteerSuccessModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0" style="border-radius: 1.25rem; overflow: hidden;">
+        <div class="modal-header border-0 pb-0" style="background: linear-gradient(135deg, var(--resqhub-light-sage), #ffffff);">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; background: #e2f4ea; color: #1e7e34;">
+              <i class="bi bi-patch-check-fill fs-3"></i>
+            </div>
+            <div>
+              <h5 class="modal-title fw-bold text-dark mb-0" id="volunteerSuccessModalLabel">Application Received</h5>
+              <div class="text-success small fw-semibold">Profile Verification Pending</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body py-4 px-4">
+          <p class="text-dark fs-6 mb-3" style="line-height: 1.6;" th:text="${volunteerPopupMessage}">
+            Volunteer application submitted successfully! Your profile has been sent for admin verification. Once verified, your login credentials will be dispatched to testuser@gmail.com.
+          </p>
+          <div class="p-3 rounded-3 border" style="background: var(--resqhub-warm-beige); border-color: rgba(121, 85, 72, 0.15) !important;">
+            <div class="d-flex align-items-center gap-2 text-dark small fw-semibold">
+              <i class="bi bi-envelope-check-fill text-success"></i>
+              <span>Next Step: Email Dispatch</span>
+            </div>
+            <div class="small text-secondary mt-1">
+              Our emergency desk administrator will review your skills and assign your portal username and password. Keep an eye on your email inbox.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-primary w-100 py-2 shadow-sm" data-bs-dismiss="modal">
+            <i class="bi bi-check-lg me-1"></i> Understood &amp; Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donation Officials Contact Modal -->
+  <div class="modal fade" id="donateModal" tabindex="-1" aria-labelledby="donateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content shadow-lg border-0" style="border-radius: 1.25rem; overflow: hidden;">
+        <div class="modal-header border-0 text-white" style="background: linear-gradient(135deg, #1b3d2b, #2d5a3f);">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background: rgba(255, 255, 255, 0.15);">
+              <i class="bi bi-heart-fill text-warning fs-4"></i>
+            </div>
+            <div>
+              <h5 class="modal-title fw-bold text-white mb-0" id="donateModalLabel">Relief Aid &amp; Donation Coordination</h5>
+              <div class="text-white-50 small">Direct Official Contacts for Frontline Disaster Relief &amp; Camp Operations</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body p-4" style="background: #fbfbf9;">
+          <!-- Guiding Coordination Message -->
+          <div class="p-3 mb-4 rounded-3 border bg-white shadow-sm">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background: var(--resqhub-light-sage); color: var(--resqhub-forest);">
+                <i class="bi bi-info-circle-fill fs-6"></i>
+              </div>
+              <h6 class="fw-bold text-dark mb-0">Direct Operations &amp; Manager Contacts</h6>
+            </div>
+            <p class="small text-muted mb-0" style="line-height: 1.6;">
+              For material donations, financial relief contributions, corporate CSR aid, or direct shelter drop-offs, please connect directly with our designated officials and operational managers below:
+            </p>
+          </div>
+
+          <!-- Officials Grid -->
+          <div class="row g-3 mb-3">
+            <!-- 1. Admin Desk -->
+            <div class="col-md-6">
+              <div class="p-3 rounded-3 border bg-white shadow-sm h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="badge" style="background: var(--resqhub-earth-brown); color: #fff; font-size: 0.75rem;">Central Administrator</span>
+                  <i class="bi bi-shield-check text-muted fs-5"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1" th:text="${adminContact != null ? adminContact.fullName : 'Administrator System'}">Administrator System</h6>
+                <div class="small text-muted mb-2">System Administration &amp; Central Operations</div>
+                <div class="small d-flex flex-column gap-2 mt-2 pt-2 border-top">
+                  <a th:href="'tel:' + (${adminContact != null ? adminContact.phone : '9876543210'})" class="text-decoration-none text-dark fw-semibold d-flex align-items-center gap-2">
+                    <i class="bi bi-telephone-fill text-success"></i><span th:text="${adminContact != null ? adminContact.phone : '+91 98765 43210'}">+91 98765 43210</span>
+                  </a>
+                  <a th:href="'mailto:' + (${adminContact != null ? adminContact.email : 'admin@resqhub.org'})" class="text-decoration-none text-muted d-flex align-items-center gap-2 text-truncate">
+                    <i class="bi bi-envelope-fill text-muted"></i><span th:text="${adminContact != null ? adminContact.email : 'admin@resqhub.org'}">admin@resqhub.org</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Rescue Manager -->
+            <div class="col-md-6">
+              <div class="p-3 rounded-3 border bg-white shadow-sm h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="badge bg-danger text-white" style="font-size: 0.75rem;">Rescue Manager</span>
+                  <i class="bi bi-life-preserver text-danger fs-5"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1" th:text="${rescueContact != null ? rescueContact.fullName : 'Kavita Menon'}">Kavita Menon</h6>
+                <div class="small text-muted mb-2">Rescue Operations &amp; Field Dispatch</div>
+                <div class="small d-flex flex-column gap-2 mt-2 pt-2 border-top">
+                  <a th:href="'tel:' + (${rescueContact != null ? rescueContact.phone : '9876543211'})" class="text-decoration-none text-dark fw-semibold d-flex align-items-center gap-2">
+                    <i class="bi bi-telephone-fill text-danger"></i><span th:text="${rescueContact != null ? rescueContact.phone : '+91 98765 43211'}">+91 98765 43211</span>
+                  </a>
+                  <a th:href="'mailto:' + (${rescueContact != null ? rescueContact.email : 'rescue.officer@resqhub.org'})" class="text-decoration-none text-muted d-flex align-items-center gap-2 text-truncate">
+                    <i class="bi bi-envelope-fill text-muted"></i><span th:text="${rescueContact != null ? rescueContact.email : 'rescue.officer@resqhub.org'}">rescue.officer@resqhub.org</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Camp Manager -->
+            <div class="col-md-6">
+              <div class="p-3 rounded-3 border bg-white shadow-sm h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="badge" style="background: var(--resqhub-forest); color: #fff; font-size: 0.75rem;">Camp Manager</span>
+                  <i class="bi bi-house-door-fill text-success fs-5"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1" th:text="${campContact != null ? campContact.fullName : 'Anjali Menon'}">Anjali Menon</h6>
+                <div class="small text-muted mb-2">Shelter Supplies &amp; Relief Material Intake</div>
+                <div class="small d-flex flex-column gap-2 mt-2 pt-2 border-top">
+                  <a th:href="'tel:' + (${campContact != null ? campContact.phone : '9876543213'})" class="text-decoration-none text-dark fw-semibold d-flex align-items-center gap-2">
+                    <i class="bi bi-telephone-fill text-success"></i><span th:text="${campContact != null ? campContact.phone : '+91 98765 43213'}">+91 98765 43213</span>
+                  </a>
+                  <a th:href="'mailto:' + (${campContact != null ? campContact.email : 'camp.manager@resqhub.org'})" class="text-decoration-none text-muted d-flex align-items-center gap-2 text-truncate">
+                    <i class="bi bi-envelope-fill text-muted"></i><span th:text="${campContact != null ? campContact.email : 'camp.manager@resqhub.org'}">camp.manager@resqhub.org</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Official Support Desk -->
+            <div class="col-md-6">
+              <div class="p-3 rounded-3 border bg-white shadow-sm h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="badge bg-primary text-white" style="font-size: 0.75rem;">Official Support Desk</span>
+                  <i class="bi bi-headset text-primary fs-5"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1">Central Relief Helpdesk</h6>
+                <div class="small text-muted mb-2">General Support &amp; Donation Inquiries</div>
+                <div class="small d-flex flex-column gap-2 mt-2 pt-2 border-top">
+                  <a href="tel:1078" class="text-decoration-none text-dark fw-semibold d-flex align-items-center gap-2">
+                    <i class="bi bi-telephone-fill text-primary"></i>1078 / 112 (Relief Helpline)
+                  </a>
+                  <a href="mailto:support@resqhub.org" class="text-decoration-none text-muted d-flex align-items-center gap-2 text-truncate">
+                    <i class="bi bi-envelope-at-fill text-primary"></i>support@resqhub.org
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Notice -->
+          <div class="p-3 rounded-3" style="background: var(--resqhub-light-sage); border: 1px solid rgba(40, 89, 67, 0.15); font-size: 0.85rem; color: var(--resqhub-forest);">
+            <div class="d-flex align-items-center gap-2 fw-bold mb-1">
+              <i class="bi bi-check2-circle fs-5"></i>
+              <span>Direct Coordination Guidelines</span>
+            </div>
+            <div>
+              Before sending physical relief supplies, food batches, or medical kits, please call or email the <strong>Camp Manager</strong> or <strong>Rescue Manager</strong> above to confirm real-time camp capacities and required drop-off points.
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-0 p-3 bg-white justify-content-end">
+          <button type="button" class="btn btn-secondary px-4 shadow-sm" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg me-1"></i> Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donation Success Popup Modal -->
+  <div th:if="${donationSuccessMessage}" class="modal fade" id="donationSuccessModal" tabindex="-1" aria-labelledby="donationSuccessModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0" style="border-radius: 1.25rem; overflow: hidden;">
+        <div class="modal-header border-0 pb-0" style="background: linear-gradient(135deg, #e8f5e9, #ffffff);">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; background: #e2f4ea; color: #1e7e34;">
+              <i class="bi bi-heart-fill fs-4 text-danger"></i>
+            </div>
+            <div>
+              <h5 class="modal-title fw-bold text-dark mb-0" id="donationSuccessModalLabel">Donation Received</h5>
+              <div class="text-success small fw-semibold">ResQHub Relief Operations</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body py-4 px-4">
+          <p class="text-dark fs-6 mb-3" style="line-height: 1.6;" th:text="${donationSuccessMessage}">
+            Thank you for your generous contribution to ResQHub Relief Operations!
+          </p>
+          <div class="p-3 rounded-3 border" style="background: var(--resqhub-warm-beige); border-color: rgba(121, 85, 72, 0.15) !important;">
+            <div class="d-flex align-items-center gap-2 text-dark small fw-semibold">
+              <i class="bi bi-shield-check text-success"></i>
+              <span>Direct Operational Impact</span>
+            </div>
+            <div class="small text-secondary mt-1">
+              Your contribution directly equips relief camps, community shelters, and frontline rescue teams with essential supplies and logistics.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-success w-100 py-2 shadow-sm fw-bold" data-bs-dismiss="modal">
+            <i class="bi bi-check-lg me-1"></i> Done &amp; Return to Overview
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script th:src="@{/assets/vendor/bootstrap/bootstrap.bundle.min.js}"></script>
+  <script th:src="@{/assets/js/rq.js}"></script>
+  <script>
+    function toggleDonationType(type) {
+      var cash = document.getElementById('cashFields');
+      var mat = document.getElementById('materialFields');
+      if (type === 'CASH') {
+        if (cash) cash.classList.remove('d-none');
+        if (mat) mat.classList.add('d-none');
+      } else {
+        if (cash) cash.classList.add('d-none');
+        if (mat) mat.classList.remove('d-none');
+      }
+    }
+    function setDonationAmount(amt) {
+      var inp = document.getElementById('donationAmountInput');
+      if (inp) {
+        inp.value = amt;
+      }
+      document.querySelectorAll('.preset-btn').forEach(function(btn) {
+        if (btn.textContent.indexOf(amt.toLocaleString()) !== -1 || btn.textContent.indexOf(String(amt)) !== -1) {
+          btn.classList.add('active', 'btn-secondary');
+          btn.classList.remove('btn-outline-secondary');
+        } else {
+          btn.classList.remove('active', 'btn-secondary');
+          btn.classList.add('btn-outline-secondary');
+        }
+      });
+    }
+    function openDonateModal() {
+      var modalEl = document.getElementById('donateModal');
+      if (modalEl && typeof bootstrap !== 'undefined') {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+      }
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.location.hash === '#donateModal') {
+        openDonateModal();
+      }
+    });
+  </script>
+  <script th:if="${volunteerPopupMessage}">
+    document.addEventListener('DOMContentLoaded', function () {
+      var modalEl = document.getElementById('volunteerSuccessModal');
+      if (modalEl) {
+        var modal = new bootstrap.Modal(modalEl);
+        modal.show();
+      }
+    });
+  </script>
+  <script th:if="${donationSuccessMessage}">
+    document.addEventListener('DOMContentLoaded', function () {
+      var modalEl = document.getElementById('donationSuccessModal');
+      if (modalEl) {
+        var modal = new bootstrap.Modal(modalEl);
+        modal.show();
+      }
+    });
+  </script>
+</body>
+</html>

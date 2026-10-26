@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('My Tasks', 'MY_TASKS', ~{::#content})}">
+<body>
+<div id="content">
+  <!-- When user is not linked to a volunteer profile -->
+  <th:block th:if="${me == null}">
+    <div class="rq-page-head">
+      <div>
+        <h1>My Tasks</h1>
+        <div class="sub">Tasks assigned to you by the response coordinators</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="rq-empty">
+        <i class="bi bi-person-lines-fill"></i>
+        <strong>Your login is not linked to a volunteer profile yet.</strong><br>
+        Ask a rescue officer or administrator to register you as a volunteer and link this account
+        (<span th:text="${currentUser != null ? currentUser.username : 'your account'}">username</span>).
+        Your tasks will appear here afterwards.
+      </div>
+    </div>
+  </th:block>
+
+  <!-- When user is linked to a volunteer profile -->
+  <th:block th:if="${me != null}">
+    <div class="rq-page-head">
+      <div>
+        <h1>My Tasks</h1>
+        <div class="sub" th:text="${me.fullName + ' · ' + me.emergencyRole.label + ' · ' + workload + ' active task(s)'}">
+          Volunteer Name · Role · 0 active tasks
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-5">
+        <div class="card">
+          <div class="card-body">
+            <div class="small text-brown mb-1">My availability</div>
+            <form method="post" th:action="@{/app/my-tasks}" class="d-flex gap-2">
+              <input type="hidden" name="action" value="availability">
+              <select class="form-select" name="availability" aria-label="My availability">
+                <option th:each="o : ${availabilities}"
+                        th:value="${o[0]}"
+                        th:text="${o[1]}"
+                        th:selected="${o[0] == me.availability.name()}">Available</option>
+              </select>
+              <button class="btn btn-primary" type="submit">Update</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table rq-table align-middle" id="tblMyTasks">
+          <thead>
+            <tr>
+              <th th:each="h : ${taskHeaders}" scope="col" th:text="${h}">Header</th>
+              <th scope="col" class="text-end no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r, iterStat : ${taskRows}" data-row>
+              <td th:each="cell, cStat : ${r}">
+                <th:block th:with="hname=${taskHeaders[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                  <span th:if="${(hname == 'Status' or hname == 'Priority') and !cellText.isEmpty() and cellText != '-'}"
+                        class="rq-badge"
+                        th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(cellText, ' ', '-'))}"
+                        th:text="${cellText}">Status</span>
+                  <span th:unless="${(hname == 'Status' or hname == 'Priority') and !cellText.isEmpty() and cellText != '-'}"
+                        th:text="${cellText}">Cell</span>
+                </th:block>
+              </td>
+              <td class="rq-actions no-print" th:with="t=${tasks[iterStat.index]}">
+                <th:block th:with="nextStatus=${t.status.name() == 'ASSIGNED' ? 'ACCEPTED' : (t.status.name() == 'ACCEPTED' ? 'IN_PROGRESS' : (t.status.name() == 'IN_PROGRESS' ? 'COMPLETED' : ''))}">
+                  <form th:if="${!nextStatus.isEmpty()}" method="post" th:action="@{/app/my-tasks}" class="d-inline">
+                    <input type="hidden" name="action" value="taskStatus">
+                    <input type="hidden" name="assignmentId" th:value="${t.id}">
+                    <input type="hidden" name="status" th:value="${nextStatus}">
+                    <button class="btn btn-sm btn-primary" type="submit"
+                            th:text="${nextStatus == 'ACCEPTED' ? 'Accept' : (nextStatus == 'IN_PROGRESS' ? 'Start' : 'Complete')}">
+                      Action
+                    </button>
+                  </form>
+                </th:block>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(taskRows)}" data-empty>
+              <td th:colspan="${#lists.size(taskHeaders) + 1}">
+                <div class="rq-empty">
+                  <i class="bi bi-list-check"></i>
+                  <div class="empty-title">You have no tasks right now. You will be notified when one is assigned.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </th:block>
+</div>
+</body>
+</html>

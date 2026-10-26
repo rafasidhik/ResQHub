@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Report Emergency', 'REPORT_EMERGENCY', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Report an emergency</h1>
+      <div class="sub">Tell us what is happening — rescue teams are prioritised from the details you provide</div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-body">
+          <form method="post" th:action="@{/app/report-emergency}" class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="re_name">Your name <span class="req">*</span></label>
+              <input class="form-control" id="re_name" name="requesterName" required th:value="${currentUser != null ? currentUser.fullName : ''}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="re_phone">Contact number (10 digits) <span class="req">*</span></label>
+              <input class="form-control" type="tel" id="re_phone" name="contactNumber" required th:value="${currentUser != null ? currentUser.phone : ''}">
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="re_location">Where are you? <span class="req">*</span></label>
+              <input class="form-control" id="re_location" name="location" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="re_people">People needing help <span class="req">*</span></label>
+              <input class="form-control" type="number" id="re_people" name="people" min="1" value="1" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="re_children">Children</label>
+              <input class="form-control" type="number" id="re_children" name="children" min="0" value="0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="re_elderly">Elderly</label>
+              <input class="form-control" type="number" id="re_elderly" name="elderly" min="0" value="0">
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="re_life" name="lifeThreatening" value="true">
+                <label class="form-check-label" for="re_life">Life is in danger</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="re_med" name="medicalEmergency" value="true">
+                <label class="form-check-label" for="re_med">Medical emergency</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="re_trapped" name="trapped" value="true">
+                <label class="form-check-label" for="re_trapped">Trapped under debris</label>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="re_disaster">Which disaster is this related to? <span class="req">*</span></label>
+              <select class="form-select" id="re_disaster" name="disasterId" required>
+                <option th:each="opt : ${disasterOptions}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="re_assistance">What help do you need?</label>
+              <textarea class="form-control" id="re_assistance" name="assistance" rows="3"></textarea>
+            </div>
+            <div class="col-12">
+              <button class="btn btn-primary btn-lg" type="submit">
+                <i class="bi bi-send me-1"></i>Send emergency request
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout('Rescue Teams', 'TEAMS', ~{::#content})}">
+<body>
+<div id="content">
+  <div class="rq-page-head">
+    <div>
+      <h1>Rescue Teams</h1>
+      <div class="sub">Teams, availability and deployment status</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTeam">
+        <i class="bi bi-plus-lg me-1"></i>Register team
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="p-3 pb-0 no-print">
+      <input type="search" class="form-control form-control-sm" style="max-width:320px"
+             placeholder="Search this table…" aria-label="Search this table" data-rq-search="tblTeams">
+    </div>
+    <div class="table-responsive">
+      <table class="table rq-table align-middle" id="tblTeams">
+        <thead>
+          <tr>
+            <th th:each="h : ${headers}" scope="col" th:text="${h}">Header</th>
+            <th scope="col" class="text-end no-print">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="r, iterStat : ${rows}" data-row>
+            <td th:each="cell, cStat : ${r}">
+              <th:block th:with="hname=${headers[cStat.index]}, cellText=${cell != null ? cell.toString() : ''}">
+                <span th:if="${(hname == 'Status' or hname == 'Availability' or hname == 'Type' or hname == 'Operational Status') and !cellText.isEmpty() and cellText != '-'}"
+                      class="rq-badge"
+                      th:classappend="${'rq-' + #strings.toLowerCase(#strings.replace(#strings.replace(cellText, ' ', '-'), '/', '-'))}"
+                      th:text="${cellText}">Status</span>
+                <span th:unless="${(hname == 'Status' or hname == 'Availability' or hname == 'Type' or hname == 'Operational Status') and !cellText.isEmpty() and cellText != '-'}"
+                      th:text="${cellText}">Cell text</span>
+              </th:block>
+            </td>
+            <td class="rq-actions no-print" th:with="t=${items[iterStat.index]}">
+              <a class="btn btn-sm btn-primary" th:href="@{/app/teams(id=${t.id})}">Open</a>
+              <button type="button" class="btn btn-sm btn-outline-primary"
+                      data-rq-edit="editTeam"
+                      th:data-rq-title="${'Edit ' + t.teamName}"
+                      th:data-id="${t.id}"
+                      th:data-team-name="${t.teamName}"
+                      th:data-team-type="${t.teamType}"
+                      th:data-leader-name="${t.leaderName}"
+                      th:data-contact-number="${t.contactNumber}"
+                      th:data-member-count="${t.memberCount}"
+                      th:data-base-location="${t.baseLocation}"
+                      th:data-skills="${t.skills}"
+                      th:data-equipment="${t.equipment}">Edit</button>
+              <form method="post" th:action="@{/app/teams}" class="d-inline"
+                    th:data-rq-confirm="${'Delete team ' + t.teamName + '?'}">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="id" th:value="${t.id}">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div th:if="${#lists.isEmpty(rows)}" class="rq-empty">
+        <i class="bi bi-shield-check"></i>No rescue teams registered.
+      </div>
+      <div class="rq-empty rq-no-match" style="display:none">
+        <i class="bi bi-search"></i>No rows match your search.
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Team Modal -->
+  <div class="modal fade" id="createTeam" tabindex="-1" aria-labelledby="createTeam-t" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/teams}" autocomplete="off">
+        <input type="hidden" name="action" value="create">
+        <div class="modal-header">
+          <h2 class="modal-title" id="createTeam-t">Register rescue team</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="ct_name">Team name <span class="req">*</span></label>
+              <input class="form-control" id="ct_name" name="teamName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ct_type">Team type <span class="req">*</span></label>
+              <select class="form-select" id="ct_type" name="teamType" required>
+                <option th:each="opt : ${types}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ct_leader">Leader <span class="req">*</span></label>
+              <input class="form-control" id="ct_leader" name="leaderName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ct_phone">Contact (10 digits) <span class="req">*</span></label>
+              <input class="form-control" type="tel" id="ct_phone" name="contactNumber" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ct_count">Member count <span class="req">*</span></label>
+              <input class="form-control" type="number" id="ct_count" name="memberCount" min="1" value="1" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ct_location">Base location <span class="req">*</span></label>
+              <input class="form-control" id="ct_location" name="baseLocation" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ct_skills">Skills (comma separated)</label>
+              <textarea class="form-control" id="ct_skills" name="skills" rows="2"></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="ct_equipment">Equipment (comma separated)</label>
+              <textarea class="form-control" id="ct_equipment" name="equipment" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Register</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Team Modal -->
+  <div class="modal fade" id="editTeam" tabindex="-1" aria-labelledby="editTeam-t" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <form class="modal-content" method="post" th:action="@{/app/teams}" autocomplete="off">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id">
+        <div class="modal-header">
+          <h2 class="modal-title" id="editTeam-t">Edit team</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="et_name">Team name <span class="req">*</span></label>
+              <input class="form-control" id="et_name" name="teamName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="et_type">Team type <span class="req">*</span></label>
+              <select class="form-select" id="et_type" name="teamType" required>
+                <option th:each="opt : ${types}" th:value="${opt[0]}" th:text="${opt[1]}"></option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="et_leader">Leader <span class="req">*</span></label>
+              <input class="form-control" id="et_leader" name="leaderName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="et_phone">Contact (10 digits) <span class="req">*</span></label>
+              <input class="form-control" type="tel" id="et_phone" name="contactNumber" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="et_count">Member count <span class="req">*</span></label>
+              <input class="form-control" type="number" id="et_count" name="memberCount" min="1" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="et_location">Base location <span class="req">*</span></label>
+              <input class="form-control" id="et_location" name="baseLocation" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="et_skills">Skills (comma separated)</label>
+              <textarea class="form-control" id="et_skills" name="skills" rows="2"></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="et_equipment">Equipment (comma separated)</label>
+              <textarea class="form-control" id="et_equipment" name="equipment" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
