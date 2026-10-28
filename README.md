@@ -227,20 +227,6 @@ The application will start on **`http://localhost:8080/`**.
 
 ---
 
-## Sample Data & Login Credentials
-
-All sample accounts are pre-configured in `sample_data.sql` with the standard development password: **`ResQHub@123`**
-
-| Role | Username | Password | Purpose & Capabilities |
-|---|---|---|---|
-| **Administrator** | `admin` | `ResQHub@123` | Full administrative control, system settings, user management |
-| **Rescue Officer** | `rescue_officer` | `ResQHub@123` | Incident triage, field rescue team dispatch, victim tracking |
-| **Camp Manager** | `camp_manager` | `ResQHub@123` | Shelter capacity, resident registration, food distribution |
-| **Volunteer** | `volunteer_user` | `ResQHub@123` | Access to personal task board, delivery coordination |
-| **Citizen** | `citizen_user` | `ResQHub@123` | Submit SOS distress reports, track emergency requests |
-
----
-
 ## Project Layout
 
 ```
